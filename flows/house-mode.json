@@ -1,0 +1,710 @@
+[
+ {
+  "id": "tab-hm",
+  "type": "tab",
+  "label": "House Mode",
+  "disabled": false,
+  "info": "House Mode orchestrator (STATE-ONLY). Occupancy Home/Away/Sleeping + storm/maintenance/guest overlays. Sleeping = 23:00\u201307:00 + adult home + 20m no-activity (motion/presence, any light on-off, any dimmer press) + TVs off + sitting-room lights off. Wake = first activity from 06:00 (2h re-entry block). No tag. No consumers wired yet."
+ },
+ {
+  "id": "hm-presence",
+  "type": "server-state-changed",
+  "z": "tab-hm",
+  "name": "presence + indoor",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "person.colm_finn",
+    "person.olivia_finn",
+    "binary_sensor.colm_phone_home",
+    "binary_sensor.olivia_phone_home",
+    "binary_sensor.hallway_motion_sensor_occupancy",
+    "binary_sensor.landing_motion_sensor_occupancy",
+    "binary_sensor.sitting_room_presence_occupancy",
+    "binary_sensor.office_presence_occupancy",
+    "person.daire_finn",
+    "binary_sensor.daire_phone_home"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": false,
+  "ignorePrevStateUnavailable": false,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "eid",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "presence",
+    "valueType": "str"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 190,
+  "y": 40,
+  "wires": [
+   [
+    "hm-pres-get"
+   ]
+  ]
+ },
+ {
+  "id": "hm-lights",
+  "type": "server-state-changed",
+  "z": "tab-hm",
+  "name": "all lights (activity)",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "light.hallway",
+    "light.landing",
+    "light.aoife_bedroom",
+    "light.office",
+    "light.colm_bedroom",
+    "light.cian_bedroom",
+    "light.sitting_room",
+    "light.kitchen",
+    "light.downstairs",
+    "light.upstairs",
+    "light.sitting_room_tv_lightstrip",
+    "light.kitchen_tv_lightstrip",
+    "light.olivia_bedside",
+    "light.landing_1",
+    "light.colm_ceiling",
+    "light.cian_ceiling",
+    "light.kitchen_1",
+    "light.kitchen_2",
+    "light.kitchen_3",
+    "light.office_ceiling",
+    "light.hallway_1",
+    "light.aoife_ceiling",
+    "light.colm_bedside",
+    "light.sitting_room_stand",
+    "light.sitting_room_lamp"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": false,
+  "ignorePrevStateUnavailable": false,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "eid",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "lights",
+    "valueType": "str"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 150,
+  "y": 200,
+  "wires": [
+   [
+    "hm-engine"
+   ]
+  ]
+ },
+ {
+  "id": "hm-dimmers",
+  "type": "server-state-changed",
+  "z": "tab-hm",
+  "name": "dimmer presses",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "input_text.colm_bedroom_dimmer_helper_last_controller_event",
+    "input_text.sitting_room_dimmer_helper_last_controller_event",
+    "input_text.kitchen_dimmer_helper_last_controller_event",
+    "input_text.office_dimmer_helper_last_controller_event"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": false,
+  "ignorePrevStateUnavailable": false,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "eid",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "dimmer",
+    "valueType": "str"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 150,
+  "y": 280,
+  "wires": [
+   [
+    "hm-engine"
+   ]
+  ]
+ },
+ {
+  "id": "hm-tv",
+  "type": "server-state-changed",
+  "z": "tab-hm",
+  "name": "tvs (level)",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "binary_sensor.lg_tv_online",
+    "binary_sensor.samsung_tv_online"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": false,
+  "ignorePrevStateUnavailable": false,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "eid",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "tv",
+    "valueType": "str"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 150,
+  "y": 360,
+  "wires": [
+   [
+    "hm-engine"
+   ]
+  ]
+ },
+ {
+  "id": "hm-storm",
+  "type": "server-state-changed",
+  "z": "tab-hm",
+  "name": "met eireann level",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "sensor.met_eireann_warning_level"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": false,
+  "ignorePrevStateUnavailable": false,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "eid",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "storm",
+    "valueType": "str"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 150,
+  "y": 440,
+  "wires": [
+   [
+    "hm-engine"
+   ]
+  ]
+ },
+ {
+  "id": "hm-manual",
+  "type": "server-state-changed",
+  "z": "tab-hm",
+  "name": "manual changes",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "input_select.house_mode",
+    "input_boolean.storm_mode",
+    "input_boolean.maintenance_mode"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": false,
+  "ignorePrevStateUnavailable": false,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "eid",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "manual",
+    "valueType": "str"
+   },
+   {
+    "property": "ent",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entity"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 150,
+  "y": 520,
+  "wires": [
+   [
+    "hm-engine"
+   ]
+  ]
+ },
+ {
+  "id": "hm-seed-inj",
+  "type": "inject",
+  "z": "tab-hm",
+  "name": "seed on deploy",
+  "props": [],
+  "repeat": "",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "x": 150,
+  "y": 600,
+  "wires": [
+   [
+    "hm-cfg"
+   ]
+  ]
+ },
+ {
+  "id": "hm-get",
+  "type": "ha-get-entities",
+  "z": "tab-hm",
+  "name": "all entities",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "output_type": "array",
+  "output_empty_results": true,
+  "output_location_type": "msg",
+  "output_location": "payload",
+  "output_results_count": 1,
+  "x": 530,
+  "y": 600,
+  "wires": [
+   [
+    "hm-engine"
+   ]
+  ]
+ },
+ {
+  "id": "hm-tick",
+  "type": "inject",
+  "z": "tab-hm",
+  "name": "tick 2m",
+  "props": [
+   {
+    "p": "topic",
+    "v": "tick",
+    "vt": "str"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "tick",
+  "x": 320,
+  "y": 680,
+  "wires": [
+   [
+    "hm-get"
+   ]
+  ]
+ },
+ {
+  "id": "hm-engine",
+  "type": "function",
+  "z": "tab-hm",
+  "name": "Mode engine",
+  "func": "\nconst NR='32733c512f63453f895a569740484151';\nconst RESIDENTS=flow.get('residents')||[{person:'person.colm_finn',ping:'binary_sensor.colm_phone_home'},{person:'person.olivia_finn',ping:'binary_sensor.olivia_phone_home'}];\nconst GUESTS=flow.get('guests')||[{person:'person.daire_finn',ping:'binary_sensor.daire_phone_home'}];\nconst INDOOR=['binary_sensor.hallway_motion_sensor_occupancy','binary_sensor.landing_motion_sensor_occupancy','binary_sensor.sitting_room_presence_occupancy','binary_sensor.office_presence_occupancy'];\nconst AWAY_MS=20*60*1000, OCC_LOOKBACK=15*60*1000, SLEEP_MS=20*60*1000, MAINT_MS=4*3600*1000, HOLD_MS=4*3600*1000, WAKE_BLOCK_MS=2*3600*1000;\nconst WAKE_FROM=360;            // 06:00 in minutes\nconst NIGHT_LO=1320, NIGHT_HI=420; // 22:00 .. 07:00\nconst WATCH=['person.colm_finn','person.olivia_finn','person.daire_finn','binary_sensor.colm_phone_home','binary_sensor.olivia_phone_home','binary_sensor.daire_phone_home','binary_sensor.lg_tv_online','binary_sensor.samsung_tv_online','light.sitting_room','sensor.met_eireann_warning_level','input_select.house_mode','input_boolean.storm_mode','input_boolean.maintenance_mode'].concat(INDOOR);\nfunction nowMs(){return Date.now();}\nfunction dub(){return new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});}\nfunction mins(){var d=new Date();return parseInt(d.toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10)*60+parseInt(d.toLocaleString('en-IE',{timeZone:'Europe/Dublin',minute:'2-digit'}),10);}\nvar st=flow.get('st')||{};\nfunction residentHome(){return RESIDENTS.some(function(r){return st[r.person]==='home'||st[r.ping]==='on';});}\nfunction guestHome(){return GUESTS.some(function(g){return st[g.person]==='home'||st[g.ping]==='on';});}\nfunction anyoneHome(){return residentHome()||guestHome();}\nfunction indoorAny(){return INDOOR.some(function(e){return st[e]==='on';});}\nfunction indoorRecent(){return (nowMs()-(flow.get('lastIndoorMotion')||0))<OCC_LOOKBACK;}\nfunction mode(){return flow.get('mode')||st['input_select.house_mode']||'Home';}\nfunction holdActive(){return (flow.get('manual_until')||0)>nowMs();}\nfunction clrAway(){var t=context.get('awayTimer');if(t){clearTimeout(t);context.set('awayTimer',null);}}\nfunction scheduleAway(delay){context.set('awayTimer',setTimeout(attemptAway,delay));}\nfunction attemptAway(){\n  context.set('awayTimer',null);\n  if(anyoneHome()||st['input_boolean.maintenance_mode']==='on'||holdActive()){return;}\n  if(indoorAny()||indoorRecent()){node.warn('[house-mode] away deferred: indoor motion - retry 20m');scheduleAway(AWAY_MS);return;}\n  if(mode()!=='Away') emitMode('Away','all residents left (20m)');\n}\nfunction nightWindow(){var m=mins(); return m>=NIGHT_LO || m<NIGHT_HI;}\nfunction quietLevel(){return st['binary_sensor.lg_tv_online']!=='on' && st['binary_sensor.samsung_tv_online']!=='on' && !indoorAny() && st['light.sitting_room']!=='on';}\nfunction emitMode(opt,reason){\n  if(mode()===opt)return;\n  flow.set('mode',opt); flow.set('last_auto',opt); st['input_select.house_mode']=opt; flow.set('st',st);\n  node.send([{entity:'input_select.house_mode',option:opt},null,null,{payload:'House mode \u2192 '+opt+'  ('+reason+')'},{payload:dub()+'  MODE '+opt+'  ('+reason+')\\n'}]);\n}\nfunction emitOverlay(id,on,reason){\n  var ent='input_boolean.'+id; if((st[ent]==='on')===on)return;\n  st[ent]=on?'on':'off'; flow.set('st',st);\n  node.send([null, on?{entity:ent}:null, on?null:{entity:ent}, {payload:(on?'Overlay ON: ':'Overlay OFF: ')+id+'  ('+reason+')'}, {payload:dub()+'  OVERLAY '+id+'='+(on?'on':'off')+'  ('+reason+')\\n'}]);\n}\nfunction evaluate(){\n  var warn=(st['sensor.met_eireann_warning_level']||'none').toString().toLowerCase();\n  emitOverlay('storm_mode',(warn==='orange'||warn==='red'),'Met \u00c9ireann '+warn);\n  if(st['input_boolean.maintenance_mode']==='on'){var ms=flow.get('maint_since'); if(ms&&nowMs()-ms>MAINT_MS) emitOverlay('maintenance_mode',false,'4h auto-expire');}\n  if(st['input_boolean.maintenance_mode']==='on'){ clrAway(); if(mode()==='Away') emitMode('Home','maintenance active'); return; }\n  if(holdActive()){clrAway();return;}\n  var m=mode(); if(m==='Sleeping')return;\n  if(!anyoneHome()){\n    if(!context.get('awayTimer')) scheduleAway(AWAY_MS);\n    return;\n  }\n  clrAway();\n  if(m==='Away'){ emitMode('Home','resident returned'); return; }\n  var la=flow.get('last_activity'); if(la===undefined){flow.set('last_activity',nowMs()); la=nowMs();}\n  if(m==='Home' && residentHome() && nightWindow() && quietLevel() && (nowMs()-la>=SLEEP_MS) && nowMs()>(flow.get('sleep_block_until')||0)){\n    emitMode('Sleeping','quiet 20m, no activity (22:00\u201307:00)');\n  }\n}\nvar T=msg.topic;\n// seed from ha-get-entities (array)\nif(Array.isArray(msg.payload)){\n  var want={}; WATCH.forEach(function(w){want[w]=1;});\n  msg.payload.forEach(function(e){ if(e&&e.entity_id&&want[e.entity_id]) st[e.entity_id]=e.state; });\n  if(INDOOR.some(function(e){return st[e]==='on';})) flow.set('lastIndoorMotion',nowMs());\n  flow.set('st',st);\n  if(T==='presence'){\n    var indoorFired=INDOOR.indexOf(msg.eid)>=0&&st[msg.eid]==='on';\n    if(indoorFired){ flow.set('last_activity',nowMs()); flow.set('lastIndoorMotion',nowMs()); if(mode()==='Sleeping'&&mins()>=WAKE_FROM){flow.set('sleep_block_until',nowMs()+WAKE_BLOCK_MS);emitMode('Home','morning activity ('+(msg.eid||T)+')');} }\n  } else if(T!=='tick'){ flow.set('mode', st['input_select.house_mode']||flow.get('mode')||'Home'); flow.set('last_activity',nowMs()); }\n  evaluate(); return null;\n}\nif(msg.eid && !Array.isArray(msg.payload)){ st[msg.eid]=msg.payload; flow.set('st',st); }\n// activity = any light change, any dimmer press, or an indoor sensor turning on\nvar act=(T==='lights')||(T==='tv')||(T==='dimmer');\nif(act){\n  flow.set('last_activity',nowMs());\n  if(mode()==='Sleeping' && mins()>=WAKE_FROM){ flow.set('sleep_block_until',nowMs()+WAKE_BLOCK_MS); emitMode('Home','morning activity ('+(msg.eid||T)+')'); }\n}\nif(T==='tick'){ evaluate(); return null; }\nif(T==='manual'){\n  var uid=(msg.ent&&msg.ent.context&&msg.ent.context.user_id)||null;\n  if(uid===NR) return null;\n  if(msg.eid==='input_select.house_mode'){ flow.set('mode',msg.payload); flow.set('manual_until',nowMs()+HOLD_MS); node.send([null,null,null,null,{payload:dub()+'  MANUAL house_mode='+msg.payload+' (hold 4h)\\n'}]); }\n  else if(msg.eid==='input_boolean.maintenance_mode'){ flow.set('maint_since', msg.payload==='on'?nowMs():null); }\n  return null;\n}\nevaluate();\nreturn null;\n",
+  "outputs": 5,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 560,
+  "y": 360,
+  "wires": [
+   [
+    "hm-set-mode"
+   ],
+   [
+    "hm-overlay-on"
+   ],
+   [
+    "hm-overlay-off"
+   ],
+   [
+    "hm-notify",
+    "hm-notify-olivia"
+   ],
+   [
+    "hm-logfile"
+   ]
+  ]
+ },
+ {
+  "id": "hm-set-mode",
+  "type": "api-call-service",
+  "z": "tab-hm",
+  "name": "set house_mode",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "input_select.select_option",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"entity_id\": msg.entity, \"option\": msg.option}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 820,
+  "y": 240,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "hm-overlay-on",
+  "type": "api-call-service",
+  "z": "tab-hm",
+  "name": "overlay turn_on",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "input_boolean.turn_on",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"entity_id\": msg.entity}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 820,
+  "y": 300,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "hm-overlay-off",
+  "type": "api-call-service",
+  "z": "tab-hm",
+  "name": "overlay turn_off",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "input_boolean.turn_off",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"entity_id\": msg.entity}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 820,
+  "y": 360,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "hm-notify",
+  "type": "api-call-service",
+  "z": "tab-hm",
+  "name": "notify Colm",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_np3",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": \"\ud83c\udfe0 House Mode\", \"message\": msg.payload}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 810,
+  "y": 460,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "hm-logfile",
+  "type": "file",
+  "z": "tab-hm",
+  "name": "house_mode log",
+  "filename": "/data/house_mode.log",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": true,
+  "overwriteFile": "false",
+  "encoding": "none",
+  "x": 810,
+  "y": 600,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "hm-cfg",
+  "type": "function",
+  "z": "tab-hm",
+  "name": "people config",
+  "func": "flow.set('residents',[\n  {person:'person.colm_finn',   ping:'binary_sensor.colm_phone_home'},\n  {person:'person.olivia_finn', ping:'binary_sensor.olivia_phone_home'},\n  // add when Cian has a phone: {person:'person.cian_finn', ping:'binary_sensor.cian_phone_home'},\n]);\nflow.set('guests',[\n  {person:'person.daire_finn', ping:'binary_sensor.daire_phone_home'},\n]);\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 340,
+  "y": 600,
+  "wires": [
+   [
+    "hm-get"
+   ]
+  ]
+ },
+ {
+  "id": "hm-pres-get",
+  "type": "ha-get-entities",
+  "z": "tab-hm",
+  "name": "presence entities",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "x": 190,
+  "y": 120,
+  "wires": [
+   [
+    "hm-engine"
+   ]
+  ]
+ },
+ {
+  "id": "hm-notify-olivia",
+  "type": "api-call-service",
+  "z": "tab-hm",
+  "name": "notify Olivia",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_pixel_6a",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": \"\ud83c\udfe0 House Mode\", \"message\": msg.payload}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 810,
+  "y": 500,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "ha-server",
+  "type": "server",
+  "name": "Home Assistant",
+  "version": 5,
+  "addon": false,
+  "rejectUnauthorizedCerts": false,
+  "ha_boolean": "y|yes|true|on|home|open",
+  "connectionDelay": true,
+  "cacheJson": true,
+  "heartbeat": true,
+  "heartbeatInterval": 30,
+  "areaSelector": "friendly",
+  "deviceSelector": "friendly",
+  "entitySelector": "friendly",
+  "statusSeparator": "at: ",
+  "statusYear": "hidden",
+  "statusMonth": "short",
+  "statusDay": "numeric",
+  "statusHourCycle": "h23",
+  "statusTimeFormat": "h:m",
+  "enableGlobalContextStore": false
+ }
+]

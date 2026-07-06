@@ -1,0 +1,467 @@
+[
+ {
+  "id": "5a86c1a3371ffe9e",
+  "type": "tab",
+  "label": "Heating Control",
+  "disabled": false,
+  "info": "DRAFT 18-06-2026 - DISABLED. Schedule + presence -> climate.netatmo_smart_thermostat via HomeKit. Set Netatmo native schedule to flat night baseline before enabling. Away->night 19.5, 24h-empty->away 12 (input_boolean.heating_extended_away toggle, defaults ON). 30-min heartbeat re-assert. See project_heating_nodered memory."
+ },
+ {
+  "id": "heat-tick",
+  "type": "inject",
+  "z": "5a86c1a3371ffe9e",
+  "name": "boot seed + 60s",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "60",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 8,
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 130,
+  "y": 120,
+  "wires": [
+   [
+    "heat-get"
+   ]
+  ]
+ },
+ {
+  "id": "heat-presence",
+  "type": "server-state-changed",
+  "z": "5a86c1a3371ffe9e",
+  "name": "house_mode change",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "input_select.house_mode"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": true,
+  "ignorePrevStateUnavailable": true,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "eventData"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 120,
+  "y": 180,
+  "wires": [
+   [
+    "heat-get"
+   ]
+  ]
+ },
+ {
+  "id": "heat-get",
+  "type": "ha-get-entities",
+  "z": "5a86c1a3371ffe9e",
+  "name": "all entities",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "output_type": "array",
+  "output_empty_results": true,
+  "output_location_type": "msg",
+  "output_location": "payload",
+  "output_results_count": 1,
+  "x": 380,
+  "y": 150,
+  "wires": [
+   [
+    "heat-fn"
+   ]
+  ]
+ },
+ {
+  "id": "heat-fn",
+  "type": "function",
+  "z": "5a86c1a3371ffe9e",
+  "name": "heating controller",
+  "func": "// === Heating controller \u2014 House Mode + time + 2h BOOST + forecast pre-heat (02-07-2026; dash boost 04-07-2026) ===\n// Netatmo holds flat eco 18.5 baseline; this flow only RAISES via HomeKit set_temperature.\n// Out1 -> set thermostat; Out2 -> test notify (change only, quiet 22:00-07:00); Out3 -> input_text.heating_status.\nconst TEMP = { eco: 18.5, comfort: 20, night: 19.5, hot: 20.5, frost: 12 };\nconst BOOST_MS = 2 * 60 * 60 * 1000;   // manual override holds 2 hours\nconst MORNING_HOUR = 7;                // morning comfort warm-up starts 07:00 (base; forecast can bring earlier)\nconst PROX_M = 10000;                  // proximity pre-heat: within 10 km AND heading towards home -> comfort\n\nconst ents = Array.isArray(msg.payload) ? msg.payload : [];\nconst get = id => ents.find(e => e.entity_id === id);\nconst ds = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');\n\n// Guest mode: ONLY block Away (never let the house go cold with guests in);\n// Sleeping and Home run as normal (overnight 19.5, 7am warm-up, forecast pre-heat all still apply).\nconst guestOn = (() => { const g = get('input_boolean.guest_mode'); return g ? g.state === 'on' : false; })();\nconst hmRaw = (get('input_select.house_mode') || {}).state || 'Home';\nconst hm = (guestOn && hmRaw === 'Away') ? 'Home' : hmRaw;\nconst hmDisplay = guestOn ? hm + ' (guest)' : hm;\nconst mode = String(hm).toLowerCase();\n\n// Extended-away 24h deep setback (helper defaults ON if absent)\nconst extToggle = get('input_boolean.heating_extended_away');\nconst extendedAwayEnabled = extToggle ? (extToggle.state === 'on') : true;\nconst EMPTY_LIMIT_MS = 24 * 60 * 60 * 1000;\nlet emptySince = context.get('emptySince');\nif (mode === 'away') { if (!emptySince) emptySince = Date.now(); } else emptySince = null;\ncontext.set('emptySince', emptySince);\nconst longAway = !!emptySince && (Date.now() - emptySince) >= EMPTY_LIMIT_MS;\n\nconst now = new Date();\nconst nowMs = Date.now();\nconst mins = now.getHours() * 60 + now.getMinutes();\nconst hour = now.getHours();\nconst between = (m, sH, sM, eH, eM) => m >= sH * 60 + sM && m < eH * 60 + eM;\nconst hhmm = ms => { const d = new Date(ms); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };\n\n// --- scheduled target ---\nlet schedMode;\nif (mode !== 'away') flow.set('preheat_latch', false);   // any exit from Away clears the pre-heat latch\nif (mode === 'away') {\n  // Proximity pre-heat: within 10 km AND heading towards home -> warm for arrival.\n  // LATCHED: GPS direction flaps towards/stationary between fixes (glitch seen 05-07-2026:\n  // setpoint bounced 20 -> 18.5 -> 20 mid-approach). Once on, pre-heat holds for the rest of\n  // Away unless the person clearly leaves again (beyond PROX_CLEAR_M or distance unknown).\n  const PROX_CLEAR_M = 12000;\n  const pDist = parseFloat((get('sensor.12_the_oaks_nearest_distance') || {}).state);\n  const pDir = (get('sensor.12_the_oaks_nearest_direction_of_travel') || {}).state;\n  let preheat = flow.get('preheat_latch') || false;\n  if (!isNaN(pDist) && pDist <= PROX_M && pDir === 'towards') preheat = true;\n  if (isNaN(pDist) || pDist > PROX_CLEAR_M) preheat = false;\n  flow.set('preheat_latch', preheat);\n  schedMode = preheat ? 'comfort' : ((longAway && extendedAwayEnabled) ? 'frost' : 'eco');\n} else if (mode === 'sleeping') {\n  let sm = (hour >= MORNING_HOUR && hour < 12) ? 'comfort' : 'night';\n  // Forecast pre-heat: bring the morning comfort forward on cold mornings (set nightly by the fc sub-flow)\n  const ph = flow.get('preHeat');\n  if (ph && ph.day === ds(now) && nowMs >= ph.startMs && hour < MORNING_HOUR) sm = 'comfort';\n  schedMode = sm;\n} else {\n  schedMode = between(mins, 19, 0, 22, 0) ? 'hot' : 'comfort';\n}\nconst schedTarget = TEMP[schedMode];\n\n// --- manual boost detection (confirmed-setpoint method; immune to poll lag) ---\n// A confirmed external setpoint change ABOVE the scheduled target = 2h boost.\n// A change AT or BELOW the scheduled target (dial turned down / Netatmo app boost deleted ->\n// device reverts to its 18.5 baseline) = CANCEL any boost; the schedule reasserts. Never a \"boost down\".\nconst climate = get('climate.netatmo_smart_thermostat');\nconst curSet = climate && climate.attributes ? climate.attributes.temperature : null;\nconst lastTarget = context.get('lastTarget');\nlet confirmed = context.get('confirmed') || false;\nlet boostUntil = context.get('boostUntil') || 0;\nlet boostTemp = context.get('boostTemp');\nlet boostNote = null; // overrides the notify text for boost cancel/decline\n\nif (curSet != null && lastTarget != null && curSet === lastTarget) confirmed = true;\nif (mode !== 'away' && confirmed && curSet != null && lastTarget != null && curSet !== lastTarget\n    && !(boostUntil > nowMs && curSet === boostTemp)) {\n  if (curSet > schedTarget) {\n    boostTemp = curSet;\n    boostUntil = nowMs + BOOST_MS;       // start / restart the 2h hold (never starts while Away)\n  } else if (boostUntil > nowMs) {\n    boostUntil = 0; boostTemp = null;    // turned down to/below schedule -> cancel boost\n    boostNote = 'Boost cancelled - back to schedule';\n  }\n  context.set('boostTemp', boostTemp);\n  context.set('boostUntil', boostUntil);\n}\ncontext.set('confirmed', confirmed);\n\n// --- dashboard boost commands (input_buttons via msg.topic) ---\nif (msg.topic === 'boost-start') {\n  if (mode === 'away') {\n    boostNote = 'Boost ignored - house is Away';\n  } else {\n    const bt = parseFloat((get('input_number.heating_boost_temperature') || {}).state);\n    if (!isNaN(bt)) {\n      boostTemp = bt;\n      boostUntil = nowMs + BOOST_MS;\n      context.set('boostTemp', boostTemp);\n      context.set('boostUntil', boostUntil);\n    }\n  }\n}\nif (msg.topic === 'boost-cancel' && boostUntil > nowMs) {\n  boostUntil = 0; boostTemp = null;\n  context.set('boostTemp', null);\n  context.set('boostUntil', 0);\n  boostNote = 'Boost cancelled - back to schedule';\n}\n\n// Cancel any active boost the moment the house goes Away (don't heat an empty house)\nif (mode === 'away' && boostUntil > nowMs) { boostUntil = 0; boostTemp = null; }\n\nconst boosting = boostUntil > nowMs;\nif (!boosting) { context.set('boostUntil', 0); context.set('boostTemp', null); }\n\nconst effectiveMode = boosting ? 'boost' : schedMode;\nconst target = boosting ? boostTemp : schedTarget;\n\n// --- status text (out3; only written when it changes) ---\nconst statusText = boosting\n  ? ('Boost ' + target + '\u00b0 until ' + hhmm(boostUntil))\n  : (hmDisplay + ': ' + effectiveMode + ' ' + target + '\u00b0');\nlet statusMsg = null;\nif (statusText !== context.get('lastStatus')) {\n  context.set('lastStatus', statusText);\n  statusMsg = { statusText: statusText };\n}\n\n// --- de-dupe + 30-min re-assert ---\nconst lastTs = context.get('lastTs') || 0;\nconst stale = (nowMs - lastTs) > 30 * 60 * 1000;\nif (lastTarget === target && !stale) {\n  // no thermostat write needed; still surface status changes + boost notes (quiet hours apply)\n  let n2 = null;\n  if (boostNote && !(hour >= 22 || hour < 7)) n2 = { notify_title: 'Heating', notify_message: boostNote };\n  return [null, n2, statusMsg];\n}\nconst changed = (lastTarget !== target);\ncontext.set('lastTarget', target);\ncontext.set('lastTs', nowMs);\ncontext.set('confirmed', false);          // wait for the entity to reflect this new write\n\nmsg.target = target;\nmsg.info = { houseMode: hmDisplay, effectiveMode, target, boosting, longAway };\n\nconst boostMins = boosting ? Math.round((boostUntil - nowMs) / 60000) : 0;\nnode.status({\n  fill: boosting ? 'yellow' : (mode === 'away' ? 'blue' : (mode === 'sleeping' ? 'grey' : 'green')),\n  shape: 'dot',\n  text: boosting ? ('BOOST ' + target + 'C ' + boostMins + 'm left') : (hmDisplay + ' -> ' + effectiveMode + ' ' + target + 'C')\n});\n\n// --- test notification: change only, quiet 22:00-07:00 ---\nlet notifyMsg = null;\nconst nightQuiet = (hour >= 22 || hour < 7);\nif (changed && !nightQuiet) {\n  let m;\n  if (boostNote) {\n    m = boostNote + ' (' + effectiveMode + ' ' + target + 'C)';\n  } else if (boosting) {\n    m = 'Boost ' + target + 'C, holding until ' + hhmm(boostUntil);\n  } else {\n    m = hmDisplay + ' -> ' + effectiveMode + ' ' + target + 'C';\n  }\n  notifyMsg = { notify_title: 'Heating', notify_message: m };\n}\nreturn [msg, notifyMsg, statusMsg];\n",
+  "outputs": 3,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 590,
+  "y": 150,
+  "wires": [
+   [
+    "heat-set"
+   ],
+   [
+    "heat-notify"
+   ],
+   [
+    "heat-status"
+   ]
+  ]
+ },
+ {
+  "id": "heat-set",
+  "type": "api-call-service",
+  "z": "5a86c1a3371ffe9e",
+  "name": "Set thermostat temp",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "climate.set_temperature",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [
+   "climate.netatmo_smart_thermostat"
+  ],
+  "data": "{\"temperature\": msg.target}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 820,
+  "y": 140,
+  "wires": [
+   [
+    "heat-dbg"
+   ]
+  ]
+ },
+ {
+  "id": "heat-dbg",
+  "type": "debug",
+  "z": "5a86c1a3371ffe9e",
+  "name": "heat debug",
+  "active": true,
+  "tosidebar": true,
+  "console": false,
+  "tostatus": true,
+  "complete": "info",
+  "targetType": "msg",
+  "statusVal": "info.target",
+  "statusType": "msg",
+  "x": 1050,
+  "y": 140,
+  "wires": []
+ },
+ {
+  "id": "heat-notify",
+  "type": "api-call-service",
+  "z": "5a86c1a3371ffe9e",
+  "name": "Notify Colm (test)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_np3",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 850,
+  "y": 220,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "heat-fc-cron",
+  "type": "inject",
+  "z": "5a86c1a3371ffe9e",
+  "name": "nightly 21:30",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "",
+  "crontab": "30 21 * * *",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 120,
+  "y": 400,
+  "wires": [
+   [
+    "heat-fc-get"
+   ]
+  ]
+ },
+ {
+  "id": "heat-fc-get",
+  "type": "api-call-service",
+  "z": "5a86c1a3371ffe9e",
+  "name": "Met Eireann hourly",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "weather.get_forecasts",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [
+   "weather.forecast_home"
+  ],
+  "data": "{\"type\":\"hourly\"}",
+  "dataType": "json",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "results"
+   }
+  ],
+  "queue": "none",
+  "x": 380,
+  "y": 400,
+  "wires": [
+   [
+    "heat-fc-fn"
+   ]
+  ]
+ },
+ {
+  "id": "heat-fc-fn",
+  "type": "function",
+  "z": "5a86c1a3371ffe9e",
+  "name": "preheat decision",
+  "func": "// === Nightly forecast pre-heat decision (~21:30) ===\n// Reads the Met \u00c9ireann hourly forecast (from heat-fc-get) and decides how early to\n// start tomorrow's 07:00 warm-up. Sets flow.preHeat for heat-fn. NO notification (removed 02-07-2026).\nconst MORNING_HOUR = 7;\nconst p = msg.payload || {};\nlet fc = p.forecast\n  || (p['weather.forecast_home'] && p['weather.forecast_home'].forecast)\n  || (msg.response && msg.response.forecast)\n  || [];\nif (!Array.isArray(fc)) fc = [];\nif (fc.length === 0) {\n  node.warn('preheat: forecast empty. msg keys=' + JSON.stringify(Object.keys(msg)) + ' payload keys=' + JSON.stringify(typeof p === 'object' ? Object.keys(p) : typeof p));\n}\n\nconst now = new Date();\nconst ds = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');\n\n// tomorrow-morning entries: future, local (Dublin) hour 5..7\nconst morning = fc\n  .map(x => ({ d: new Date(x.datetime), t: x.temperature }))\n  .filter(x => x.d > now && x.d.getHours() >= 5 && x.d.getHours() <= 7 && x.t != null);\n\nif (!morning.length) {\n  node.warn('preheat: no morning forecast entries (payload shape?)');\n  node.status({ fill: 'grey', shape: 'ring', text: 'no forecast' });\n  return null;\n}\n\nconst minTemp = Math.min(...morning.map(x => x.t));\nlet lead = 0;\nif (minTemp < -3) lead = 60;\nelse if (minTemp < 0) lead = 45;\nelse if (minTemp < 4) lead = 30;\nelse if (minTemp < 8) lead = 15;\nnode.warn('preheat check: fc=' + fc.length + ' morning=' + morning.length + ' minTemp=' + minTemp + ' lead=' + lead);\n\nif (lead === 0) {\n  flow.set('preHeat', null);\n  node.status({ fill: 'green', shape: 'dot', text: 'no preheat (' + minTemp + 'C)' });\n  return null;                       // mild enough -> no early start\n}\n\nconst day = morning[0].d;\nconst start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), MORNING_HOUR, 0, 0);\nstart.setMinutes(start.getMinutes() - lead);\nconst hhmm = String(start.getHours()).padStart(2, '0') + ':' + String(start.getMinutes()).padStart(2, '0');\n\nflow.set('preHeat', { day: ds(day), startMs: start.getTime(), leadMins: lead, temp: minTemp });\nnode.status({ fill: 'yellow', shape: 'dot', text: 'preheat ' + hhmm + ' (' + minTemp + 'C)' });\n\n// Notify ONLY when the forecast low is sub-zero / freezing (user 02-07-2026)\nif (minTemp < 0) {\n  msg.notify_title = '\u2744\ufe0f Freezing morning ahead';\n  msg.notify_message = 'Low around ' + minTemp + '\u00b0C overnight \u2014 I\\'ll start warming the house early, from ' + hhmm + '.';\n  return msg;\n}\nreturn null;                         // above-freezing pre-heat happens silently (no push)\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 600,
+  "y": 400,
+  "wires": [
+   [
+    "heat-fc-np3",
+    "heat-fc-oli"
+   ]
+  ]
+ },
+ {
+  "id": "heat-fc-np3",
+  "type": "api-call-service",
+  "z": "5a86c1a3371ffe9e",
+  "name": "Notify Colm (freezing)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_np3",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 820,
+  "y": 390,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "heat-fc-oli",
+  "type": "api-call-service",
+  "z": "5a86c1a3371ffe9e",
+  "name": "Notify Olivia (freezing)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_pixel_6a",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 820,
+  "y": 430,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "heat-btn-boost",
+  "type": "server-state-changed",
+  "z": "5a86c1a3371ffe9e",
+  "name": "heating_boost_start",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "entities": {
+   "entity": [
+    "input_button.heating_boost_start"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "eventData"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "boost-start",
+    "valueType": "str"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 110,
+  "y": 340,
+  "wires": [
+   [
+    "heat-get"
+   ]
+  ]
+ },
+ {
+  "id": "heat-btn-cancel",
+  "type": "server-state-changed",
+  "z": "5a86c1a3371ffe9e",
+  "name": "heating_boost_cancel",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "entities": {
+   "entity": [
+    "input_button.heating_boost_cancel"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "eventData"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "boost-cancel",
+    "valueType": "str"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 120,
+  "y": 260,
+  "wires": [
+   [
+    "heat-get"
+   ]
+  ]
+ },
+ {
+  "id": "heat-status",
+  "type": "api-call-service",
+  "z": "5a86c1a3371ffe9e",
+  "name": "write heating status",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "input_text.set_value",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [
+   "input_text.heating_status"
+  ],
+  "data": "{\"value\": msg.statusText}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 850,
+  "y": 280,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "ha-server",
+  "type": "server",
+  "name": "Home Assistant",
+  "version": 5,
+  "addon": false,
+  "rejectUnauthorizedCerts": false,
+  "ha_boolean": "y|yes|true|on|home|open",
+  "connectionDelay": true,
+  "cacheJson": true,
+  "heartbeat": true,
+  "heartbeatInterval": 30,
+  "areaSelector": "friendly",
+  "deviceSelector": "friendly",
+  "entitySelector": "friendly",
+  "statusSeparator": "at: ",
+  "statusYear": "hidden",
+  "statusMonth": "short",
+  "statusDay": "numeric",
+  "statusHourCycle": "h23",
+  "statusTimeFormat": "h:m",
+  "enableGlobalContextStore": false
+ }
+]

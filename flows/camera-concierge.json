@@ -1,0 +1,922 @@
+[
+ {
+  "id": "tab-cam",
+  "type": "tab",
+  "label": "Camera Concierge",
+  "disabled": false,
+  "info": ""
+ },
+ {
+  "id": "cam-patio",
+  "type": "server-state-changed",
+  "z": "tab-cam",
+  "name": "patio_door_open",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "input_boolean.patio_door_open"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": true,
+  "ignorePrevStateUnavailable": true,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 140,
+  "y": 920,
+  "wires": [
+   [
+    "cam-patio-set"
+   ]
+  ]
+ },
+ {
+  "id": "cam-patio-set",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "store patio state",
+  "func": "flow.set('patio_open', msg.payload === 'on');\nreturn null;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 380,
+  "y": 920,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-mqtt-reviews",
+  "type": "mqtt in",
+  "z": "tab-cam",
+  "name": "frigate/reviews",
+  "topic": "frigate/reviews",
+  "qos": "0",
+  "datatype": "json",
+  "broker": "mqtt-frigate",
+  "nl": false,
+  "rap": true,
+  "rh": 0,
+  "inputs": 0,
+  "x": 90,
+  "y": 400,
+  "wires": [
+   [
+    "cam-fn-review",
+    "cam-car-fn"
+   ]
+  ]
+ },
+ {
+  "id": "cam-fn-review",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "Parse review",
+  "func": "const r=msg.payload; if(!r) return null;\nconst a=r.after||{}; if(a.severity!=='alert') return null;\nconst cam=a.camera||'';\nif((cam==='Rear_Door'||cam==='Rear_Shed') && flow.get('patio_open')) return null;\nconst objs=([...new Set(((a.data&&a.data.objects)||[]).map(o=>o.replace(/-verified$/,'')))]);\nconst det=(a.data&&a.data.detections)||[];\nconst label=objs.length?objs.join(', '):'Motion';\nconst cl=label.charAt(0).toUpperCase()+label.slice(1);\nconst names={Front_Car:'Front Car',Front_Van:'Front Van',Rear_Door:'Rear Door',Rear_Shed:'Rear Shed',Doorbell:'Doorbell'};\nconst camName=names[cam]||cam;\nconst subs=(a.data&&a.data.sub_labels)||[]; const personName=((objs.indexOf('person')!==-1)&&subs.length&&subs[0])?subs[0]:null;\nconst NB=env.get('NABU_URL');\nconst rid=a.id; const rkey='rev_'+String(rid).split('.').join('_');\nconst gif=NB+'/api/frigate/notifications/'+rid+'/review_preview.gif';\nconst snap=det.length?(NB+'/api/frigate/notifications/'+det[0]+'/snapshot.jpg?bbox=1'):null;\nconst clip=det.length?(NB+'/api/frigate/notifications/'+det[0]+'/'+cam+'/clip.mp4'):null;\nconst tm=new Date((a.start_time||Date.now()/1000)*1000).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});\nconst type=r.type;\nconst GMAP={Front_Car:'front',Front_Van:'front',Doorbell:'doorbell',Rear_Door:'rear',Rear_Shed:'rear'};\nconst GLABEL={front:'Front',doorbell:'Doorbell',rear:'Rear'};\nconst PRIO={Front_Car:1,Front_Van:2,Doorbell:1,Rear_Door:1,Rear_Shed:2};\nconst KLABEL={person:'Person',car:'Vehicle',motorcycle:'Motorcycle',bicycle:'Bicycle',package:'Package',umbrella:'Umbrella'};\nfunction ohas(l){return objs.indexOf(l)!==-1;}\nlet kind=null;\nif(ohas('person')) kind='person'; else if(ohas('car')||ohas('truck')) kind='car'; else if(ohas('motorcycle')) kind='motorcycle'; else if(ohas('bicycle')) kind='bicycle'; else if(ohas('package')) kind='package'; else if(ohas('umbrella')) kind='umbrella';\nconst kindLabel=kind?KLABEL[kind]:'';\nconst group=GMAP[cam]||null;\nconst WINDOW=120000;\nif(kind && group){\n  const gl=GLABEL[group]; const gkey='grp_'+group+'_'+kind;\n  if(type==='new'||type==='update'){\n    let grp=flow.get(gkey);\n    const newInc=(!grp||(Date.now()-grp.lastAt)>WINDOW);\n    if(newInc) grp={tag:'frig_'+group+'_'+kind+'_'+rid,cams:[],snap:null,snapCam:null,gif:null,gifCam:null,clip:null,lastAt:0,firstCam:cam};\n    const had=grp.cams.indexOf(camName)!==-1;\n    if(!had) grp.cams.push(camName);\n    if(!grp.firstCam) grp.firstCam=cam;\n    if(snap && cam===grp.firstCam){ grp.snap=snap; grp.snapCam=cam; if(clip) grp.clip=clip; }\n    grp.lastAt=Date.now(); flow.set(gkey,grp); flow.set(rkey,{gkey:gkey,tag:grp.tag});\n    let door=null;\n    if(cam==='Doorbell'&&kind==='person'&&!had) door={camName:camName,gif:gif,snap:snap,tag:grp.tag,_src:'doorbell'};\n    const titl='\\ud83d\\udcf7 '+(personName||kindLabel)+' \\u2014 '+gl; const body=grp.cams.join(', ')+' at '+tm; const msgs=[];\n    if(newInc){\n      msgs.push({_src:'push-grp',title:titl,message:body,ndata:{tag:grp.tag,channel:'Cameras'}});\n      if(grp.snap){ const nd={tag:grp.tag,channel:'Cameras',image:grp.snap}; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;} msgs.push({_src:'push-grp-snap',title:titl,message:body,ndata:nd}); }\n    } else if(!had){\n      const nd={tag:grp.tag,channel:'Cameras'}; const img=grp.gif||grp.snap; if(img) nd.image=img; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;}\n      msgs.push({_src:'push-grp',title:titl,message:body,ndata:nd});\n    }\n    return [msgs.length?msgs:null, door];\n  }\n  if(type==='end'){\n    const meta=flow.get(rkey); flow.set(rkey,undefined);\n    if(!meta||!meta.gkey) return null;\n    let grp=flow.get(meta.gkey);\n    if(!grp||grp.tag!==meta.tag) return null;\n    const prio=PRIO[cam]||99; const cur=grp.gifCam?(PRIO[grp.gifCam]||99):999;\n    if(cam!==grp.firstCam || grp.gifCam) return null;\n    grp.gif=gif; grp.gifCam=cam; if(clip) grp.clip=clip; flow.set(meta.gkey,grp);\n    const parts=meta.gkey.split('_'); const gl2=GLABEL[parts[1]]; const kl2=KLABEL[parts[2]]||parts[2];\n    const nd={tag:grp.tag,image:grp.gif,channel:'Cameras'}; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;}\n    return [{_src:'push-grp-gif:'+cam,title:'\\ud83d\\udcf7 '+(personName||kl2)+' \\u2014 '+gl2,message:grp.cams.join(', '),ndata:nd},null];\n  }\n  return null;\n}\nif(type==='new'||type==='update'){\n  if(flow.get(rkey)) return null;\n  if(Date.now()-(flow.get('push_'+label)||0)<60000){ flow.set(rkey,'skip'); return null; }\n  flow.set('push_'+label,Date.now()); flow.set(rkey,'sent');\n  const titl=cl+' detected \\u2014 '+camName; const body=cl+' detected - '+camName+' at '+tm;\n  const msgs=[{_src:'push-instant',title:titl,message:body,ndata:{tag:'frigate_'+rid,channel:'Cameras'}}];\n  if(snap){ const nd={tag:'frigate_'+rid,channel:'Cameras',image:snap}; if(clip){nd.clickAction=clip;nd.url=clip;} msgs.push({_src:'push-snap',title:titl,message:body,ndata:nd}); }\n  return [msgs,null];\n}\nif(type==='end'){\n  const st=flow.get(rkey); flow.set(rkey,undefined);\n  if(st!=='sent') return null;\n  const nd={tag:'frigate_'+rid,image:gif,channel:'Cameras'}; if(clip){nd.clickAction=clip;nd.url=clip;}\n  return [{_src:'push-gif',title:cl+' \\u2014 '+camName,message:cl+' at '+camName+' ('+tm+')',ndata:nd},null];\n}\nreturn null;\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 430,
+  "y": 300,
+  "wires": [
+   [
+    "cam-away-boost"
+   ],
+   [
+    "cam-door-delay",
+    "cam-log"
+   ]
+  ]
+ },
+ {
+  "id": "cam-notify-np3",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Push Colm (np3)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_np3",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": msg.ndata}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1130,
+  "y": 360,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-notify-olivia",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Push Olivia (pixel_6a)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_pixel_6a",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": msg.ndata}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1140,
+  "y": 280,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-snapshot",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Doorbell snapshot",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "camera.snapshot",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [
+   "camera.doorbell"
+  ],
+  "data": "{\"filename\": \"/config/www/doorbell_snapshot.jpg\"}",
+  "dataType": "json",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 830,
+  "y": 580,
+  "wires": [
+   [
+    "cam-cast"
+   ]
+  ]
+ },
+ {
+  "id": "cam-cast",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Cast to kitchen display",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "media_player.play_media",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [
+   "media_player.kitchen_display_cast"
+  ],
+  "data": "{\"media_content_id\": url & \"&_t=\" & $string($floor($millis()/1000)), \"media_content_type\": \"image/jpeg\"}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1140,
+  "y": 540,
+  "wires": [
+   [
+    "cam-cast-delay"
+   ]
+  ]
+ },
+ {
+  "id": "cam-cast-delay",
+  "type": "delay",
+  "z": "tab-cam",
+  "name": "20s",
+  "pauseType": "delay",
+  "timeout": "20",
+  "timeoutUnits": "seconds",
+  "rate": "1",
+  "nbRateUnits": "1",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 1270,
+  "y": 660,
+  "wires": [
+   [
+    "cam-cast-off"
+   ]
+  ]
+ },
+ {
+  "id": "cam-cast-off",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Display off",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "media_player.turn_off",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [
+   "media_player.kitchen_display_cast"
+  ],
+  "data": "{}",
+  "dataType": "json",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1390,
+  "y": 740,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-shield",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Shield TV overlay",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.nvidia_shield",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"message\": who & \" at the doorbell\", \"title\": \"Doorbell\", \"data\": {\"duration\": \"20\", \"position\": \"top-right\", \"image\": image}}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1130,
+  "y": 440,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-courier-trg",
+  "type": "server-state-changed",
+  "z": "tab-cam",
+  "name": "courier counts",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "sensor.front_car_dpd_count",
+    "sensor.front_car_gls_count",
+    "sensor.front_car_amazon_count",
+    "sensor.front_car_ups_count",
+    "sensor.front_car_fedex_count",
+    "sensor.front_car_dhl_count",
+    "sensor.front_car_an_post_count",
+    "sensor.front_van_dpd_count",
+    "sensor.front_van_gls_count",
+    "sensor.front_van_amazon_count",
+    "sensor.front_van_ups_count",
+    "sensor.front_van_fedex_count",
+    "sensor.front_van_dhl_count",
+    "sensor.front_van_an_post_count"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": true,
+  "ignorePrevStateUnavailable": true,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   },
+   {
+    "property": "data",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "eventData"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 90,
+  "y": 40,
+  "wires": [
+   [
+    "cam-fn-courier"
+   ]
+  ]
+ },
+ {
+  "id": "cam-fn-courier",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "Courier (rising+dedupe)",
+  "func": "if (flow.get('house_mode') === 'Sleeping') return null;\nconst newv = Number(msg.payload);\nif (!(newv > 0)) return null;\n// entityId valueType is flaky on this palette version (came through empty on a\n// real An Post detection 17-06-2026 -> blank \" has landed\"). Prefer eventData.\nconst eid = (msg.data && (msg.data.entity_id || (msg.data.new_state && msg.data.new_state.entity_id))) || msg.topic || '';\nconst key = eid.replace('sensor.front_car_','').replace('sensor.front_van_','').replace('_count','');\nconst names = {dpd:'DPD', gls:'GLS', amazon:'Amazon', ups:'UPS', fedex:'FedEx', dhl:'DHL', an_post:'On Fwuisht'};\nconst name = names[key];\nif (!name) { node.warn('courier: unresolved entity_id \"' + eid + '\" topic \"' + (msg.topic || '') + '\" - no announcement'); return null; }\nconst now = Date.now();\nif (now - (flow.get('cour_' + key) || 0) < 300000) return null;\nflow.set('cour_' + key, now);\nif (now - (flow.get('delivery_tts') || 0) < 120000) return null;\nflow.set('delivery_tts', now);\nmsg._src = 'courier'; msg.message = name + ' has landed.';\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 490,
+  "y": 40,
+  "wires": [
+   [
+    "cam-tts-courier",
+    "cam-log"
+   ]
+  ]
+ },
+ {
+  "id": "cam-tts-courier",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "TTS courier",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "script.tts_announce",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"message\": msg.message}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1170,
+  "y": 40,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-postman-trg",
+  "type": "server-state-changed",
+  "z": "tab-cam",
+  "name": "postman last camera",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "sensor.frigate_postman_last_camera"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "Doorbell",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": true,
+  "ignorePrevStateUnavailable": true,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 110,
+  "y": 100,
+  "wires": [
+   [
+    "cam-fn-postman"
+   ]
+  ]
+ },
+ {
+  "id": "cam-fn-postman",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "Postman (dedupe)",
+  "func": "if (flow.get('house_mode') === 'Sleeping') return null;\nconst now = Date.now();\nif (now - (flow.get('postman') || 0) < 300000) return null;\nflow.set('postman', now);\nif (now - (flow.get('delivery_tts') || 0) < 120000) return null;\nflow.set('delivery_tts', now);\nmsg._src = 'postman'; msg.message = 'The postman has been detected. You have post or a package.';\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 470,
+  "y": 100,
+  "wires": [
+   [
+    "cam-tts-postman",
+    "cam-log"
+   ]
+  ]
+ },
+ {
+  "id": "cam-tts-postman",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "TTS postman",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "script.tts_announce",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"message\": msg.message}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1180,
+  "y": 100,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-log",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "log line",
+  "func": "const ts = new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});\nlet src = msg._src || 'event';\nlet what = msg.title || msg.message || ('doorbell ' + (msg.camName||''));\nmsg.payload = ts + '  [' + src + ']  ' + what + '\\n';\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 800,
+  "y": 200,
+  "wires": [
+   [
+    "cam-logfile"
+   ]
+  ]
+ },
+ {
+  "id": "cam-logfile",
+  "type": "file",
+  "z": "tab-cam",
+  "name": "concierge log",
+  "filename": "/data/camera_concierge.log",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": true,
+  "overwriteFile": "false",
+  "encoding": "none",
+  "x": 1070,
+  "y": 200,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-door-delay",
+  "type": "delay",
+  "z": "tab-cam",
+  "name": "2s (img+face ready)",
+  "pauseType": "delay",
+  "timeout": "2",
+  "timeoutUnits": "seconds",
+  "rate": "1",
+  "nbRateUnits": "1",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 380,
+  "y": 440,
+  "wires": [
+   [
+    "cam-door-get"
+   ]
+  ]
+ },
+ {
+  "id": "cam-door-get",
+  "type": "ha-get-entities",
+  "z": "tab-cam",
+  "name": "states",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "entities",
+  "outputResultsCount": 1,
+  "output_type": "array",
+  "output_empty_results": true,
+  "output_location_type": "msg",
+  "output_location": "entities",
+  "output_results_count": 1,
+  "x": 590,
+  "y": 440,
+  "wires": [
+   [
+    "cam-door-fn"
+   ]
+  ]
+ },
+ {
+  "id": "cam-door-fn",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "doorbell name/img",
+  "func": "const ents=Array.isArray(msg.entities)?msg.entities:[];\nconst S=id=>{const e=ents.find(x=>x.entity_id===id);return e&&e.state;};\nconst f=S('sensor.doorbell_last_recognized_face');\nconst bad=['none','unknown','clear','unavailable',''];\nconst name=(f&&bad.indexOf(String(f).toLowerCase())===-1)?f:null;\nconst who=name||'Person';\nconst snap=msg.snap||null;\nconst tag=msg.tag;\nnode.warn('[cam] doorbell person: '+who+(snap?'':' (no snap)'));\nconst shield={who:who,image:snap};\nconst cast=snap?{url:snap}:null;\nconst phone=name?{title:'\ud83d\udc64 '+name+' at the doorbell',message:'Doorbell',ndata:{tag:tag,channel:'Cameras',image:snap}}:null;\nreturn [shield,cast,phone];",
+  "outputs": 3,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 810,
+  "y": 440,
+  "wires": [
+   [
+    "cam-shield"
+   ],
+   [
+    "cam-cast"
+   ],
+   [
+    "cam-notify-np3",
+    "cam-notify-olivia"
+   ]
+  ]
+ },
+ {
+  "id": "cam-car-fn",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "Car deterrent (overnight)",
+  "func": "const r=msg.payload; if(!r) return null;\nconst a=r.after||{};\nif(a.severity!=='alert') return null;\nif(r.type!=='new' && r.type!=='update') return null;\nconst cam=a.camera||'';\nif(cam!=='Front_Car' && cam!=='Front_Van') return null;\nconst objs=[...new Set(((a.data&&a.data.objects)||[]).map(o=>o.replace(/-verified$/,'')))]; \nif(objs.indexOf('person')===-1) return null;\nconst zones=((a.data&&a.data.zones)||[]).map(z=>String(z).toLowerCase());\nif(zones.indexOf('182_focus_zone')===-1 && zones.indexOf('162_focus_zone')===-1) return null;\n// fire when house is Sleeping (replaces fixed 23:00-06:30 window)\nif(flow.get('house_mode') !== 'Sleeping') return null;\n// cooldown 120s (strobe runs ~30s)\nconst last=flow.get('car_last')||0;\nif(Date.now()-last < 120000) return null;\nflow.set('car_last', Date.now());\nconst now=new Date();\nconst ts=now.toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});\nconst line={payload:ts+'  [car-deterrent] person in focus zone - '+cam+'\\n'};\nnode.send([{}, {}, line]);\nreturn null;\n",
+  "outputs": 3,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 490,
+  "y": 680,
+  "wires": [
+   [
+    "cam-car-strobe"
+   ],
+   [
+    "cam-car-tts",
+    "cam-car-tts-sitting"
+   ],
+   [
+    "cam-logfile"
+   ]
+  ]
+ },
+ {
+  "id": "cam-car-strobe",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Strobe sitting+hallway",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "script.strobe_lights",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"lights\":[\"light.sitting_room\",\"light.hallway\"],\"count\":10,\"on_seconds\":1.5,\"off_seconds\":1.5}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 900,
+  "y": 680,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-car-tts",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "TTS bedroom",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "script.tts_announce",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"message\":\"Person detected on front camera at car\",\"target_player\":\"media_player.colm_bedroom_speaker_cast\"}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 880,
+  "y": 760,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-car-tts-sitting",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "TTS sitting room",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "script.tts_announce",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"message\":\"Person detected on front camera at car\",\"target_player\":\"media_player.sitting_room_speaker_cast\"}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 880,
+  "y": 840,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-hm-watcher",
+  "type": "server-state-changed",
+  "z": "tab-cam",
+  "name": "house_mode",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "input_select.house_mode"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": true,
+  "ignorePrevStateUnavailable": true,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "eventData"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 140,
+  "y": 820,
+  "wires": [
+   [
+    "cam-hm-fn"
+   ]
+  ]
+ },
+ {
+  "id": "cam-hm-fn",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "store house_mode",
+  "func": "const ev = msg.payload || {};\nconst mode = ev.new_state ? ev.new_state.state : '';\nif (mode) flow.set('house_mode', mode);\nnode.warn('[cam-concierge] house_mode: ' + mode);\nreturn null;\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 370,
+  "y": 820,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-hm-init",
+  "type": "inject",
+  "z": "tab-cam",
+  "name": "startup (2s)",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 2,
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 130,
+  "y": 1020,
+  "wires": [
+   [
+    "cam-hm-init-get"
+   ]
+  ]
+ },
+ {
+  "id": "cam-hm-init-get",
+  "type": "ha-get-entities",
+  "z": "tab-cam",
+  "name": "get house_mode",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [
+   {
+    "property": "entity_id",
+    "logic": "is",
+    "value": "input_select.house_mode",
+    "valueType": "str"
+   }
+  ],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "x": 390,
+  "y": 1020,
+  "wires": [
+   [
+    "cam-hm-startup-fn"
+   ]
+  ]
+ },
+ {
+  "id": "cam-hm-startup-fn",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "seed house_mode",
+  "func": "const ents = Array.isArray(msg.payload) ? msg.payload : [];\nconst hm = ents.find(x => x.entity_id === 'input_select.house_mode');\nconst mode = hm ? hm.state : 'Home';\nflow.set('house_mode', mode);\nnode.warn('[cam-concierge] startup house_mode=' + mode);\nreturn null;\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 710,
+  "y": 1020,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-away-boost",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "away priority boost",
+  "func": "if(flow.get('house_mode')==='Away'){\n  msg.ndata=msg.ndata||{};\n  msg.ndata.ttl=0;\n  msg.ndata.priority='high';\n  msg.ndata.channel='Cameras Away';\n  msg.ndata.importance='high';\n  if(msg.title&&msg.title.indexOf('\\u26a0')!==0)msg.title='\\u26a0\\ufe0f '+msg.title;\n}\nreturn msg;\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 730,
+  "y": 300,
+  "wires": [
+   [
+    "cam-notify-np3",
+    "cam-notify-olivia",
+    "cam-log"
+   ]
+  ]
+ },
+ {
+  "id": "ha-server",
+  "type": "server",
+  "name": "Home Assistant",
+  "version": 5,
+  "addon": false,
+  "rejectUnauthorizedCerts": false,
+  "ha_boolean": "y|yes|true|on|home|open",
+  "connectionDelay": true,
+  "cacheJson": true,
+  "heartbeat": true,
+  "heartbeatInterval": 30,
+  "areaSelector": "friendly",
+  "deviceSelector": "friendly",
+  "entitySelector": "friendly",
+  "statusSeparator": "at: ",
+  "statusYear": "hidden",
+  "statusMonth": "short",
+  "statusDay": "numeric",
+  "statusHourCycle": "h23",
+  "statusTimeFormat": "h:m",
+  "enableGlobalContextStore": false
+ },
+ {
+  "id": "mqtt-frigate",
+  "type": "mqtt-broker",
+  "name": "Frigate MQTT",
+  "broker": "10.0.0.229",
+  "port": "1883",
+  "clientid": "node-red-cam",
+  "autoConnect": true,
+  "usetls": false,
+  "protocolVersion": "4",
+  "keepalive": "60",
+  "cleansession": true
+ }
+]

@@ -20,6 +20,14 @@ The Node-RED flows + config behind the automations in [colfin22/ha-config](https
   NR_ADMIN_HASH=<bcrypt hash, with every $ escaped as $$>    # editor login (adminAuth reads these from the environment)
   ```
 
+## Want one of these flows? (per-tab exports)
+The `flows/` directory holds an **importable JSON per tab**, regenerated automatically on
+every nightly backup — grab a file and paste it into Node-RED via **Menu → Import**. Each
+file includes the config nodes its flow references (a Home Assistant server node, and the
+MQTT broker for the camera flow) — after importing, point those at your own HA/MQTT and add
+your credentials; they are exported without secrets. Entity ids, camera names and notify
+targets are this house's — expect to search-and-replace.
+
 ## Restore
 1. PBS-restore or rebuild the LXC (Debian + Docker + compose).
 2. `git clone https://github.com/colfin22/node-red-config.git /opt/node-red` (or via the repo's SSH deploy-key alias)
@@ -27,7 +35,7 @@ The Node-RED flows + config behind the automations in [colfin22/ha-config](https
 4. Open the editor, re-enter the HA token (`ha-server`) + MQTT password (`mqtt-frigate`), Deploy.
 
 ## Auto-backup
-`node-red-backup.timer` (systemd) runs `git-backup.sh` daily at 02:30 — commits + pushes if anything changed.
+`node-red-backup.timer` (systemd) runs `git-backup.sh` daily at 02:30 — regenerates `flows/`, then commits + pushes if anything changed. The repo is public, so the script **refuses to push and raises an alert** if anything committed matches a secret pattern (API tokens, bcrypt hashes, JWTs, private keys, remote-access URLs).
 
 ---
 

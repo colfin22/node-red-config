@@ -3790,6 +3790,79 @@
         ]
     },
     {
+        "id": "esbn-cron",
+        "type": "inject",
+        "z": "tab-ih",
+        "name": "ESBN staleness hourly",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3600",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 30,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 960,
+        "wires": [
+            [
+                "esbn-get"
+            ]
+        ]
+    },
+    {
+        "id": "esbn-get",
+        "type": "ha-get-entities",
+        "z": "tab-ih",
+        "name": "get esbn_last_update",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [
+            {
+                "property": "entity_id",
+                "logic": "is",
+                "value": "sensor.esbn_meter_6830cfea50b0_esbn_last_update",
+                "valueType": "str"
+            }
+        ],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "payload",
+        "outputResultsCount": 1,
+        "x": 440,
+        "y": 960,
+        "wires": [
+            [
+                "esbn-fn"
+            ]
+        ]
+    },
+    {
+        "id": "esbn-fn",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "ESBN stale check (>13h)",
+        "func": "// Add-on polls every 6h; >13h since last successful poll = two misses = stuck\n// (04-07-2026: portal ReadTimeout crashed the add-on, sensors froze 2 days unseen).\n// NB data_lag (meter-read age, up to ~4 days) is normal - we check the POLL time.\nvar LIMIT_H = 13;\nvar REALERT_MS = 6*60*60*1000; // re-alert at most every 6h while still stale\nvar ents = msg.payload || [];\nvar st = ents.length ? ents[0].state : null;\nvar ageH = null;\nif (st && st !== 'unknown' && st !== 'unavailable') {\n    var t = Date.parse(st);\n    if (!isNaN(t)) ageH = (Date.now() - t) / 3600000;\n}\nvar stale = (ageH === null) || (ageH > LIMIT_H);\nif (!stale) { context.set('lastAlert', 0); return null; }\nvar last = context.get('lastAlert') || 0;\nif (Date.now() - last < REALERT_MS) return null;\ncontext.set('lastAlert', Date.now());\nvar detail = (ageH === null)\n  ? 'esbn_last_update sensor is ' + (st || 'missing') + ' - add-on may be dead.'\n  : 'Last successful ESBN poll was ' + ageH.toFixed(1) + 'h ago (6h cycle, limit ' + LIMIT_H + 'h). Add-on likely crashed on a portal timeout - check/restart esbn-to-mqtt.';\nreturn {cat: 'Service', sub: 'ESBN add-on', message: detail, tag: 'esbn_stale'};\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 960,
+        "wires": [
+            [
+                "ih-send"
+            ]
+        ]
+    },
+    {
         "id": "iw-http",
         "type": "http in",
         "z": "tab-iw",
@@ -3969,72 +4042,48 @@
         ]
     },
     {
-        "id": "esbn-cron",
-        "type": "inject",
+        "id": "nrb-in",
+        "type": "http in",
         "z": "tab-ih",
-        "name": "ESBN staleness hourly",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "3600",
-        "crontab": "",
-        "once": true,
-        "onceDelay": 30,
-        "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 170,
-        "y": 900,
+        "name": "NR backup alert",
+        "url": "/nr-backup-alert",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 960,
         "wires": [
             [
-                "esbn-get"
+                "nrb-fn",
+                "nrb-resp"
             ]
         ]
     },
     {
-        "id": "esbn-get",
-        "type": "ha-get-entities",
+        "id": "nrb-resp",
+        "type": "http response",
         "z": "tab-ih",
-        "name": "get esbn_last_update",
-        "server": "ha-server",
-        "version": 3,
-        "rules": [
-            {
-                "property": "entity_id",
-                "logic": "is",
-                "value": "sensor.esbn_meter_6830cfea50b0_esbn_last_update",
-                "valueType": "str"
-            }
-        ],
-        "outputType": "array",
-        "outputEmptyResults": true,
-        "outputLocationType": "msg",
-        "outputLocation": "payload",
-        "outputResultsCount": 1,
-        "x": 400,
-        "y": 900,
-        "wires": [
-            [
-                "esbn-fn"
-            ]
-        ]
+        "name": "200",
+        "statusCode": "200",
+        "headers": {},
+        "x": 390,
+        "y": 990,
+        "wires": []
     },
     {
-        "id": "esbn-fn",
+        "id": "nrb-fn",
         "type": "function",
         "z": "tab-ih",
-        "name": "ESBN stale check (>13h)",
-        "func": "// Add-on polls every 6h; >13h since last successful poll = two misses = stuck\n// (04-07-2026: portal ReadTimeout crashed the add-on, sensors froze 2 days unseen).\n// NB data_lag (meter-read age, up to ~4 days) is normal - we check the POLL time.\nvar LIMIT_H = 13;\nvar REALERT_MS = 6*60*60*1000; // re-alert at most every 6h while still stale\nvar ents = msg.payload || [];\nvar st = ents.length ? ents[0].state : null;\nvar ageH = null;\nif (st && st !== 'unknown' && st !== 'unavailable') {\n    var t = Date.parse(st);\n    if (!isNaN(t)) ageH = (Date.now() - t) / 3600000;\n}\nvar stale = (ageH === null) || (ageH > LIMIT_H);\nif (!stale) { context.set('lastAlert', 0); return null; }\nvar last = context.get('lastAlert') || 0;\nif (Date.now() - last < REALERT_MS) return null;\ncontext.set('lastAlert', Date.now());\nvar detail = (ageH === null)\n  ? 'esbn_last_update sensor is ' + (st || 'missing') + ' - add-on may be dead.'\n  : 'Last successful ESBN poll was ' + ageH.toFixed(1) + 'h ago (6h cycle, limit ' + LIMIT_H + 'h). Add-on likely crashed on a portal timeout - check/restart esbn-to-mqtt.';\nreturn {cat: 'Service', sub: 'ESBN add-on', message: detail, tag: 'esbn_stale'};\n",
+        "name": "NR backup build",
+        "func": "var b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={message:b};}}\nreturn {cat:'Backup', sub:'Node-RED repo', message:(b&&b.message)||'Node-RED git backup reported a problem.', tag:'nr_backup'};\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 640,
-        "y": 900,
+        "x": 400,
+        "y": 960,
         "wires": [
             [
                 "ih-send"

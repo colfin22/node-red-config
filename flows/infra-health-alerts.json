@@ -1,0 +1,826 @@
+[
+ {
+  "id": "tab-ih",
+  "type": "tab",
+  "label": "Infra Health & Alerts",
+  "disabled": false,
+  "info": "Consolidated infra health + backup/Zabbix alerts (migrated from HA 28-06-2026). Group A: ih-watch->ih-engine. Group B: 4 http-in. All -> ih-send (type-prefix + quiet-hours 22-07 + 07:00 flush)."
+ },
+ {
+  "id": "ih-watch",
+  "type": "server-state-changed",
+  "z": "tab-ih",
+  "name": "Infra health entities",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "binary_sensor.node_proxmox_status",
+    "binary_sensor.node_proxmox2_status",
+    "sensor.node_proxmox_cpu_used",
+    "sensor.node_proxmox2_cpu_used",
+    "sensor.node_proxmox_memory_used_percentage",
+    "sensor.node_proxmox2_memory_used_percentage",
+    "sensor.node_proxmox_disk_used_percentage",
+    "sensor.node_proxmox2_disk_used_percentage",
+    "sensor.storage_proxmox_pbs_remote_vpn_disk_used_percentage",
+    "binary_sensor.truenas_system_mainpool_healthy",
+    "binary_sensor.truenas_system_boot_pool_healthy",
+    "sensor.truenas_snapshot_tasks_mainpool",
+    "sensor.truenas_disks_sda",
+    "sensor.truenas_disks_sdb",
+    "sensor.truenas_disks_sdc",
+    "sensor.truenas_disks_sdd",
+    "sensor.truenas_disks_sde",
+    "binary_sensor.truenas_rsync_failures",
+    "sensor.truenas_rsync_failed_paths",
+    "binary_sensor.qemu_ubuntu_nextcloud_117_status",
+    "sensor.qemu_ubuntu_nextcloud_117_cpu_used",
+    "sensor.qemu_ubuntu_nextcloud_117_memory_free",
+    "sensor.nextcloud_colfin22_net_free_space",
+    "sensor.nextcloud_colfin22_net_updates_available",
+    "binary_sensor.nextcloud_online",
+    "binary_sensor.docker_online",
+    "sensor.nextcloud_cpu",
+    "sensor.docker_cpu",
+    "sensor.nextcloud_memory",
+    "sensor.docker_memory",
+    "sensor.nextcloud_disk",
+    "sensor.docker_disk",
+    "sensor.nextcloud_package_count",
+    "sensor.docker_package_count",
+    "sensor.frigate_cctv_disk_usage",
+    "binary_sensor.lxc_docker_frigate_107_status",
+    "camera.doorbell",
+    "camera.front_van",
+    "camera.front_car",
+    "camera.rear_door",
+    "camera.rear_shed"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": true,
+  "ignorePrevStateUnavailable": true,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   },
+   {
+    "property": "ent",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entity"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 170,
+  "y": 740,
+  "wires": [
+   [
+    "ih-engine"
+   ]
+  ]
+ },
+ {
+  "id": "ih-engine",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Rule engine",
+  "func": "\nconst H='Health';\nconst NAMES={'camera.doorbell':'Doorbell','camera.front_van':'Front Van','camera.front_car':'Front Car','camera.rear_door':'Rear Door','camera.rear_shed':'Rear Shed'};\nfunction r1(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n*10)/10;}\nfunction r0(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n);}\nfunction r2(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n*100)/100;}\nconst FIVE=5*60*1000, TWO=2*60*1000;\nconst RULES={\n 'binary_sensor.node_proxmox_status':{cat:H,sub:'Proxmox',op:'eq',val:'off',m:function(s){return 'Node 1 (proxmox) is offline';}},\n 'binary_sensor.node_proxmox2_status':{cat:H,sub:'Proxmox',op:'eq',val:'off',m:function(s){return 'Node 2 (proxmox2) is offline';}},\n 'sensor.node_proxmox_cpu_used':{cat:H,sub:'Proxmox',op:'gt',val:85,for:FIVE,m:function(s){return 'Node 1 CPU high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_cpu_used':{cat:H,sub:'Proxmox',op:'gt',val:85,for:FIVE,m:function(s){return 'Node 2 CPU high: '+r1(s)+'%';}},\n 'sensor.node_proxmox_memory_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 1 memory high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_memory_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 2 memory high: '+r1(s)+'%';}},\n 'sensor.node_proxmox_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 1 disk high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 2 disk high: '+r1(s)+'%';}},\n 'sensor.storage_proxmox_pbs_remote_vpn_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:80,m:function(s){return 'PBS remote VPN storage at '+r1(s)+'% \u2014 consider pruning backups';}},\n 'binary_sensor.truenas_system_mainpool_healthy':{cat:H,sub:'TrueNAS',op:'eq',val:'off',m:function(s){return 'MainPool is unhealthy \u2014 check pool status immediately';}},\n 'binary_sensor.truenas_system_boot_pool_healthy':{cat:H,sub:'TrueNAS',op:'eq',val:'off',m:function(s){return 'Boot pool is unhealthy \u2014 check boot pool status';}},\n 'sensor.truenas_snapshot_tasks_mainpool':{cat:H,sub:'TrueNAS',op:'in',val:['ERROR','FAILED','ABORTED'],m:function(s){return 'Snapshot task failed \u2014 status: '+s;}},\n 'sensor.truenas_disks_sda':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'\u00b0C';}},\n 'sensor.truenas_disks_sdb':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'\u00b0C';}},\n 'sensor.truenas_disks_sdc':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'\u00b0C';}},\n 'sensor.truenas_disks_sdd':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'\u00b0C';}},\n 'sensor.truenas_disks_sde':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'\u00b0C';}},\n 'binary_sensor.truenas_rsync_failures':{cat:H,sub:'TrueNAS',op:'eq',val:'on',m:function(s){return 'Rsync task failure \u2014 '+(flow.get('rsync_paths')||'check failed paths');}},\n 'binary_sensor.qemu_ubuntu_nextcloud_117_status':{cat:H,sub:'Nextcloud',op:'eq',val:'off',m:function(s){return 'Nextcloud VM is offline';}},\n 'sensor.qemu_ubuntu_nextcloud_117_cpu_used':{cat:H,sub:'Nextcloud',op:'gt',val:85,for:FIVE,m:function(s){return 'Nextcloud VM CPU high: '+r1(s)+'%';}},\n 'sensor.qemu_ubuntu_nextcloud_117_memory_free':{cat:H,sub:'Nextcloud',op:'lt',val:0.25,m:function(s){return 'Nextcloud VM memory low: '+r2(s)+' GB free';}},\n 'sensor.nextcloud_colfin22_net_free_space':{cat:H,sub:'Nextcloud',op:'lt',val:500,m:function(s){return 'Nextcloud storage low: '+(Math.round(parseFloat(s)/1024*10)/10)+' TB free';}},\n 'sensor.nextcloud_colfin22_net_updates_available':{cat:H,sub:'Nextcloud',op:'gt',val:0,m:function(s){return s+' Nextcloud app update(s) available';}},\n 'binary_sensor.nextcloud_online':{cat:H,sub:'Ubuntu-VM',op:'eq',val:'off',m:function(s){return 'Nextcloud VM is offline';}},\n 'binary_sensor.docker_online':{cat:H,sub:'Ubuntu-VM',op:'eq',val:'off',m:function(s){return 'Docker VM is offline';}},\n 'sensor.nextcloud_cpu':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,for:FIVE,m:function(s){return 'Nextcloud VM CPU high: '+r1(s)+'%';}},\n 'sensor.docker_cpu':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,for:FIVE,m:function(s){return 'Docker VM CPU high: '+r1(s)+'%';}},\n 'sensor.nextcloud_memory':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Nextcloud VM memory high: '+r1(s)+'%';}},\n 'sensor.docker_memory':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Docker VM memory high: '+r1(s)+'%';}},\n 'sensor.nextcloud_disk':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Nextcloud VM disk high: '+r1(s)+'%';}},\n 'sensor.docker_disk':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Docker VM disk high: '+r1(s)+'%';}},\n 'sensor.nextcloud_package_count':{cat:H,sub:'Ubuntu-VM',op:'gt',val:0,m:function(s){return 'Nextcloud VM has '+s+' pending package update(s)';}},\n 'sensor.docker_package_count':{cat:H,sub:'Ubuntu-VM',op:'gt',val:0,m:function(s){return 'Docker VM has '+s+' pending package update(s)';}},\n 'sensor.frigate_cctv_disk_usage':{cat:H,sub:'Frigate',op:'gt',val:85,for:FIVE,m:function(s){return 'Frigate CCTV disk is at '+s+'%. Check recording retention before storage fills up.';}},\n 'binary_sensor.lxc_docker_frigate_107_status':{cat:H,sub:'Frigate',op:'eq',val:'off',for:TWO,m:function(s){return 'Frigate has been offline for 2 minutes. Check the LXC container on Proxmox.';}},\n 'camera.doorbell':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.doorbell']+' has been unavailable for 2 minutes.';}},\n 'camera.front_van':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.front_van']+' has been unavailable for 2 minutes.';}},\n 'camera.front_car':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.front_car']+' has been unavailable for 2 minutes.';}},\n 'camera.rear_door':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.rear_door']+' has been unavailable for 2 minutes.';}},\n 'camera.rear_shed':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.rear_shed']+' has been unavailable for 2 minutes.';}},\n};\n\nvar ent=msg.topic, state=msg.payload;\nif(ent==='sensor.truenas_rsync_failed_paths'){flow.set('rsync_paths',state);return null;}\nvar rule=RULES[ent];\nif(!rule)return null;\nvar fired=context.get('fired')||{};\nvar timers=context.get('timers')||{};\nfunction test(){\n  if(rule.op==='eq')return state===rule.val;\n  if(rule.op==='in')return rule.val.indexOf(state)>=0;\n  var n=parseFloat(state); if(isNaN(n))return false;\n  if(rule.op==='gt')return n>rule.val;\n  if(rule.op==='lt')return n<rule.val;\n  return false;\n}\nvar active=test();\nvar fname=(msg.ent&&msg.ent.attributes&&msg.ent.attributes.friendly_name)||ent.replace('sensor.truenas_disks_','');\nfunction emit(nm){node.send({cat:rule.cat,sub:rule.sub,message:rule.m(state,nm),tag:rule.sub+'_'+ent});}\nif(rule.for){\n  if(active){\n    if(fired[ent])return null;\n    if(timers[ent])return null;\n    var capName=fname;\n    timers[ent]=setTimeout(function(){\n      var tm=context.get('timers')||{};delete tm[ent];context.set('timers',tm);\n      var fr=context.get('fired')||{};fr[ent]=true;context.set('fired',fr);\n      emit(capName);\n    },rule.for);\n    context.set('timers',timers);\n  }else{\n    if(timers[ent]){clearTimeout(timers[ent]);delete timers[ent];context.set('timers',timers);}\n    if(fired[ent]){fired[ent]=false;context.set('fired',fired);}\n  }\n}else{\n  if(active){\n    if(fired[ent])return null;\n    fired[ent]=true;context.set('fired',fired);\n    emit(fname);\n  }else{\n    if(fired[ent]){fired[ent]=false;context.set('fired',fired);}\n  }\n}\nreturn null;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 470,
+  "y": 740,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "ih-send",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Quiet-hours send",
+  "func": "\nfunction dub(){return new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});}\nfunction dhour(){return parseInt(new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10);}\nfunction quiet(){var h=dhour();return (h>=22||h<7);}\nfunction hhmm(ts){return new Date(ts).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});}\n\nif(msg.topic==='flush'){\n  var held=context.get('held')||[];\n  context.set('held',[]);\n  if(!held.length)return null;\n  var nots=[],logs=[];\n  held.forEach(function(e){\n    nots.push({title:e.title+' (triggered '+hhmm(e.firedAt)+')',message:e.message,ndata:e.ndata});\n    logs.push({payload:dub()+'  [flush] '+e.title+' \u2014 '+e.message+'\\n'});\n  });\n  node.send([nots,logs]);\n  return null;\n}\n\nvar cat=msg.cat, sub=msg.sub, message=msg.message;\nif(!cat||!message)return null;\nvar title='['+cat+'] '+sub;\nvar tagsrc='ih_'+(msg.tag||sub);\nvar ndata={tag:tagsrc.toString().replace(/[^A-Za-z0-9_]/g,'_'),channel:cat,group:cat};\nif(global.get('maintenance_mode')){\n  node.send([null,{payload:dub()+'  [maint-dropped] '+title+' \u2014 '+message+'\\n'}]);\n  return null;\n}\nif(quiet()){\n  var held=context.get('held')||[];\n  held.push({title:title,message:message,ndata:ndata,firedAt:Date.now()});\n  context.set('held',held);\n  node.send([null,{payload:dub()+'  [quiet-held] '+title+' \u2014 '+message+'\\n'}]);\n  return null;\n}\nnode.send([{title:title,message:message,ndata:ndata},{payload:dub()+'  '+title+' \u2014 '+message+'\\n'}]);\nreturn null;\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 890,
+  "y": 500,
+  "wires": [
+   [
+    "ih-notify"
+   ],
+   [
+    "ih-logfile"
+   ]
+  ]
+ },
+ {
+  "id": "ih-notify",
+  "type": "api-call-service",
+  "z": "tab-ih",
+  "name": "Notify Colm (np3)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_np3",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": msg.ndata}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1230,
+  "y": 660,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "ih-logfile",
+  "type": "file",
+  "z": "tab-ih",
+  "name": "ih log",
+  "filename": "/data/infra_health.log",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": true,
+  "overwriteFile": "false",
+  "encoding": "none",
+  "x": 1070,
+  "y": 760,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "ih-cron",
+  "type": "inject",
+  "z": "tab-ih",
+  "name": "07:00 flush",
+  "props": [
+   {
+    "p": "topic",
+    "v": "flush",
+    "vt": "str"
+   }
+  ],
+  "repeat": "",
+  "crontab": "0 7 * * *",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "flush",
+  "x": 270,
+  "y": 640,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-tn-in",
+  "type": "http in",
+  "z": "tab-ih",
+  "name": "TrueNAS backup",
+  "url": "/ih-truenas-backup",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 160,
+  "y": 360,
+  "wires": [
+   [
+    "ih-b-tn-fn",
+    "ih-b-tn-resp"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-tn-resp",
+  "type": "http response",
+  "z": "tab-ih",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 410,
+  "y": 400,
+  "wires": []
+ },
+ {
+  "id": "ih-b-tn-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "TrueNAS backup build",
+  "func": "\nvar b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}\nvar st=(b.status||'').toLowerCase();\nvar detail;\nif(st==='updated')detail='Updated \u2014 config saved to GitHub ('+(b.size||'?')+') at '+(b.timestamp||'?')+'.';\nelse if(st==='unchanged')detail='Unchanged \u2014 no changes since last backup ('+(b.timestamp||'?')+').';\nelse detail='FAILED \u2014 '+(b.error||'Unknown error');\nreturn {cat:'Backup',sub:'TrueNAS-config',message:detail,tag:'tnconfig'};\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 420,
+  "y": 360,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-mt-in",
+  "type": "http in",
+  "z": "tab-ih",
+  "name": "MikroTik backup",
+  "url": "/ih-mikrotik-backup",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 160,
+  "y": 280,
+  "wires": [
+   [
+    "ih-b-mt-fn",
+    "ih-b-mt-resp"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-mt-resp",
+  "type": "http response",
+  "z": "tab-ih",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 410,
+  "y": 320,
+  "wires": []
+ },
+ {
+  "id": "ih-b-mt-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "MikroTik backup build",
+  "func": "\nvar b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}\nvar t=b.title||'', m=b.message||'';\nreturn {cat:'Backup',sub:'MikroTik',message:(t?t+' \u2014 ':'')+m,tag:'mikrotik'};\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 420,
+  "y": 280,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-restic-in",
+  "type": "http in",
+  "z": "tab-ih",
+  "name": "Restic failed",
+  "url": "/ih-restic-failed",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 150,
+  "y": 440,
+  "wires": [
+   [
+    "ih-b-restic-fn",
+    "ih-b-restic-resp"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-restic-resp",
+  "type": "http response",
+  "z": "tab-ih",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 410,
+  "y": 480,
+  "wires": []
+ },
+ {
+  "id": "ih-b-restic-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Restic failed build",
+  "func": "\nvar b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}\nvar ds=b.dataset||'unknown';\nreturn {cat:'Backup',sub:'Restic',message:'Restic backup for '+ds+' on TrueNAS failed. Check /mnt/MainPool/logs/restic_'+ds+'.log',tag:'restic_'+ds};\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 410,
+  "y": 440,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-zbx-in",
+  "type": "http in",
+  "z": "tab-ih",
+  "name": "Zabbix alert",
+  "url": "/ih-zabbix",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 150,
+  "y": 520,
+  "wires": [
+   [
+    "ih-b-zbx-fn",
+    "ih-b-zbx-resp"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-zbx-resp",
+  "type": "http response",
+  "z": "tab-ih",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 410,
+  "y": 560,
+  "wires": []
+ },
+ {
+  "id": "ih-b-zbx-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Zabbix alert build",
+  "func": "\nvar b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}\nvar detail=(b.status||'?')+': '+(b.name||'?')+' \u2014 '+(b.host||'?')+' ['+(b.severity||'?')+'] \u2014 '+(b.message||'');\nreturn {cat:'Monitoring',sub:'Zabbix',message:detail,tag:'zabbix_'+((b.name||b.host||'evt'))};\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 410,
+  "y": 520,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "bk-inj",
+  "type": "inject",
+  "z": "tab-ih",
+  "name": "07:30 daily + manual",
+  "props": [
+   {
+    "p": "topic",
+    "v": "backup-check",
+    "vt": "str"
+   }
+  ],
+  "repeat": "",
+  "crontab": "30 7 * * *",
+  "once": false,
+  "onceDelay": 0.1,
+  "topic": "backup-check",
+  "x": 180,
+  "y": 140,
+  "wires": [
+   [
+    "bk-build"
+   ]
+  ]
+ },
+ {
+  "id": "bk-build",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Build PVE task requests",
+  "func": "const tok = env.get(\"PVE_API_TOKEN\"); // full PVEAPIToken=... string, from gitignored .env\nconst base = \"https://10.0.0.251:8006/api2/json/nodes/\";\nconst q = \"/tasks?typefilter=vzdump&limit=8&source=archive\";\nconst mk = (n) => ({ url: base + n + q, headers: { Authorization: tok }, node: n, topic: \"pve\" });\nnode.send([[ mk(\"proxmox\"), mk(\"proxmox2\") ]]);\nreturn null;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 430,
+  "y": 140,
+  "wires": [
+   [
+    "bk-http"
+   ]
+  ]
+ },
+ {
+  "id": "bk-http",
+  "type": "http request",
+  "z": "tab-ih",
+  "name": "GET vzdump tasks",
+  "method": "GET",
+  "ret": "obj",
+  "paytoqs": "ignore",
+  "url": "",
+  "tls": "tls-insecure",
+  "persist": false,
+  "proxy": "",
+  "insecureHTTPParser": false,
+  "authType": "",
+  "senderr": false,
+  "headers": [],
+  "x": 670,
+  "y": 140,
+  "wires": [
+   [
+    "bk-wrap"
+   ]
+  ]
+ },
+ {
+  "id": "bk-wrap",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "wrap {node,tasks}",
+  "func": "msg.payload = { node: msg.node, tasks: (msg.payload && msg.payload.data) || [] };\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 850,
+  "y": 220,
+  "wires": [
+   [
+    "bk-join"
+   ]
+  ]
+ },
+ {
+  "id": "bk-join",
+  "type": "join",
+  "z": "tab-ih",
+  "name": "collect both nodes",
+  "mode": "custom",
+  "build": "array",
+  "property": "payload",
+  "propertyType": "msg",
+  "key": "topic",
+  "joiner": "\\n",
+  "joinerType": "str",
+  "accumulate": false,
+  "timeout": "",
+  "count": "2",
+  "reduceRight": false,
+  "reduceExp": "",
+  "reduceInit": "",
+  "reduceInitType": "",
+  "reduceFixup": "",
+  "x": 1060,
+  "y": 320,
+  "wires": [
+   [
+    "bk-sum"
+   ]
+  ]
+ },
+ {
+  "id": "bk-sum",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Evaluate (alert only on fail)",
+  "func": "const now = Date.now()/1000;\nconst WINDOW = 26*3600;\nconst labels = {proxmox:'node1 (proxmox)', proxmox2:'node2 (proxmox2)'};\nconst fmt = (e) => new Date(e*1000).toLocaleString('en-IE',{timeZone:'Europe/Dublin',weekday:'short',hour:'2-digit',minute:'2-digit'});\nlet problems = [];\nfor (const r of msg.payload) {\n  const lbl = labels[r.node] || r.node;\n  const done = (r.tasks||[]).filter(t => t.endtime);\n  const recent = done.filter(t => (now - t.endtime) < WINDOW);\n  if (recent.length === 0) { problems.push('\\u2022 ' + lbl + ': no backup completed in last 26h'); continue; }\n  const failed = recent.filter(t => t.status !== 'OK');\n  for (const f of failed) problems.push('\\u2022 ' + lbl + ': backup ended \\u201c' + f.status + '\\u201d at ' + fmt(f.endtime));\n}\nconst stamp = new Date().toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});\nif (problems.length === 0) { node.status({fill:'green',shape:'dot',text:'all OK '+stamp}); return null; }\nnode.status({fill:'red',shape:'dot',text:problems.length+' issue(s) '+stamp});\nmsg.cat = 'Backup';\nmsg.sub = 'Proxmox';\nmsg.message = problems.join('\\n');\nmsg.tag = 'proxmox_backup';\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1280,
+  "y": 420,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "mnt-watch",
+  "type": "server-state-changed",
+  "z": "tab-ih",
+  "name": "maintenance_mode",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "entities": {
+   "entity": [
+    "input_boolean.maintenance_mode"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "eventData"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 170,
+  "y": 860,
+  "wires": [
+   [
+    "mnt-store"
+   ]
+  ]
+ },
+ {
+  "id": "mnt-store",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "store maint state",
+  "func": "const D=(msg.payload&&msg.payload.new_state)?msg.payload.new_state.state:msg.payload;\nconst on=(D==='on');\nglobal.set('maintenance_mode',on);\nnode.warn('[maint] maintenance_mode='+D);\nreturn null;\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 490,
+  "y": 860,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "mnt-init",
+  "type": "inject",
+  "z": "tab-ih",
+  "name": "seed maint (2s + 120s)",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 2,
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 170,
+  "y": 60,
+  "wires": [
+   [
+    "mnt-get"
+   ]
+  ]
+ },
+ {
+  "id": "mnt-get",
+  "type": "ha-get-entities",
+  "z": "tab-ih",
+  "name": "get maintenance_mode",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [
+   {
+    "property": "entity_id",
+    "logic": "is",
+    "value": "input_boolean.maintenance_mode",
+    "valueType": "str"
+   }
+  ],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "x": 490,
+  "y": 60,
+  "wires": [
+   [
+    "mnt-seed"
+   ]
+  ]
+ },
+ {
+  "id": "mnt-seed",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "seed maint state",
+  "func": "const ents=Array.isArray(msg.payload)?msg.payload:[];\nconst e=ents.find(x=>x.entity_id==='input_boolean.maintenance_mode');\nconst on=!!e&&e.state==='on';\nconst prev=global.get('maintenance_mode');\nglobal.set('maintenance_mode',on);\nif(prev===undefined||prev!==on)node.warn('[maint] seed maintenance_mode='+(on?'on':'off'));\nreturn null;\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 880,
+  "y": 60,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "esbn-cron",
+  "type": "inject",
+  "z": "tab-ih",
+  "name": "ESBN staleness hourly",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "3600",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 30,
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 170,
+  "y": 960,
+  "wires": [
+   [
+    "esbn-get"
+   ]
+  ]
+ },
+ {
+  "id": "esbn-get",
+  "type": "ha-get-entities",
+  "z": "tab-ih",
+  "name": "get esbn_last_update",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [
+   {
+    "property": "entity_id",
+    "logic": "is",
+    "value": "sensor.esbn_meter_6830cfea50b0_esbn_last_update",
+    "valueType": "str"
+   }
+  ],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "x": 440,
+  "y": 960,
+  "wires": [
+   [
+    "esbn-fn"
+   ]
+  ]
+ },
+ {
+  "id": "esbn-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "ESBN stale check (>13h)",
+  "func": "// Add-on polls every 6h; >13h since last successful poll = two misses = stuck\n// (04-07-2026: portal ReadTimeout crashed the add-on, sensors froze 2 days unseen).\n// NB data_lag (meter-read age, up to ~4 days) is normal - we check the POLL time.\nvar LIMIT_H = 13;\nvar REALERT_MS = 6*60*60*1000; // re-alert at most every 6h while still stale\nvar ents = msg.payload || [];\nvar st = ents.length ? ents[0].state : null;\nvar ageH = null;\nif (st && st !== 'unknown' && st !== 'unavailable') {\n    var t = Date.parse(st);\n    if (!isNaN(t)) ageH = (Date.now() - t) / 3600000;\n}\nvar stale = (ageH === null) || (ageH > LIMIT_H);\nif (!stale) { context.set('lastAlert', 0); return null; }\nvar last = context.get('lastAlert') || 0;\nif (Date.now() - last < REALERT_MS) return null;\ncontext.set('lastAlert', Date.now());\nvar detail = (ageH === null)\n  ? 'esbn_last_update sensor is ' + (st || 'missing') + ' - add-on may be dead.'\n  : 'Last successful ESBN poll was ' + ageH.toFixed(1) + 'h ago (6h cycle, limit ' + LIMIT_H + 'h). Add-on likely crashed on a portal timeout - check/restart esbn-to-mqtt.';\nreturn {cat: 'Service', sub: 'ESBN add-on', message: detail, tag: 'esbn_stale'};\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 710,
+  "y": 960,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "nrb-in",
+  "type": "http in",
+  "z": "tab-ih",
+  "name": "NR backup alert",
+  "url": "/nr-backup-alert",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 150,
+  "y": 960,
+  "wires": [
+   [
+    "nrb-fn",
+    "nrb-resp"
+   ]
+  ]
+ },
+ {
+  "id": "nrb-resp",
+  "type": "http response",
+  "z": "tab-ih",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 390,
+  "y": 990,
+  "wires": []
+ },
+ {
+  "id": "nrb-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "NR backup build",
+  "func": "var b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={message:b};}}\nreturn {cat:'Backup', sub:'Node-RED repo', message:(b&&b.message)||'Node-RED git backup reported a problem.', tag:'nr_backup'};\n",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 400,
+  "y": 960,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "ha-server",
+  "type": "server",
+  "name": "Home Assistant",
+  "version": 5,
+  "addon": false,
+  "rejectUnauthorizedCerts": false,
+  "ha_boolean": "y|yes|true|on|home|open",
+  "connectionDelay": true,
+  "cacheJson": true,
+  "heartbeat": true,
+  "heartbeatInterval": 30,
+  "areaSelector": "friendly",
+  "deviceSelector": "friendly",
+  "entitySelector": "friendly",
+  "statusSeparator": "at: ",
+  "statusYear": "hidden",
+  "statusMonth": "short",
+  "statusDay": "numeric",
+  "statusHourCycle": "h23",
+  "statusTimeFormat": "h:m",
+  "enableGlobalContextStore": false
+ },
+ {
+  "id": "tls-insecure",
+  "type": "tls-config",
+  "name": "insecure (self-signed)",
+  "cert": "",
+  "key": "",
+  "ca": "",
+  "certname": "",
+  "keyname": "",
+  "caname": "",
+  "servername": "",
+  "verifyservercert": false
+ }
+]
