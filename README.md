@@ -227,4 +227,4 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
 **Delivery:** shared quiet-hours gate — alerts between 22:00 and 07:00 are held and flushed at 07:00 with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
 
 ## Licence
-[MIT](LICENSE).
+Built by Colm Finn — [MIT licensed](LICENSE).
