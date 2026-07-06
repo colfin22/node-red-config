@@ -1,0 +1,9 @@
+# Track only flows + config + palette manifest; everything else under data/ is runtime/secret
+data/*
+!data/flows.json
+!data/settings.js
+!data/package.json
+!data/package-lock.json
+
+# runtime secrets (PVE token, Nabu Casa URL, adminAuth hash)
+.env
