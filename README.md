@@ -112,6 +112,36 @@ Two separate HA automations — one on `alarm_control_panel.house`, one on `.she
 
 ---
 
+# Heating Control — how it works
+
+Runs off House Mode + time of day, driving the **local HomeKit** thermostat (`climate.netatmo_smart_thermostat`). The Netatmo holds a flat **eco 18.5°C** baseline; this flow only ever *raises* above it and re-asserts the target every 30 minutes so a manual override never lapses back to the baseline.
+
+## Temperatures
+eco 18.5 · night 19.5 · comfort 20 · hot 20.5 · frost 12
+
+## Schedule (House Mode + time)
+- **Home** → comfort 20; **hot 20.5** between 19:00–22:00
+- **Sleeping** → night 19.5 overnight; comfort 20 from **07:00**
+- **Away** → eco 18.5; drops to frost 12 after 24 h empty (gated by the `Away 24h+` dashboard toggle, `input_boolean.heating_extended_away`)
+
+## Forecast pre-heat
+Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts the 07:00 warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to Colm + Olivia the night before, **only when the low is sub-zero**.
+
+## Proximity pre-heat
+When the house is empty and someone is driving home (within 10 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival. The pre-heat **latches** once triggered — a GPS wobble flipping "towards" to "away from" for a moment can't bounce the setpoint mid-approach; it releases only when they arrive (house leaves Away) or genuinely leave the area again (beyond 12 km).
+
+## Boost
+Boost from the **dashboard** (pick a temperature, tap Boost) or by nudging the thermostat **above** the scheduled target — either way it holds for **2 hours** before the schedule resumes, and re-boosting restarts the clock. Turning the thermostat down to or below the schedule (or tapping Cancel on the dashboard) **cancels** the boost — a turn-down is never treated as a "boost" (this also absorbs the Netatmo app's boost-delete, which reverts the device to its 18.5 baseline). A boost cancels the moment everyone leaves, and can't start while the house is Away. The controller writes its current state ("Boost 22° until 15:30" / "Home: comfort 20°") to `input_text.heating_status` for the dashboard.
+
+## Guest mode
+While `input_boolean.guest_mode` is on the heating never drops to the Away setback (visitors stay warm); the normal overnight and morning behaviour still applies.
+
+### Implementation notes
+- Tab `Heating Control`; controller `heat-fn`, fed by `heat-get` — an **`ha-get-entities` version 3** node. **A version-1 node returns an empty list**, which silently broke this flow (it fell back to "Home" and never saw Away) until fixed 02-07-2026. When adding a get-entities node, clone a v3 one.
+- Triggers: `input_select.house_mode` change + a **60 s heartbeat**; output de-duped with a **30-min re-assert**.
+- Forecast sub-flow: `heat-fc-cron` (21:30) → `heat-fc-get` (`weather.get_forecasts`, hourly, `weather.forecast_home`; response via `outputProperties` valueType `results`) → `heat-fc-fn` → notify (sub-zero only). The pre-heat decision lives in `flow.preHeat` (in-memory → lost on a restart between 21:30 and morning, fails safe to the normal 07:00).
+- Boost detection is poll-lag-proof: a manual setpoint is only treated as a boost once the flow's own last write has been confirmed by the thermostat.
+
 # Camera Concierge — how it works
 
 The **Camera Concierge** (tab `Camera Concierge`) is the sole handler of Frigate camera notifications. It turns Frigate detections into smart, consolidated phone alerts. It replaced six separate HA automations and the old package concierge.
@@ -195,36 +225,6 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
 - **Data-freshness checks** — e.g. an hourly check that the ESB Networks smart-meter add-on has polled recently; a stale poll timestamp means the add-on is wedged even though its sensors still show plausible values.
 
 **Delivery:** shared quiet-hours gate — alerts between 22:00 and 07:00 are held and flushed at 07:00 with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
-
-# Heating Control — how it works
-
-Runs off House Mode + time of day, driving the **local HomeKit** thermostat (`climate.netatmo_smart_thermostat`). The Netatmo holds a flat **eco 18.5°C** baseline; this flow only ever *raises* above it and re-asserts the target every 30 minutes so a manual override never lapses back to the baseline.
-
-## Temperatures
-eco 18.5 · night 19.5 · comfort 20 · hot 20.5 · frost 12
-
-## Schedule (House Mode + time)
-- **Home** → comfort 20; **hot 20.5** between 19:00–22:00
-- **Sleeping** → night 19.5 overnight; comfort 20 from **07:00**
-- **Away** → eco 18.5; drops to frost 12 after 24 h empty (gated by the `Away 24h+` dashboard toggle, `input_boolean.heating_extended_away`)
-
-## Forecast pre-heat
-Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts the 07:00 warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to Colm + Olivia the night before, **only when the low is sub-zero**.
-
-## Proximity pre-heat
-When the house is empty and someone is driving home (within 10 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival. The pre-heat **latches** once triggered — a GPS wobble flipping "towards" to "away from" for a moment can't bounce the setpoint mid-approach; it releases only when they arrive (house leaves Away) or genuinely leave the area again (beyond 12 km).
-
-## Boost
-Boost from the **dashboard** (pick a temperature, tap Boost) or by nudging the thermostat **above** the scheduled target — either way it holds for **2 hours** before the schedule resumes, and re-boosting restarts the clock. Turning the thermostat down to or below the schedule (or tapping Cancel on the dashboard) **cancels** the boost — a turn-down is never treated as a "boost" (this also absorbs the Netatmo app's boost-delete, which reverts the device to its 18.5 baseline). A boost cancels the moment everyone leaves, and can't start while the house is Away. The controller writes its current state ("Boost 22° until 15:30" / "Home: comfort 20°") to `input_text.heating_status` for the dashboard.
-
-## Guest mode
-While `input_boolean.guest_mode` is on the heating never drops to the Away setback (visitors stay warm); the normal overnight and morning behaviour still applies.
-
-### Implementation notes
-- Tab `Heating Control`; controller `heat-fn`, fed by `heat-get` — an **`ha-get-entities` version 3** node. **A version-1 node returns an empty list**, which silently broke this flow (it fell back to "Home" and never saw Away) until fixed 02-07-2026. When adding a get-entities node, clone a v3 one.
-- Triggers: `input_select.house_mode` change + a **60 s heartbeat**; output de-duped with a **30-min re-assert**.
-- Forecast sub-flow: `heat-fc-cron` (21:30) → `heat-fc-get` (`weather.get_forecasts`, hourly, `weather.forecast_home`; response via `outputProperties` valueType `results`) → `heat-fc-fn` → notify (sub-zero only). The pre-heat decision lives in `flow.preHeat` (in-memory → lost on a restart between 21:30 and morning, fails safe to the normal 07:00).
-- Boost detection is poll-lag-proof: a manual setpoint is only treated as a boost once the flow's own last write has been confirmed by the thermostat.
 
 ## Licence
 [MIT](LICENSE).
