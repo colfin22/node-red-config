@@ -1,11 +1,11 @@
-# Node-RED config — LXC 110 (node2) · http://10.0.0.208:1880
+# Node-RED config — flows for a Home Assistant smart home
 
-Backup of the Node-RED flows + config. The whole LXC is also backed up nightly by PBS1; this repo adds flow versioning + quick recovery.
+The Node-RED flows + config behind the automations in [colfin22/ha-config](https://github.com/colfin22/ha-config). Runs in Docker in a Proxmox LXC (also backed up nightly by PBS); this repo adds flow versioning + quick recovery.
 
 ## Tracked
 - `docker-compose.yml` — container definition
 - `data/flows.json` — flows: House Mode, House Alarm, Alarm NFC Tags, Camera Concierge, Infra Watchdog, Infra Health & Alerts, Heating Control
-- `data/settings.js` — config incl. editor adminAuth (user `cfinn`)
+- `data/settings.js` — config; editor adminAuth reads its credentials from the gitignored `.env`
 - `data/package.json` + `data/package-lock.json` — installed palette (reinstalls on first start)
 - `git-backup.sh` — the daily backup script
 
@@ -21,8 +21,8 @@ Backup of the Node-RED flows + config. The whole LXC is also backed up nightly b
   ```
 
 ## Restore
-1. PBS-restore or rebuild LXC 110 (Debian + Docker + compose).
-2. `git clone git@github-node-red-config:colfin22/node-red-config.git /opt/node-red`
+1. PBS-restore or rebuild the LXC (Debian + Docker + compose).
+2. `git clone https://github.com/colfin22/node-red-config.git /opt/node-red` (or via the repo's SSH deploy-key alias)
 3. Recreate `.env` (see above), then `cd /opt/node-red && docker compose up -d`
 4. Open the editor, re-enter the HA token (`ha-server`) + MQTT password (`mqtt-frigate`), Deploy.
 
@@ -74,6 +74,8 @@ The alarm follows `input_select.house_mode` directly:
 - **Home** → `alarm_disarm` (house) + spoken "Welcome home" announcement *only* when returning from Away (not from Sleeping)
 
 All presence tracking, timing, dead-phone safeguards, and battery nudges live in the **House Mode** tab — the alarm tab just reacts to the resulting state. On Node-RED restart, a startup inject reads the current `house_mode` and `guest_mode` via `ha-get-entities` and syncs both into flow context before the first evaluation.
+
+Two robustness details: a **60-second reconcile** compares the live `house_mode` against the last mode the flow processed and re-applies any change missed during a websocket drop (a manual disarm is respected — it only reacts to *missed mode changes*, never to alarm state). And every arm/disarm call is **idempotent** — if the panel is already in the target state the call is skipped, so nothing spams the Alarmo log with "cannot go to state X from X".
 
 ## Guest mode
 When `input_boolean.guest_mode` is on, only **Away** arming is suspended (guests moving around would trip an away-armed alarm):
@@ -136,14 +138,11 @@ All stages share the same notification **tag**, so they update in place rather t
 
 If more cameras in the same zone+kind see it, the notification **updates its camera list** instead of firing new ones.
 
-## Which camera's view you get (priority)
-Within a zone the snapshot, GIF and tap-link all come from the **highest-priority** camera that detected, upgrading as higher-priority reviews finish (never downgrades):
-- **Front:** Front_Car > Front_Van
-- **Rear:** Rear_Door > Rear_Shed
-- **Doorbell:** on its own
+## Which camera's view you get
+Within a zone the snapshot, GIF and tap-link all come from the camera that **detected first** — the one that opened the 120-second incident (shed-first → shed's view, door-first → door's view). The notification text still lists every camera that saw it.
 
 ## Tapping the alert
-The notification's tap action (`clickAction`/`url`) opens the **event clip** (`clip.mp4`) of that priority camera — straight to the footage.
+The notification's tap action (`clickAction`/`url`) opens the **event clip** (`clip.mp4`) of that first-detecting camera — straight to the footage.
 
 ## Who gets what
 - **Phone push** (text → snapshot → GIF) → **both phones**: Colm (`mobile_app_np3`) + Olivia (`mobile_app_pixel_6a`).
@@ -172,6 +171,31 @@ When `house_mode = Sleeping`, a **person** detected in the front car or van focu
 - `house_mode` is mirrored into flow context (`flow.house_mode`) so the courier/postman TTS suppression and the person-at-the-car deterrent can read it cheaply. A `server-state-changed` watcher updates it on every change (**with `for:0, forType:num` — a missing/empty `for` throws `ConfigError: Invalid config value for 'for'` on every change**), and a startup inject → `ha-get-entities` → function seeds the current mode on restart. The watcher uses `outputInitially:false`, so the **seed is what keeps Sleeping-based behaviour correct after a Node-RED restart mid-Sleeping/Away** — the seed's `ha-get-entities` **must** output to `msg.payload` (`outputLocationType:msg`, not `none`) or it silently falls back to a default.
 - Context keys derived from review ids are sanitised (dots → `_`) because Frigate review ids contain a dot (which Node-RED would otherwise treat as a nested-context path).
 
+# Infra Watchdog — how it works
+
+**Uptime Kuma** posts every monitor up/down event to a webhook in this tab (`/uk-event`). The watchdog turns those raw events into escalating alerts rather than one-ping-per-flap:
+
+- **Tier 1** — phone push on first confirmed down.
+- **Tier 2** — still down after the escalation window → repeat push **+ a spoken announcement** (voice only while someone is home).
+- **Tier 3** — long outages re-alert on a slow repeat so a dead service can't be silently forgotten.
+- Recovery sends an "up again" push and resets the monitor's state machine.
+- **Quiet hours (22:00–07:00)** hold non-urgent noise; anything still outstanding is delivered in an **07:00 overnight summary**.
+- While `maintenance_mode` is on, notifications are suppressed but the state machines keep running — anything still down when maintenance ends re-alerts on its next repeat.
+
+Uptime Kuma stays the source of truth for *reachability*; the flow below handles *health*.
+
+# Infra Health & Alerts — how it works
+
+One tab consolidates what used to be eleven separate HA infrastructure-alert automations. Every alert is titled **`[Category] Subsystem: detail`** (categories: Health / Backup / Monitoring / Service) and lands on a phone with a matching Android notification channel + group, plus a line in a log file.
+
+**Inputs:**
+- **Sensor-driven rules** — a `server-state-changed` watcher over ~40 entities feeds a rule engine (disk usage, pool health, service states, rsync failures…) with per-rule thresholds, sustain times and de-duplication.
+- **Webhooks** — backup scripts (TrueNAS config, MikroTik config, restic) and Zabbix post their outcomes straight to HTTP-in endpoints here.
+- **Backup watchdog** — each morning it queries the Proxmox API on both nodes for last night's vzdump task list and alerts **only on failures** (the read-only API token comes from the gitignored `.env`).
+- **Data-freshness checks** — e.g. an hourly check that the ESB Networks smart-meter add-on has polled recently; a stale poll timestamp means the add-on is wedged even though its sensors still show plausible values.
+
+**Delivery:** shared quiet-hours gate — alerts between 22:00 and 07:00 are held and flushed at 07:00 with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
+
 # Heating Control — how it works
 
 Runs off House Mode + time of day, driving the **local HomeKit** thermostat (`climate.netatmo_smart_thermostat`). The Netatmo holds a flat **eco 18.5°C** baseline; this flow only ever *raises* above it and re-asserts the target every 30 minutes so a manual override never lapses back to the baseline.
@@ -188,7 +212,7 @@ eco 18.5 · night 19.5 · comfort 20 · hot 20.5 · frost 12
 Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts the 07:00 warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to Colm + Olivia the night before, **only when the low is sub-zero**.
 
 ## Proximity pre-heat
-When the house is empty and someone is driving home (within 12 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival.
+When the house is empty and someone is driving home (within 10 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival. The pre-heat **latches** once triggered — a GPS wobble flipping "towards" to "away from" for a moment can't bounce the setpoint mid-approach; it releases only when they arrive (house leaves Away) or genuinely leave the area again (beyond 12 km).
 
 ## Boost
 Boost from the **dashboard** (pick a temperature, tap Boost) or by nudging the thermostat **above** the scheduled target — either way it holds for **2 hours** before the schedule resumes, and re-boosting restarts the clock. Turning the thermostat down to or below the schedule (or tapping Cancel on the dashboard) **cancels** the boost — a turn-down is never treated as a "boost" (this also absorbs the Netatmo app's boost-delete, which reverts the device to its 18.5 baseline). A boost cancels the moment everyone leaves, and can't start while the house is Away. The controller writes its current state ("Boost 22° until 15:30" / "Home: comfort 20°") to `input_text.heating_status` for the dashboard.
