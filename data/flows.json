@@ -3863,6 +3863,55 @@
         ]
     },
     {
+        "id": "nrb-in",
+        "type": "http in",
+        "z": "tab-ih",
+        "name": "NR backup alert",
+        "url": "/nr-backup-alert",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 1020,
+        "wires": [
+            [
+                "nrb-fn",
+                "nrb-resp"
+            ]
+        ]
+    },
+    {
+        "id": "nrb-resp",
+        "type": "http response",
+        "z": "tab-ih",
+        "name": "200",
+        "statusCode": "200",
+        "headers": {},
+        "x": 390,
+        "y": 1020,
+        "wires": []
+    },
+    {
+        "id": "nrb-fn",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "NR backup build",
+        "func": "var b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={message:b};}}\nreturn {cat:'Backup', sub:'Node-RED repo', message:(b&&b.message)||'Node-RED git backup reported a problem.', tag:'nr_backup'};\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 960,
+        "wires": [
+            [
+                "ih-send"
+            ]
+        ]
+    },
+    {
         "id": "iw-http",
         "type": "http in",
         "z": "tab-iw",
@@ -4038,55 +4087,6 @@
         "wires": [
             [
                 "iw-engine"
-            ]
-        ]
-    },
-    {
-        "id": "nrb-in",
-        "type": "http in",
-        "z": "tab-ih",
-        "name": "NR backup alert",
-        "url": "/nr-backup-alert",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 150,
-        "y": 960,
-        "wires": [
-            [
-                "nrb-fn",
-                "nrb-resp"
-            ]
-        ]
-    },
-    {
-        "id": "nrb-resp",
-        "type": "http response",
-        "z": "tab-ih",
-        "name": "200",
-        "statusCode": "200",
-        "headers": {},
-        "x": 390,
-        "y": 990,
-        "wires": []
-    },
-    {
-        "id": "nrb-fn",
-        "type": "function",
-        "z": "tab-ih",
-        "name": "NR backup build",
-        "func": "var b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={message:b};}}\nreturn {cat:'Backup', sub:'Node-RED repo', message:(b&&b.message)||'Node-RED git backup reported a problem.', tag:'nr_backup'};\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 400,
-        "y": 960,
-        "wires": [
-            [
-                "ih-send"
             ]
         ]
     }
