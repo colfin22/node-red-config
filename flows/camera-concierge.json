@@ -288,7 +288,7 @@
   "areaId": [],
   "deviceId": [],
   "entityId": [],
-  "data": "{\"message\": who & \" at the doorbell\", \"data\": {\"duration\": \"20\", \"position\": \"top-right\", \"image\": image}}",
+  "data": "{\"message\": who & \" at the front door\", \"data\": {\"duration\": \"20\", \"position\": \"top-right\", \"image\": image}}",
   "dataType": "jsonata",
   "mergeContext": "",
   "mustacheAltTags": false,
