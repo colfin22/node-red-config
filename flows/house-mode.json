@@ -66,7 +66,7 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 190,
+  "x": 130,
   "y": 40,
   "wires": [
    [
@@ -486,7 +486,7 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 560,
+  "x": 750,
   "y": 360,
   "wires": [
    [
@@ -525,7 +525,7 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 820,
+  "x": 1220,
   "y": 240,
   "wires": [
    []
@@ -549,7 +549,7 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 820,
+  "x": 1220,
   "y": 300,
   "wires": [
    []
@@ -573,7 +573,7 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 820,
+  "x": 1220,
   "y": 360,
   "wires": [
    []
@@ -597,8 +597,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 810,
-  "y": 460,
+  "x": 1210,
+  "y": 440,
   "wires": [
    []
   ]
@@ -614,7 +614,7 @@
   "createDir": true,
   "overwriteFile": "false",
   "encoding": "none",
-  "x": 810,
+  "x": 1210,
   "y": 600,
   "wires": [
    []
@@ -678,7 +678,7 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 810,
+  "x": 1210,
   "y": 500,
   "wires": [
    []
