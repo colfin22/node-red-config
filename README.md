@@ -41,7 +41,7 @@ targets are this house's — expect to search-and-replace.
 
 # House Mode — how it works
 
-The **House Mode** tab (`tab-hm`) is the household state orchestrator. It computes and maintains `input_select.house_mode` — the single source of truth that other flows (starting with the alarm) consume so each doesn't have to do its own presence tracking.
+The **House Mode** tab (`tab-hm`) is the household state orchestrator. It computes and maintains `input_select.house_mode` — the single source of truth that other flows (alarm, heating and infrastructure alerts) consume so each doesn't have to do its own presence tracking.
 
 ## Three states + overlays
 
