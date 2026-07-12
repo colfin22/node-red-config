@@ -8,7 +8,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Repo](https://img.shields.io/badge/Repo-Public-brightgreen)](https://github.com/colfin22/node-red-config)
 
-*The automation brain behind a family smart home in Ireland — presence, alarm, heating and cameras, wired in Node-RED.*
+*The automation brain behind a family smart home in Ireland.*
 
 </div>
 
