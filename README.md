@@ -1,6 +1,22 @@
-# Node-RED config — flows for a Home Assistant smart home
+<div align="center">
 
-The Node-RED flows + config behind the automations in [colfin22/ha-config](https://github.com/colfin22/ha-config). Runs in Docker in a Proxmox LXC (also backed up nightly by PBS); this repo adds flow versioning + quick recovery.
+# 🔴 Node-RED — Smart Home Flows
+
+[![Node-RED](https://img.shields.io/badge/Node--RED-flows-8F0000?logo=nodered&logoColor=white)](https://nodered.org/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-companion-41BDF5?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
+[![Flows](https://img.shields.io/badge/Flows-7-success?logo=nodered&logoColor=white)](data/flows.json)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Repo](https://img.shields.io/badge/Repo-Public-brightgreen)](https://github.com/colfin22/node-red-config)
+
+*The automation brain behind a family smart home in Ireland — presence, alarm, heating and cameras, wired in Node-RED.*
+
+</div>
+
+---
+
+The Node-RED flows + config behind the automations in [colfin22/ha-config](https://github.com/colfin22/ha-config). Home Assistant handles the simple, single-trigger stuff; the multi-input, **stateful** logic lives here — deciding the house's mode, arming the alarm, making heating calls from presence + forecast + tariff, and turning camera detections into one smart notification. Runs in Docker in a Proxmox LXC (also backed up nightly by PBS); this repo adds flow versioning + quick recovery.
+
+**Seven flows, each documented below with a screenshot:** House Mode · House &amp; Shed Alarm · Alarm NFC Tags · Camera Concierge · Heating Control · Infra Watchdog · Infra Health &amp; Alerts.
 
 ## Tracked
 - `docker-compose.yml` — container definition
@@ -41,6 +57,8 @@ targets are this house's — expect to search-and-replace.
 
 # House Mode — how it works
 
+![The House Mode flow in the Node-RED editor](docs/house-mode.png)
+
 The **House Mode** tab (`tab-hm`) is the household state orchestrator. It computes and maintains `input_select.house_mode` — the single source of truth that other flows (alarm, heating and infrastructure alerts) consume so each doesn't have to do its own presence tracking.
 
 ## Three states + overlays
@@ -69,6 +87,8 @@ Residents (Colm, Olivia) enable Sleeping and trigger Away. Guests (Daire) only c
 ---
 
 # House & Shed Alarm — how it works
+
+![The House Alarm flow in the Node-RED editor](docs/house-alarm.png)
 
 Two tabs automate the **Alarmo** alarm — `alarm_control_panel.house` and `.shed` (two independent panels); none needs a code. The **house** alarm is driven by House Mode state; the **shed** is NFC-driven. All notifications and voice announcements are **state-driven**, so they fire however the alarm changes — phone, Alarmo card, NFC, or automatic.
 
@@ -122,6 +142,8 @@ Two separate HA automations — one on `alarm_control_panel.house`, one on `.she
 
 # Heating Control — how it works
 
+![The Heating Control flow in the Node-RED editor](docs/heating-control.png)
+
 Runs off House Mode + time of day, driving the **local HomeKit** thermostat (`climate.netatmo_smart_thermostat`). The Netatmo holds a flat **eco 18.5°C** baseline; this flow only ever *raises* above it and re-asserts the target every 30 minutes so a manual override never lapses back to the baseline.
 
 ## Temperatures
@@ -151,6 +173,8 @@ While `input_boolean.guest_mode` is on the heating never drops to the Away setba
 - Boost detection is poll-lag-proof: a manual setpoint is only treated as a boost once the flow's own last write has been confirmed by the thermostat.
 
 # Camera Concierge — how it works
+
+![The Camera Concierge flow in the Node-RED editor](docs/camera-concierge.png)
 
 The **Camera Concierge** (tab `Camera Concierge`) is the sole handler of Frigate camera notifications. It turns Frigate detections into smart, consolidated phone alerts. It replaced six separate HA automations and the old package concierge.
 
