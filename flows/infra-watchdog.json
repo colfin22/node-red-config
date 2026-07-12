@@ -72,7 +72,7 @@
   "areaId": [],
   "deviceId": [],
   "entityId": [],
-  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": msg.ndata}",
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server-network\"}])}",
   "dataType": "jsonata",
   "mergeContext": "",
   "mustacheAltTags": false,
