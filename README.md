@@ -7,9 +7,10 @@
 [![Flows](https://img.shields.io/badge/Flows-7-success?logo=nodered&logoColor=white)](data/flows.json)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Repo](https://img.shields.io/badge/Repo-Public-brightgreen)](https://github.com/colfin22/node-red-config)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/colfin22)
 
 *The automation brain behind a family smart home in Ireland.*
+
+<a href="https://www.buymeacoffee.com/colfin22"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="40"></a>
 
 </div>
 
