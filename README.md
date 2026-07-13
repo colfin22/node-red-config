@@ -84,7 +84,8 @@ Residents (Colm, Olivia) enable Sleeping and trigger Away. Guests (Daire) only c
 ### Implementation notes
 - All Away evaluations use a fresh live HA snapshot via `ha-get-entities` — no stale flow context.
 - `server-state-changed` nodes always use `outputInitially: false`; startup state is seeded via an inject → `ha-get-entities` → function chain (global context is not populated reliably at 1 s after start).
-- On every state change: sets `input_select.house_mode` via `hm-set-mode`, logs to `/data/house_mode.log` with IST timestamp + reason, pushes a notification to Colm.
+- On every state change: sets `input_select.house_mode` via `hm-set-mode`, logs to `/data/house_mode.log` with a local timestamp + reason, pushes a notification, and publishes the **same reason** to `input_text.house_mode_reason` (`hm-reason`).
+- **Why the reason is published, not just notified:** the engine always knew *why* it changed mode — `morning activity (light.sitting_room)`, `resident returned`, `all residents left (20m)`, `quiet 20m, no activity` — but that string only ever reached a push notification. Other flows (the heating controller, below) can now name the actual cause instead of guessing at it. A **manual** mode change publishes `changed by hand`, so a consumer can't attribute it to whatever the engine last decided.
 
 ---
 
@@ -163,7 +164,22 @@ Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05
 When the house is empty and someone is driving home (within 10 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival. The pre-heat **latches** once triggered — a GPS wobble flipping "towards" to "away from" for a moment can't bounce the setpoint mid-approach; it releases only when they arrive (house leaves Away) or genuinely leave the area again (beyond 12 km).
 
 ## Boost
-Boost from the **dashboard** (pick a temperature, tap Boost) or by nudging the thermostat **above** the scheduled target — either way it holds for **2 hours** before the schedule resumes, and re-boosting restarts the clock. Turning the thermostat down to or below the schedule (or tapping Cancel on the dashboard) **cancels** the boost — a turn-down is never treated as a "boost" (this also absorbs the Netatmo app's boost-delete, which reverts the device to its 18.5 baseline). A boost cancels the moment everyone leaves, and can't start while the house is Away. The controller writes its current state ("Boost 22° until 15:30" / "Home: comfort 20°") to `input_text.heating_status` for the dashboard.
+Boost from the **dashboard** (pick a temperature, tap Boost) or by nudging the thermostat **above** the scheduled target — either way it holds for **2 hours** before the schedule resumes, and re-boosting restarts the clock. Turning the thermostat down to or below the schedule (or tapping Cancel on the dashboard) **cancels** the boost — a turn-down is never treated as a "boost" (this also absorbs the Netatmo app's boost-delete, which reverts the device to its 18.5 baseline). A boost cancels the moment everyone leaves, and can't start while the house is Away.
+
+## "Why did the heating change?"
+The controller writes a plain-English status to `input_text.heating_status` — used both by the heating card and by a **Recent activity** logbook card — and it names **what triggered the change**, not just what the heating is doing:
+
+| Status line | What happened |
+|---|---|
+| `Home — comfort 20° · house woke up (sitting room light)` | someone turned a light on in the morning; the house switched out of Sleeping |
+| `Evening warm-up 20.5° · evening schedule (19:00)` | the clock, not you |
+| `Sleeping — overnight 19.5° · quiet for 20 min — bed` | the house settled |
+| `Away — setback 18.5° · everyone left` | the last person left |
+| `Boost 22° until 15:30 · you asked` | dashboard or thermostat dial |
+| `Morning warm-up 20° · cold morning — started early` | forecast pre-heat |
+| `Home — comfort 20° · heading home` | proximity pre-heat |
+
+The cause is taken from `input_text.house_mode_reason` when a mode change drove it (entity ids resolved to friendly names), from the boost/pre-heat state when one of those did, and otherwise from the clock.
 
 ## Guest mode
 While `input_boolean.guest_mode` is on the heating never drops to the Away setback (visitors stay warm); the normal overnight and morning behaviour still applies.
@@ -173,6 +189,7 @@ While `input_boolean.guest_mode` is on the heating never drops to the Away setba
 - Triggers: `input_select.house_mode` change + a **60 s heartbeat**; output de-duped with a **30-min re-assert**.
 - Forecast sub-flow: `heat-fc-cron` (21:30) → `heat-fc-get` (`weather.get_forecasts`, hourly, `weather.forecast_home`; response via `outputProperties` valueType `results`) → `heat-fc-fn` → notify (sub-zero only). The pre-heat decision lives in `flow.preHeat` (in-memory → lost on a restart between 21:30 and morning, fails safe to the normal 07:00).
 - Boost detection is poll-lag-proof: a manual setpoint is only treated as a boost once the flow's own last write has been confirmed by the thermostat.
+- The status line is **capped at 100 characters** — that is the `input_text` limit, and Home Assistant *rejects* an over-long value, which would silently stop the ticker updating.
 
 # Camera Concierge — how it works
 
