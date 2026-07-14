@@ -2260,7 +2260,7 @@
         "type": "function",
         "z": "096ff268dc7bd2f0",
         "name": "alarm notify engine",
-        "func": "// Alarm notification engine (state-derived) -> all people\nconst PEOPLE=flow.get('people')||[{notify:'notify.mobile_app_np3'},{notify:'notify.mobile_app_pixel_6a'}];\nconst ents=Array.isArray(msg.entities)?msg.entities:[];\nconst S=id=>{const e=ents.find(x=>x.entity_id===id);return e&&e.state;};\nconst homeP=p=>S(p.person)==='home'||S(p.ping)==='on';\nconst FN=id=>{const e=ents.find(x=>x.entity_id===id);return (e&&e.attributes&&e.attributes.friendly_name)||id.split('.').pop().replace(/_contact$/,'').replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase());};\nconst PERSONS=['cian','colm','aoife','olivia','daire'];\nconst spoken=id=>{const nm=FN(id).trim();const w=nm.split(/\\s+/);return (PERSONS.includes(w[0].toLowerCase())&&w.length>1)?(w[0]+\"'s \"+w.slice(1).join(' ').toLowerCase()):('the '+nm.toLowerCase());};\nconst ev=msg.payload||{};\nconst ns=ev.new_state||{}, os=ev.old_state||{};\nconst nw=ns.state, old=os.state, eid=ev.entity_id||'';\nconst area=eid.endsWith('.shed')?'Shed':'House';\nif(eid==='alarm_control_panel.house'&&nw){flow.set('alarm_house',nw);global.set('alarm_house',nw);}\nif(eid==='alarm_control_panel.shed'&&nw){global.set('alarm_shed',nw);}\nconst ARMED=['armed_away','armed_home','armed_night','armed_vacation','armed_custom_bypass'];\nconst opens=(ns.attributes&&ns.attributes.open_sensors)||null;\nfunction ol(){ if(!opens) return ''; try{return ' Open: '+Object.keys(opens).map(id=>FN(id)).join(', ')+'.';}catch(e){return '';} }\nlet title=null,message=null,tag=null;\nif(ARMED.includes(nw)&&!ARMED.includes(old)){title='🔒 '+area+' alarm armed';message='The '+area+' alarm is now armed.';tag='armed';}\nelse if(nw==='triggered'){title='🚨 '+area+' alarm TRIGGERED';message='The '+area+' alarm has been triggered!'+ol();tag='trig';}\nelse if(old==='triggered'&&nw!=='triggered'){title='✅ '+area+' alarm clear';message='The '+area+' alarm is no longer triggered.';tag='untrig';}\nelse if(nw==='disarmed'&&(ARMED.includes(old)||old==='triggered'||old==='pending'||old==='arming')){title='🔓 '+area+' alarm disarmed';message='The '+area+' alarm has been disarmed.';tag='disarm';}\nelse if(nw==='disarmed'&&opens&&(old==='disarmed'||old==='arming')){title='⚠️ '+area+' failed to arm';message='The '+area+' alarm failed to arm.'+ol();tag='failed';}\nelse { return null; }\nconst key=tag+'|'+message, last=context.get('last_'+eid);\nif(last===key) return null;\ncontext.set('last_'+eid,key);\nnode.warn('[alarm-notify] '+area+' '+tag+' -> '+PEOPLE.filter(p=>p.notify&&(!p.onlyWhenHome||homeP(p))).length+' people');\nconst ICON={armed:'mdi:shield-lock',trig:'mdi:alarm-light',untrig:'mdi:shield-check',disarm:'mdi:shield-off',failed:'mdi:shield-alert'};\nconst ico=ICON[tag]||'mdi:shield-home';\nconst out=PEOPLE.filter(p=>p.notify&&(!p.onlyWhenHome||homeP(p))).map(p=>({payload:{action:p.notify,data:{title:title,message:message,data:{notification_icon:ico}}}}));\nlet sm=null;\nif(tag==='armed') sm=(nw==='armed_night')?null:(area+' alarm armed.');\nelse if(tag==='disarm') sm=(old==='armed_night')?null:(area+' alarm disarmed.');\nelse if(tag==='trig') sm='Warning! The '+area+' alarm has been triggered.';\nelse if(tag==='untrig') sm='The '+area+' alarm is no longer triggered.';\nelse if(tag==='failed'){const ks=opens?Object.keys(opens):[];sm=ks.length===1?('Alarm failed to arm because '+spoken(ks[0])+' is open.'):'Alarm failed to arm. Multiple windows and or doors are open. Check Home Assistant.';}\nreturn [out, sm?{payload:{message:sm}}:null];\n",
+        "func": "// Alarm notification engine (state-derived) -> all people\nconst PEOPLE=flow.get('people')||[{notify:'notify.mobile_app_np3'},{notify:'notify.mobile_app_pixel_6a'}];\nconst ents=Array.isArray(msg.entities)?msg.entities:[];\nconst S=id=>{const e=ents.find(x=>x.entity_id===id);return e&&e.state;};\nconst homeP=p=>S(p.person)==='home'||S(p.ping)==='on';\nconst FN=id=>{const e=ents.find(x=>x.entity_id===id);return (e&&e.attributes&&e.attributes.friendly_name)||id.split('.').pop().replace(/_contact$/,'').replace(/_/g,' ').replace(/\\b\\w/g,c=>c.toUpperCase());};\nconst PERSONS=['cian','colm','aoife','olivia','daire'];\nconst spoken=id=>{const nm=FN(id).trim();const w=nm.split(/\\s+/);return (PERSONS.includes(w[0].toLowerCase())&&w.length>1)?(w[0]+\"'s \"+w.slice(1).join(' ').toLowerCase()):('the '+nm.toLowerCase());};\nconst ev=msg.payload||{};\nconst ns=ev.new_state||{}, os=ev.old_state||{};\nconst nw=ns.state, old=os.state, eid=ev.entity_id||'';\nconst area=eid.endsWith('.shed')?'Shed':'House';\nif(eid==='alarm_control_panel.house'&&nw){flow.set('alarm_house',nw);global.set('alarm_house',nw);}\nif(eid==='alarm_control_panel.shed'&&nw){global.set('alarm_shed',nw);}\nconst ARMED=['armed_away','armed_home','armed_night','armed_vacation','armed_custom_bypass'];\nconst opens=(ns.attributes&&ns.attributes.open_sensors)||null;\nfunction ol(){ if(!opens) return ''; try{return ' Open: '+Object.keys(opens).map(id=>FN(id)).join(', ')+'.';}catch(e){return '';} }\nlet title=null,message=null,tag=null;\nif(ARMED.includes(nw)&&!ARMED.includes(old)){title='🔒 '+area+' alarm armed';message='The '+area+' alarm is now armed.';tag='armed';}\nelse if(nw==='triggered'){title='🚨 '+area+' alarm TRIGGERED';message='The '+area+' alarm has been triggered!'+ol();tag='trig';}\nelse if(old==='triggered'&&nw!=='triggered'){title='✅ '+area+' alarm clear';message='The '+area+' alarm is no longer triggered.';tag='untrig';}\nelse if(nw==='disarmed'&&(ARMED.includes(old)||old==='triggered'||old==='pending'||old==='arming')){title='🔓 '+area+' alarm disarmed';message='The '+area+' alarm has been disarmed.';tag='disarm';}\nelse if(nw==='disarmed'&&opens&&(old==='disarmed'||old==='arming')){title='⚠️ '+area+' failed to arm';message='The '+area+' alarm failed to arm.'+ol();tag='failed';}\nelse { return null; }\nconst key=tag+'|'+message, last=context.get('last_'+eid);\nif(last===key) return null;\ncontext.set('last_'+eid,key);\nnode.warn('[alarm-notify] '+area+' '+tag+' -> '+PEOPLE.filter(p=>p.notify&&(!p.onlyWhenHome||homeP(p))).length+' people');\nconst ICON={armed:'mdi:shield-lock',trig:'mdi:alarm-light',untrig:'mdi:shield-check',disarm:'mdi:shield-off',failed:'mdi:shield-alert'};\nconst ico=ICON[tag]||'mdi:shield-home';\nconst out=PEOPLE.filter(p=>p.notify&&(!p.onlyWhenHome||homeP(p))).map(p=>({payload:{action:p.notify,data:{title:title,message:message,data:{notification_icon:ico}}}}));\nlet sm=null;\nif(tag==='armed') sm=(nw==='armed_night')?null:(area+' alarm armed.');\nelse if(tag==='disarm') sm=(old==='armed_night')?null:(area+' alarm disarmed.');\nelse if(tag==='trig') sm='Warning! The '+area+' alarm has been triggered.';\nelse if(tag==='untrig') sm='The '+area+' alarm is no longer triggered.';\nelse if(tag==='failed'){const ks=opens?Object.keys(opens):[];const isHouse=(eid==='alarm_control_panel.house');if(isHouse&&flow.get('failSpoken')){sm=null;}else{if(isHouse)flow.set('failSpoken',true);sm=ks.length===1?('Alarm failed to arm because '+spoken(ks[0])+' is open.'):'Alarm failed to arm. Multiple windows and or doors are open. Check Home Assistant.';}}\nreturn [out, sm?{payload:{message:sm}}:null];\n",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,
@@ -2336,7 +2336,8 @@
         "y": 480,
         "wires": [
             [
-                "na-fn"
+                "na-fn",
+                "aa-retry-fn"
             ]
         ]
     },
@@ -4117,6 +4118,71 @@
         "y": 520,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "aa-retry-tick",
+        "type": "inject",
+        "z": "096ff268dc7bd2f0",
+        "name": "night-retry 60s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 120,
+        "y": 640,
+        "wires": [
+            [
+                "aa-retry-get"
+            ]
+        ]
+    },
+    {
+        "id": "aa-retry-get",
+        "type": "ha-get-entities",
+        "z": "096ff268dc7bd2f0",
+        "name": "states",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "entities",
+        "outputResultsCount": 1,
+        "x": 320,
+        "y": 640,
+        "wires": [
+            [
+                "aa-retry-fn"
+            ]
+        ]
+    },
+    {
+        "id": "aa-retry-fn",
+        "type": "function",
+        "z": "096ff268dc7bd2f0",
+        "name": "night-arm retry",
+        "func": "// Night-arm retry (one shot).\n// Alarmo refuses arm_night when a door/window is open: the panel STAYS 'disarmed'\n// and names the culprits in attribute open_sensors. aa-hm-fn is a state-change\n// one-shot on house_mode, so nothing ever tried again -- the house sat unarmed\n// all night. This retries ONCE, RETRY_MIN after every blocker is closed again\n// (someone got up to shut it; give them time to settle back down).\nconst RETRY_MIN = 20;\nconst RETRY_MS  = RETRY_MIN * 60 * 1000;\n\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nif (!ents.length) return null;                       // no snapshot -> can't judge\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst FN = id => { const e = ents.find(x => x.entity_id === id);\n                   return (e && e.attributes && e.attributes.friendly_name) || id; };\n\nconst hm    = S('input_select.house_mode');\nconst alarm = S('alarm_control_panel.house');\nconst now   = Date.now();\n\n// Left Sleeping, or armed by any route -> the whole thing is off. This is also\n// where the next night's state gets cleared (incl. na-fn's spoken-once flag).\nif (hm !== 'Sleeping' || (alarm && alarm !== 'disarmed')) {\n  if (context.get('blockers') || context.get('retryUsed') || flow.get('failSpoken')) {\n    node.warn('[night-retry] stand down (house_mode=' + hm + ', alarm=' + alarm + ')');\n  }\n  context.set('blockers', null);\n  context.set('closedSince', null);\n  context.set('retryUsed', false);\n  flow.set('failSpoken', false);\n  return null;\n}\n\n// Capture a failed night arm: disarmed + Alarmo naming open sensors, while Sleeping.\nconst ev = msg.payload || {};\nconst ns = ev.new_state || {};\nif (ev.entity_id === 'alarm_control_panel.house' && ns.state === 'disarmed' &&\n    ns.attributes && ns.attributes.open_sensors) {\n  if (context.get('retryUsed')) {\n    node.warn('[night-retry] arm failed again -- retry already used, standing down');\n  } else {\n    const b = Object.keys(ns.attributes.open_sensors);\n    context.set('blockers', b);\n    context.set('closedSince', null);\n    node.warn('[night-retry] armed blocked by: ' + b.map(FN).join(', ') + ' -- waiting for all closed');\n  }\n  return null;\n}\n\nconst blockers = context.get('blockers');\nif (!blockers || !blockers.length) return null;\nif (context.get('retryUsed')) return null;\n\nconst stillOpen = blockers.filter(id => S(id) !== 'off');\nif (stillOpen.length) {                              // re-opened (or never closed) -> clock resets\n  if (context.get('closedSince')) node.warn('[night-retry] re-opened: ' + stillOpen.map(FN).join(', ') + ' -- timer reset');\n  context.set('closedSince', null);\n  return null;\n}\n\nlet since = context.get('closedSince');\nif (!since) {\n  context.set('closedSince', now);\n  node.warn('[night-retry] all closed -- arming in ' + RETRY_MIN + ' min');\n  return null;\n}\n\nif (now - since < RETRY_MS) return null;             // still settling\n\ncontext.set('retryUsed', true);                      // ONE retry, then stop\ncontext.set('closedSince', null);\nnode.warn('[night-retry] retrying arm_night now');\nreturn {};\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 640,
+        "wires": [
+            [
+                "aa-arm-night"
+            ]
         ]
     }
 ]
