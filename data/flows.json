@@ -1620,7 +1620,7 @@
         "type": "function",
         "z": "tab-cam",
         "name": "seed house_mode",
-        "func": "const ents = Array.isArray(msg.payload) ? msg.payload : [];\nconst hm = ents.find(x => x.entity_id === 'input_select.house_mode');\nconst mode = hm ? hm.state : 'Home';\nflow.set('house_mode', mode);\nnode.warn('[cam-concierge] startup house_mode=' + mode);\nreturn null;\n",
+        "func": "const ents = Array.isArray(msg.payload) ? msg.payload : [];\nconst hm = ents.find(x => x.entity_id === 'input_select.house_mode');\nconst mode = hm ? hm.state : 'Home';\n// This seed re-runs every 120s to self-heal a missed state change, so warning on\n// every pass wrote ~720 lines a day of pure noise -- which buries the warnings that\n// actually mean something. Say it only when the value CHANGES (incl. the first seed).\nconst prev = flow.get('house_mode');\nflow.set('house_mode', mode);\nif (mode !== prev) node.warn('[cam-concierge] house_mode seeded: ' + mode);\nreturn null;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
