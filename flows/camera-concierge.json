@@ -387,7 +387,7 @@
   "y": 40,
   "wires": [
    [
-    "cam-tts-courier",
+    "cam-delay-courier",
     "cam-log"
    ]
   ]
@@ -484,7 +484,7 @@
   "y": 100,
   "wires": [
    [
-    "cam-tts-postman",
+    "cam-delay-postman",
     "cam-log"
    ]
   ]
@@ -880,6 +880,56 @@
     "cam-notify-np3",
     "cam-notify-olivia",
     "cam-log"
+   ]
+  ]
+ },
+ {
+  "id": "cam-delay-postman",
+  "type": "delay",
+  "z": "tab-cam",
+  "name": "queue behind doorbell popup (26s)",
+  "pauseType": "delay",
+  "timeout": "26",
+  "timeoutUnits": "seconds",
+  "rate": "1",
+  "nbRateUnits": "1",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 820,
+  "y": 120,
+  "wires": [
+   [
+    "cam-tts-postman"
+   ]
+  ]
+ },
+ {
+  "id": "cam-delay-courier",
+  "type": "delay",
+  "z": "tab-cam",
+  "name": "queue behind doorbell popup (26s)",
+  "pauseType": "delay",
+  "timeout": "26",
+  "timeoutUnits": "seconds",
+  "rate": "1",
+  "nbRateUnits": "1",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 820,
+  "y": 60,
+  "wires": [
+   [
+    "cam-tts-courier"
    ]
   ]
  },
