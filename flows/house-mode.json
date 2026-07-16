@@ -499,8 +499,7 @@
     "hm-overlay-off"
    ],
    [
-    "hm-notify",
-    "hm-notify-olivia"
+    "hm-notify"
    ],
    [
     "hm-logfile"
@@ -661,30 +660,6 @@
    [
     "hm-engine"
    ]
-  ]
- },
- {
-  "id": "hm-notify-olivia",
-  "type": "api-call-service",
-  "z": "tab-hm",
-  "name": "notify Olivia",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_pixel_6a",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": \"\ud83c\udfe0 House Mode\", \"message\": msg.payload, \"data\": {\"notification_icon\": \"mdi:home-account\"}}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 1210,
-  "y": 500,
-  "wires": [
-   []
   ]
  },
  {
