@@ -102,7 +102,7 @@ The alarm follows `input_select.house_mode` directly:
 
 - **Away** → `alarm_arm_away` (house)
 - **Sleeping** → `alarm_arm_night` (house) — silent, no announcement; people are in bed
-- **Home** → `alarm_disarm` (house) + spoken "Welcome home" announcement *only* when returning from Away (not from Sleeping)
+- **Home** → `alarm_disarm` (house). When returning **from Away** the spoken welcome is not fired on arrival — it is **held until the front door opens** (then a short delay), so you are inside to hear it, then a single merged line **names whoever is back**: *"Welcome home, [name]. The house has been disarmed."* on the home audio group. It stays silent if the door never opens within a few minutes, and says nothing when Home comes from Sleeping. (Someone whose phone never leaves the house can't flip Away→Home, so is never named.)
 
 All presence tracking, timing, dead-phone safeguards, and battery nudges live in the **House Mode** tab — the alarm tab just reacts to the resulting state. On Node-RED restart, a startup inject reads the current `house_mode` and `guest_mode` via `ha-get-entities` and syncs both into flow context before the first evaluation.
 
@@ -117,7 +117,7 @@ When `input_boolean.guest_mode` is on, only **Away** arming is suspended (guests
 When guest mode is turned **off**, the flow immediately re-evaluates the current house mode and arms accordingly — if the house is already Away it arms away, if Sleeping it arms night, if Home it does nothing.
 
 ## Alarm notifications + voice (same tab)
-Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, not on the HA bus). Five events → **push to all people + a spoken announcement** on the home audio group: **armed · disarmed · triggered · no-longer-triggered · failed-to-arm.** Trigger/failure messages carry the cause (open sensors). A visitor is only pushed while at home.
+Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, not on the HA bus). Five events → **push to all people + a spoken announcement** on the home audio group: **armed · disarmed · triggered · no-longer-triggered · failed-to-arm.** Trigger/failure messages carry the cause (open sensors). A visitor is only pushed while at home. On a **return from Away** the spoken *disarmed* line is suppressed in favour of the door-gated welcome above (the phone push still fires); the shed's disarm announcement is unaffected.
 
 ## Ways to disarm the house
 1. **House Mode → Home** — automatic on resident arrival (handled by House Mode tab).
