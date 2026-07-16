@@ -745,12 +745,38 @@
         "outputLocationType": "msg",
         "outputLocation": "payload",
         "outputResultsCount": 1,
-        "x": 190,
+        "x": 250,
         "y": 120,
         "wires": [
             [
                 "hm-engine"
             ]
+        ]
+    },
+    {
+        "id": "hm-reason",
+        "type": "api-call-service",
+        "z": "tab-hm",
+        "name": "write house_mode reason",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "input_text.set_value",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "input_text.house_mode_reason"
+        ],
+        "data": "{\"value\": msg.payload}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1230,
+        "y": 520,
+        "wires": [
+            []
         ]
     },
     {
@@ -964,7 +990,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1140,
+        "x": 1220,
         "y": 540,
         "wires": [
             [
@@ -1631,6 +1657,56 @@
         ]
     },
     {
+        "id": "cam-delay-postman",
+        "type": "delay",
+        "z": "tab-cam",
+        "name": "queue behind doorbell popup (26s)",
+        "pauseType": "delay",
+        "timeout": "26",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 820,
+        "y": 120,
+        "wires": [
+            [
+                "cam-tts-postman"
+            ]
+        ]
+    },
+    {
+        "id": "cam-delay-courier",
+        "type": "delay",
+        "z": "tab-cam",
+        "name": "queue behind doorbell popup (26s)",
+        "pauseType": "delay",
+        "timeout": "26",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 820,
+        "y": 60,
+        "wires": [
+            [
+                "cam-tts-courier"
+            ]
+        ]
+    },
+    {
         "id": "heat-tick",
         "type": "inject",
         "z": "5a86c1a3371ffe9e",
@@ -2126,8 +2202,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1070,
-        "y": 120,
+        "x": 1170,
+        "y": 100,
         "wires": [
             []
         ]
@@ -2152,8 +2228,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1060,
-        "y": 240,
+        "x": 1160,
+        "y": 260,
         "wires": [
             []
         ]
@@ -2176,8 +2252,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1090,
-        "y": 520,
+        "x": 1190,
+        "y": 620,
         "wires": [
             []
         ]
@@ -2222,8 +2298,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 190,
-        "y": 480,
+        "x": 150,
+        "y": 520,
         "wires": [
             [
                 "na-get"
@@ -2243,7 +2319,7 @@
         "finalize": "",
         "libs": [],
         "x": 710,
-        "y": 480,
+        "y": 540,
         "wires": [
             [
                 "na-notify",
@@ -2271,8 +2347,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1090,
-        "y": 380,
+        "x": 1190,
+        "y": 360,
         "wires": [
             []
         ]
@@ -2290,8 +2366,8 @@
         "targetType": "msg",
         "statusVal": "payload.data.title",
         "statusType": "msg",
-        "x": 1090,
-        "y": 460,
+        "x": 1270,
+        "y": 520,
         "wires": []
     },
     {
@@ -2307,8 +2383,8 @@
         "outputLocationType": "msg",
         "outputLocation": "entities",
         "outputResultsCount": 1,
-        "x": 470,
-        "y": 480,
+        "x": 430,
+        "y": 520,
         "wires": [
             [
                 "na-fn",
@@ -2362,8 +2438,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 200,
-        "y": 580,
+        "x": 160,
+        "y": 700,
         "wires": [
             [
                 "aa-batt-get"
@@ -2381,8 +2457,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 710,
-        "y": 580,
+        "x": 750,
+        "y": 700,
         "wires": [
             [
                 "aa-batt-notify"
@@ -2407,8 +2483,8 @@
         "output_location_type": "msg",
         "output_location": "entities",
         "output_results_count": 1,
-        "x": 440,
-        "y": 580,
+        "x": 480,
+        "y": 700,
         "wires": [
             [
                 "aa-batt-fn"
@@ -2432,8 +2508,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 120,
-        "y": 680,
+        "x": 140,
+        "y": 800,
         "wires": [
             [
                 "aa-batt-sum-get"
@@ -2458,8 +2534,8 @@
         "output_location_type": "msg",
         "output_location": "entities",
         "output_results_count": 1,
-        "x": 460,
-        "y": 680,
+        "x": 480,
+        "y": 800,
         "wires": [
             [
                 "aa-batt-sum-fn"
@@ -2477,8 +2553,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 710,
-        "y": 680,
+        "x": 770,
+        "y": 800,
         "wires": [
             [
                 "aa-batt-notify"
@@ -2502,8 +2578,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1100,
-        "y": 620,
+        "x": 1220,
+        "y": 760,
         "wires": [
             []
         ]
@@ -2548,7 +2624,7 @@
         ],
         "entityidfiltertype": "list",
         "x": 130,
-        "y": 220,
+        "y": 200,
         "wires": [
             [
                 "aa-hm-fn"
@@ -2567,8 +2643,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 740,
-        "y": 220,
+        "x": 820,
+        "y": 200,
         "wires": [
             [
                 "aa-arm"
@@ -2604,7 +2680,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1070,
+        "x": 1170,
         "y": 180,
         "wires": [
             []
@@ -2647,7 +2723,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 640,
+        "x": 680,
         "y": 100,
         "wires": [
             [
@@ -2726,7 +2802,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 440,
+        "x": 460,
         "y": 300,
         "wires": [
             [
@@ -2751,8 +2827,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 120,
-        "y": 400,
+        "x": 140,
+        "y": 360,
         "wires": [
             [
                 "aa-reconcile-get"
@@ -2772,8 +2848,8 @@
         "outputLocationType": "msg",
         "outputLocation": "payload",
         "outputResultsCount": 1,
-        "x": 410,
-        "y": 400,
+        "x": 370,
+        "y": 360,
         "wires": [
             [
                 "aa-reconcile-fn"
@@ -2791,11 +2867,188 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 710,
-        "y": 400,
+        "x": 690,
+        "y": 360,
         "wires": [
             [
                 "aa-hm-fn"
+            ]
+        ]
+    },
+    {
+        "id": "aa-retry-tick",
+        "type": "inject",
+        "z": "096ff268dc7bd2f0",
+        "name": "night-retry 60s",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 140,
+        "y": 420,
+        "wires": [
+            [
+                "aa-retry-get"
+            ]
+        ]
+    },
+    {
+        "id": "aa-retry-get",
+        "type": "ha-get-entities",
+        "z": "096ff268dc7bd2f0",
+        "name": "states",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "entities",
+        "outputResultsCount": 1,
+        "x": 370,
+        "y": 420,
+        "wires": [
+            [
+                "aa-retry-fn"
+            ]
+        ]
+    },
+    {
+        "id": "aa-retry-fn",
+        "type": "function",
+        "z": "096ff268dc7bd2f0",
+        "name": "night-arm retry",
+        "func": "// Night-arm retry (one shot).\n// Alarmo refuses arm_night when a door/window is open: the panel STAYS 'disarmed'\n// and names the culprits in attribute open_sensors. aa-hm-fn is a state-change\n// one-shot on house_mode, so nothing ever tried again -- the house sat unarmed\n// all night. This retries ONCE, RETRY_MIN after every blocker is closed again\n// (someone got up to shut it; give them time to settle back down).\nconst RETRY_MIN = 20;\nconst RETRY_MS  = RETRY_MIN * 60 * 1000;\n\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nif (!ents.length) return null;                       // no snapshot -> can't judge\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst FN = id => { const e = ents.find(x => x.entity_id === id);\n                   return (e && e.attributes && e.attributes.friendly_name) || id; };\n\nconst hm    = S('input_select.house_mode');\nconst alarm = S('alarm_control_panel.house');\nconst now   = Date.now();\n\n// Left Sleeping, or armed by any route -> the whole thing is off. This is also\n// where the next night's state gets cleared (incl. na-fn's spoken-once flag).\nif (hm !== 'Sleeping' || (alarm && alarm !== 'disarmed')) {\n  if (context.get('blockers') || context.get('retryUsed') || flow.get('failSpoken')) {\n    node.warn('[night-retry] stand down (house_mode=' + hm + ', alarm=' + alarm + ')');\n  }\n  context.set('blockers', null);\n  context.set('closedSince', null);\n  context.set('retryUsed', false);\n  flow.set('failSpoken', false);\n  return null;\n}\n\n// Capture a failed night arm: disarmed + Alarmo naming open sensors, while Sleeping.\nconst ev = msg.payload || {};\nconst ns = ev.new_state || {};\nif (ev.entity_id === 'alarm_control_panel.house' && ns.state === 'disarmed' &&\n    ns.attributes && ns.attributes.open_sensors) {\n  if (context.get('retryUsed')) {\n    node.warn('[night-retry] arm failed again -- retry already used, standing down');\n  } else {\n    const b = Object.keys(ns.attributes.open_sensors);\n    context.set('blockers', b);\n    context.set('closedSince', null);\n    node.warn('[night-retry] armed blocked by: ' + b.map(FN).join(', ') + ' -- waiting for all closed');\n  }\n  return null;\n}\n\nconst blockers = context.get('blockers');\nif (!blockers || !blockers.length) return null;\nif (context.get('retryUsed')) return null;\n\nconst stillOpen = blockers.filter(id => S(id) !== 'off');\nif (stillOpen.length) {                              // re-opened (or never closed) -> clock resets\n  if (context.get('closedSince')) node.warn('[night-retry] re-opened: ' + stillOpen.map(FN).join(', ') + ' -- timer reset');\n  context.set('closedSince', null);\n  return null;\n}\n\nlet since = context.get('closedSince');\nif (!since) {\n  context.set('closedSince', now);\n  node.warn('[night-retry] all closed -- arming in ' + RETRY_MIN + ' min');\n  return null;\n}\n\nif (now - since < RETRY_MS) return null;             // still settling\n\ncontext.set('retryUsed', true);                      // ONE retry, then stop\ncontext.set('closedSince', null);\nnode.warn('[night-retry] retrying arm_night now');\nreturn {};\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 440,
+        "wires": [
+            [
+                "aa-arm-night"
+            ]
+        ]
+    },
+    {
+        "id": "aa-door",
+        "type": "server-state-changed",
+        "z": "096ff268dc7bd2f0",
+        "name": "front door open",
+        "server": "ha-server",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "binary_sensor.front_door_contact"
+            ],
+            "substring": "",
+            "regex": ""
+        },
+        "outputInitially": false,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": 0,
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": true,
+        "ignorePrevStateUnknown": true,
+        "ignorePrevStateUnavailable": true,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            }
+        ],
+        "entityidfiltertype": "list",
+        "x": 140,
+        "y": 600,
+        "wires": [
+            [
+                "aa-welcome-get"
+            ]
+        ]
+    },
+    {
+        "id": "aa-welcome-get",
+        "type": "ha-get-entities",
+        "z": "096ff268dc7bd2f0",
+        "name": "states",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "entities",
+        "outputResultsCount": 1,
+        "x": 390,
+        "y": 600,
+        "wires": [
+            [
+                "aa-welcome-fn"
+            ]
+        ]
+    },
+    {
+        "id": "aa-welcome-fn",
+        "type": "function",
+        "z": "096ff268dc7bd2f0",
+        "name": "welcome (door-gated)",
+        "func": "const aw = flow.get('awaitWelcome');\nconst WINDOW = 8 * 60 * 1000;\nconst opened = msg.payload && msg.payload.new_state && msg.payload.new_state.state === 'on';\nif (!opened) return null;\nif (!aw || (Date.now() - aw.since) > WINDOW) return null;\nflow.set('awaitWelcome', null);\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst PEOPLE = flow.get('people') || [];\nconst home = PEOPLE.filter(p => p.name && (S(p.person) === 'home' || S(p.ping) === 'on')).map(p => p.name);\nlet who = null;\nif (home.length === 1) who = home[0];\nelse if (home.length > 1) who = home.slice(0, -1).join(', ') + ' and ' + home[home.length - 1];\nconst message = who ? ('Welcome home, ' + who + '. The house has been disarmed.') : 'Welcome home. The house has been disarmed.';\nnode.warn('[house-alarm] ' + message);\nreturn { payload: { message } };",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 600,
+        "wires": [
+            [
+                "aa-welcome-delay"
+            ]
+        ]
+    },
+    {
+        "id": "aa-welcome-delay",
+        "type": "delay",
+        "z": "096ff268dc7bd2f0",
+        "name": "10s",
+        "pauseType": "delay",
+        "timeout": "25",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 850,
+        "y": 600,
+        "wires": [
+            [
+                "aa-tts"
             ]
         ]
     },
@@ -3915,8 +4168,8 @@
         "name": "200",
         "statusCode": "200",
         "headers": {},
-        "x": 130,
-        "y": 500,
+        "x": 170,
+        "y": 340,
         "wires": []
     },
     {
@@ -3963,7 +4216,7 @@
         "outputProperties": [],
         "queue": "none",
         "x": 970,
-        "y": 180,
+        "y": 120,
         "wires": [
             []
         ]
@@ -4021,8 +4274,8 @@
         "outputProperties": [],
         "queue": "none",
         "blockInputOverrides": false,
-        "x": 1010,
-        "y": 420,
+        "x": 1150,
+        "y": 260,
         "wires": [
             []
         ]
@@ -4038,8 +4291,8 @@
         "createDir": true,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 810,
-        "y": 580,
+        "x": 830,
+        "y": 400,
         "wires": [
             []
         ]
@@ -4061,264 +4314,11 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "flush",
-        "x": 330,
-        "y": 380,
+        "x": 350,
+        "y": 280,
         "wires": [
             [
                 "iw-engine"
-            ]
-        ]
-    },
-    {
-        "id": "hm-reason",
-        "type": "api-call-service",
-        "z": "tab-hm",
-        "name": "write house_mode reason",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "input_text.set_value",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [
-            "input_text.house_mode_reason"
-        ],
-        "data": "{\"value\": msg.payload}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 1230,
-        "y": 520,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "aa-retry-tick",
-        "type": "inject",
-        "z": "096ff268dc7bd2f0",
-        "name": "night-retry 60s",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "60",
-        "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 120,
-        "y": 640,
-        "wires": [
-            [
-                "aa-retry-get"
-            ]
-        ]
-    },
-    {
-        "id": "aa-retry-get",
-        "type": "ha-get-entities",
-        "z": "096ff268dc7bd2f0",
-        "name": "states",
-        "server": "ha-server",
-        "version": 3,
-        "rules": [],
-        "outputType": "array",
-        "outputEmptyResults": true,
-        "outputLocationType": "msg",
-        "outputLocation": "entities",
-        "outputResultsCount": 1,
-        "x": 320,
-        "y": 640,
-        "wires": [
-            [
-                "aa-retry-fn"
-            ]
-        ]
-    },
-    {
-        "id": "aa-retry-fn",
-        "type": "function",
-        "z": "096ff268dc7bd2f0",
-        "name": "night-arm retry",
-        "func": "// Night-arm retry (one shot).\n// Alarmo refuses arm_night when a door/window is open: the panel STAYS 'disarmed'\n// and names the culprits in attribute open_sensors. aa-hm-fn is a state-change\n// one-shot on house_mode, so nothing ever tried again -- the house sat unarmed\n// all night. This retries ONCE, RETRY_MIN after every blocker is closed again\n// (someone got up to shut it; give them time to settle back down).\nconst RETRY_MIN = 20;\nconst RETRY_MS  = RETRY_MIN * 60 * 1000;\n\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nif (!ents.length) return null;                       // no snapshot -> can't judge\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst FN = id => { const e = ents.find(x => x.entity_id === id);\n                   return (e && e.attributes && e.attributes.friendly_name) || id; };\n\nconst hm    = S('input_select.house_mode');\nconst alarm = S('alarm_control_panel.house');\nconst now   = Date.now();\n\n// Left Sleeping, or armed by any route -> the whole thing is off. This is also\n// where the next night's state gets cleared (incl. na-fn's spoken-once flag).\nif (hm !== 'Sleeping' || (alarm && alarm !== 'disarmed')) {\n  if (context.get('blockers') || context.get('retryUsed') || flow.get('failSpoken')) {\n    node.warn('[night-retry] stand down (house_mode=' + hm + ', alarm=' + alarm + ')');\n  }\n  context.set('blockers', null);\n  context.set('closedSince', null);\n  context.set('retryUsed', false);\n  flow.set('failSpoken', false);\n  return null;\n}\n\n// Capture a failed night arm: disarmed + Alarmo naming open sensors, while Sleeping.\nconst ev = msg.payload || {};\nconst ns = ev.new_state || {};\nif (ev.entity_id === 'alarm_control_panel.house' && ns.state === 'disarmed' &&\n    ns.attributes && ns.attributes.open_sensors) {\n  if (context.get('retryUsed')) {\n    node.warn('[night-retry] arm failed again -- retry already used, standing down');\n  } else {\n    const b = Object.keys(ns.attributes.open_sensors);\n    context.set('blockers', b);\n    context.set('closedSince', null);\n    node.warn('[night-retry] armed blocked by: ' + b.map(FN).join(', ') + ' -- waiting for all closed');\n  }\n  return null;\n}\n\nconst blockers = context.get('blockers');\nif (!blockers || !blockers.length) return null;\nif (context.get('retryUsed')) return null;\n\nconst stillOpen = blockers.filter(id => S(id) !== 'off');\nif (stillOpen.length) {                              // re-opened (or never closed) -> clock resets\n  if (context.get('closedSince')) node.warn('[night-retry] re-opened: ' + stillOpen.map(FN).join(', ') + ' -- timer reset');\n  context.set('closedSince', null);\n  return null;\n}\n\nlet since = context.get('closedSince');\nif (!since) {\n  context.set('closedSince', now);\n  node.warn('[night-retry] all closed -- arming in ' + RETRY_MIN + ' min');\n  return null;\n}\n\nif (now - since < RETRY_MS) return null;             // still settling\n\ncontext.set('retryUsed', true);                      // ONE retry, then stop\ncontext.set('closedSince', null);\nnode.warn('[night-retry] retrying arm_night now');\nreturn {};\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 530,
-        "y": 640,
-        "wires": [
-            [
-                "aa-arm-night"
-            ]
-        ]
-    },
-    {
-        "id": "cam-delay-postman",
-        "type": "delay",
-        "z": "tab-cam",
-        "name": "queue behind doorbell popup (26s)",
-        "pauseType": "delay",
-        "timeout": "26",
-        "timeoutUnits": "seconds",
-        "rate": "1",
-        "nbRateUnits": "1",
-        "rateUnits": "second",
-        "randomFirst": "1",
-        "randomLast": "5",
-        "randomUnits": "seconds",
-        "drop": false,
-        "allowrate": false,
-        "outputs": 1,
-        "x": 820,
-        "y": 120,
-        "wires": [
-            [
-                "cam-tts-postman"
-            ]
-        ]
-    },
-    {
-        "id": "cam-delay-courier",
-        "type": "delay",
-        "z": "tab-cam",
-        "name": "queue behind doorbell popup (26s)",
-        "pauseType": "delay",
-        "timeout": "26",
-        "timeoutUnits": "seconds",
-        "rate": "1",
-        "nbRateUnits": "1",
-        "rateUnits": "second",
-        "randomFirst": "1",
-        "randomLast": "5",
-        "randomUnits": "seconds",
-        "drop": false,
-        "allowrate": false,
-        "outputs": 1,
-        "x": 820,
-        "y": 60,
-        "wires": [
-            [
-                "cam-tts-courier"
-            ]
-        ]
-    },
-    {
-        "id": "aa-door",
-        "type": "server-state-changed",
-        "z": "096ff268dc7bd2f0",
-        "name": "front door open",
-        "server": "ha-server",
-        "version": 6,
-        "outputs": 1,
-        "exposeAsEntityConfig": "",
-        "entities": {
-            "entity": [
-                "binary_sensor.front_door_contact"
-            ],
-            "substring": "",
-            "regex": ""
-        },
-        "outputInitially": false,
-        "stateType": "str",
-        "ifState": "",
-        "ifStateType": "str",
-        "ifStateOperator": "is",
-        "outputOnlyOnStateChange": true,
-        "for": 0,
-        "forType": "num",
-        "forUnits": "minutes",
-        "ignorePrevStateNull": true,
-        "ignorePrevStateUnknown": true,
-        "ignorePrevStateUnavailable": true,
-        "ignoreCurrentStateUnknown": false,
-        "ignoreCurrentStateUnavailable": false,
-        "outputProperties": [
-            {
-                "property": "payload",
-                "propertyType": "msg",
-                "value": "",
-                "valueType": "eventData"
-            }
-        ],
-        "entityidfiltertype": "list",
-        "x": 130,
-        "y": 640,
-        "wires": [
-            [
-                "aa-welcome-get"
-            ]
-        ]
-    },
-    {
-        "id": "aa-welcome-get",
-        "type": "ha-get-entities",
-        "z": "096ff268dc7bd2f0",
-        "name": "states",
-        "server": "ha-server",
-        "version": 3,
-        "rules": [],
-        "outputType": "array",
-        "outputEmptyResults": true,
-        "outputLocationType": "msg",
-        "outputLocation": "entities",
-        "outputResultsCount": 1,
-        "x": 360,
-        "y": 640,
-        "wires": [
-            [
-                "aa-welcome-fn"
-            ]
-        ]
-    },
-    {
-        "id": "aa-welcome-fn",
-        "type": "function",
-        "z": "096ff268dc7bd2f0",
-        "name": "welcome (door-gated)",
-        "func": "const aw = flow.get('awaitWelcome');\nconst WINDOW = 8 * 60 * 1000;\nconst opened = msg.payload && msg.payload.new_state && msg.payload.new_state.state === 'on';\nif (!opened) return null;\nif (!aw || (Date.now() - aw.since) > WINDOW) return null;\nflow.set('awaitWelcome', null);\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst PEOPLE = flow.get('people') || [];\nconst home = PEOPLE.filter(p => p.name && (S(p.person) === 'home' || S(p.ping) === 'on')).map(p => p.name);\nlet who = null;\nif (home.length === 1) who = home[0];\nelse if (home.length > 1) who = home.slice(0, -1).join(', ') + ' and ' + home[home.length - 1];\nconst message = who ? ('Welcome home, ' + who + '. The house has been disarmed.') : 'Welcome home. The house has been disarmed.';\nnode.warn('[house-alarm] ' + message);\nreturn { payload: { message } };",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 580,
-        "y": 640,
-        "wires": [
-            [
-                "aa-welcome-delay"
-            ]
-        ]
-    },
-    {
-        "id": "aa-welcome-delay",
-        "type": "delay",
-        "z": "096ff268dc7bd2f0",
-        "name": "10s",
-        "pauseType": "delay",
-        "timeout": "10",
-        "timeoutUnits": "seconds",
-        "rate": "1",
-        "nbRateUnits": "1",
-        "rateUnits": "second",
-        "randomFirst": "1",
-        "randomLast": "5",
-        "randomUnits": "seconds",
-        "drop": false,
-        "allowrate": false,
-        "outputs": 1,
-        "x": 810,
-        "y": 640,
-        "wires": [
-            [
-                "aa-tts"
             ]
         ]
     }

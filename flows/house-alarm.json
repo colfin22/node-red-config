@@ -67,8 +67,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1070,
-  "y": 120,
+  "x": 1170,
+  "y": 100,
   "wires": [
    []
   ]
@@ -93,8 +93,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1060,
-  "y": 240,
+  "x": 1160,
+  "y": 260,
   "wires": [
    []
   ]
@@ -117,8 +117,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1090,
-  "y": 520,
+  "x": 1190,
+  "y": 620,
   "wires": [
    []
   ]
@@ -163,8 +163,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 190,
-  "y": 480,
+  "x": 150,
+  "y": 520,
   "wires": [
    [
     "na-get"
@@ -184,7 +184,7 @@
   "finalize": "",
   "libs": [],
   "x": 710,
-  "y": 480,
+  "y": 540,
   "wires": [
    [
     "na-notify",
@@ -212,8 +212,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1090,
-  "y": 380,
+  "x": 1190,
+  "y": 360,
   "wires": [
    []
   ]
@@ -231,8 +231,8 @@
   "targetType": "msg",
   "statusVal": "payload.data.title",
   "statusType": "msg",
-  "x": 1090,
-  "y": 460,
+  "x": 1270,
+  "y": 520,
   "wires": []
  },
  {
@@ -248,8 +248,8 @@
   "outputLocationType": "msg",
   "outputLocation": "entities",
   "outputResultsCount": 1,
-  "x": 470,
-  "y": 480,
+  "x": 430,
+  "y": 520,
   "wires": [
    [
     "na-fn",
@@ -303,8 +303,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 200,
-  "y": 580,
+  "x": 160,
+  "y": 700,
   "wires": [
    [
     "aa-batt-get"
@@ -322,8 +322,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 710,
-  "y": 580,
+  "x": 750,
+  "y": 700,
   "wires": [
    [
     "aa-batt-notify"
@@ -348,8 +348,8 @@
   "output_location_type": "msg",
   "output_location": "entities",
   "output_results_count": 1,
-  "x": 440,
-  "y": 580,
+  "x": 480,
+  "y": 700,
   "wires": [
    [
     "aa-batt-fn"
@@ -373,8 +373,8 @@
   "topic": "",
   "payload": "",
   "payloadType": "date",
-  "x": 120,
-  "y": 680,
+  "x": 140,
+  "y": 800,
   "wires": [
    [
     "aa-batt-sum-get"
@@ -399,8 +399,8 @@
   "output_location_type": "msg",
   "output_location": "entities",
   "output_results_count": 1,
-  "x": 460,
-  "y": 680,
+  "x": 480,
+  "y": 800,
   "wires": [
    [
     "aa-batt-sum-fn"
@@ -418,8 +418,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 710,
-  "y": 680,
+  "x": 770,
+  "y": 800,
   "wires": [
    [
     "aa-batt-notify"
@@ -443,8 +443,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1100,
-  "y": 620,
+  "x": 1220,
+  "y": 760,
   "wires": [
    []
   ]
@@ -489,7 +489,7 @@
   ],
   "entityidfiltertype": "list",
   "x": 130,
-  "y": 220,
+  "y": 200,
   "wires": [
    [
     "aa-hm-fn"
@@ -508,8 +508,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 740,
-  "y": 220,
+  "x": 820,
+  "y": 200,
   "wires": [
    [
     "aa-arm"
@@ -545,7 +545,7 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1070,
+  "x": 1170,
   "y": 180,
   "wires": [
    []
@@ -588,7 +588,7 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 640,
+  "x": 680,
   "y": 100,
   "wires": [
    [
@@ -667,7 +667,7 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 440,
+  "x": 460,
   "y": 300,
   "wires": [
    [
@@ -692,8 +692,8 @@
   "topic": "",
   "payload": "",
   "payloadType": "date",
-  "x": 120,
-  "y": 400,
+  "x": 140,
+  "y": 360,
   "wires": [
    [
     "aa-reconcile-get"
@@ -713,8 +713,8 @@
   "outputLocationType": "msg",
   "outputLocation": "payload",
   "outputResultsCount": 1,
-  "x": 410,
-  "y": 400,
+  "x": 370,
+  "y": 360,
   "wires": [
    [
     "aa-reconcile-fn"
@@ -732,8 +732,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 710,
-  "y": 400,
+  "x": 690,
+  "y": 360,
   "wires": [
    [
     "aa-hm-fn"
@@ -757,8 +757,8 @@
   "topic": "",
   "payload": "",
   "payloadType": "date",
-  "x": 120,
-  "y": 640,
+  "x": 140,
+  "y": 420,
   "wires": [
    [
     "aa-retry-get"
@@ -778,8 +778,8 @@
   "outputLocationType": "msg",
   "outputLocation": "entities",
   "outputResultsCount": 1,
-  "x": 320,
-  "y": 640,
+  "x": 370,
+  "y": 420,
   "wires": [
    [
     "aa-retry-fn"
@@ -797,8 +797,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 530,
-  "y": 640,
+  "x": 700,
+  "y": 440,
   "wires": [
    [
     "aa-arm-night"
@@ -844,8 +844,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 130,
-  "y": 640,
+  "x": 140,
+  "y": 600,
   "wires": [
    [
     "aa-welcome-get"
@@ -865,8 +865,8 @@
   "outputLocationType": "msg",
   "outputLocation": "entities",
   "outputResultsCount": 1,
-  "x": 360,
-  "y": 640,
+  "x": 390,
+  "y": 600,
   "wires": [
    [
     "aa-welcome-fn"
@@ -884,8 +884,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 580,
-  "y": 640,
+  "x": 640,
+  "y": 600,
   "wires": [
    [
     "aa-welcome-delay"
@@ -898,7 +898,7 @@
   "z": "096ff268dc7bd2f0",
   "name": "10s",
   "pauseType": "delay",
-  "timeout": "10",
+  "timeout": "25",
   "timeoutUnits": "seconds",
   "rate": "1",
   "nbRateUnits": "1",
@@ -909,8 +909,8 @@
   "drop": false,
   "allowrate": false,
   "outputs": 1,
-  "x": 810,
-  "y": 640,
+  "x": 850,
+  "y": 600,
   "wires": [
    [
     "aa-tts"
