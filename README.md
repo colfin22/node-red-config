@@ -147,15 +147,15 @@ Two separate HA automations — one on `alarm_control_panel.house`, one on `.she
 
 ![The Heating Control flow in the Node-RED editor](docs/heating-control.png)
 
-Runs off House Mode + time of day, driving the **local HomeKit** thermostat (`climate.netatmo_smart_thermostat`). The Netatmo holds a flat **eco 18.5°C** baseline; this flow only ever *raises* above it and re-asserts the target every 30 minutes so a manual override never lapses back to the baseline.
+Runs off House Mode + time of day, driving the **local HomeKit** thermostat (`climate.netatmo_smart_thermostat`). The Netatmo holds a flat **eco 19°C** baseline; this flow only ever *raises* above it and re-asserts the target every 30 minutes so a manual override never lapses back to the baseline.
 
 ## Temperatures
-eco 18.5 · night 19.5 · comfort 20 · hot 20.5 · frost 12
+eco 19 · night 19.5 · comfort 20 · hot 20.5 · frost 12
 
 ## Schedule (House Mode + time)
 - **Home** → comfort 20; **hot 20.5** between 19:00–22:00
 - **Sleeping** → night 19.5 overnight; comfort 20 from **07:00**
-- **Away** → eco 18.5; drops to frost 12 after 24 h empty (gated by the `Away 24h+` dashboard toggle, `input_boolean.heating_extended_away`)
+- **Away** → eco 19; drops to frost 12 after 24 h empty (gated by the `Away 24h+` dashboard toggle, `input_boolean.heating_extended_away`)
 
 ## Forecast pre-heat
 Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts the 07:00 warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to Colm + Olivia the night before, **only when the low is sub-zero**.
@@ -164,7 +164,7 @@ Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05
 When the house is empty and someone is driving home (within 10 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival. The pre-heat **latches** once triggered — a GPS wobble flipping "towards" to "away from" for a moment can't bounce the setpoint mid-approach; it releases only when they arrive (house leaves Away) or genuinely leave the area again (beyond 12 km).
 
 ## Boost
-Boost from the **dashboard** (pick a temperature, tap Boost) or by nudging the thermostat **above** the scheduled target — either way it holds for **2 hours** before the schedule resumes, and re-boosting restarts the clock. Turning the thermostat down to or below the schedule (or tapping Cancel on the dashboard) **cancels** the boost — a turn-down is never treated as a "boost" (this also absorbs the Netatmo app's boost-delete, which reverts the device to its 18.5 baseline). A boost cancels the moment everyone leaves, and can't start while the house is Away.
+Boost from the **dashboard** (pick a temperature, tap Boost) or by nudging the thermostat **above** the scheduled target — either way it holds for **2 hours** before the schedule resumes, and re-boosting restarts the clock. Turning the thermostat down to or below the schedule (or tapping Cancel on the dashboard) **cancels** the boost — a turn-down is never treated as a "boost" (this also absorbs the Netatmo app's boost-delete, which reverts the device to its 19 baseline). A boost cancels the moment everyone leaves, and can't start while the house is Away.
 
 ## "Why did the heating change?"
 The controller writes a plain-English status to `input_text.heating_status` — used both by the heating card and by a **Recent activity** logbook card — and it names **what triggered the change**, not just what the heating is doing:
@@ -174,7 +174,7 @@ The controller writes a plain-English status to `input_text.heating_status` — 
 | `Home — comfort 20° · house woke up (sitting room light)` | someone turned a light on in the morning; the house switched out of Sleeping |
 | `Evening warm-up 20.5° · evening schedule (19:00)` | the clock, not you |
 | `Sleeping — overnight 19.5° · quiet for 20 min — bed` | the house settled |
-| `Away — setback 18.5° · everyone left` | the last person left |
+| `Away — setback 19° · everyone left` | the last person left |
 | `Boost 22° until 15:30 · you asked` | dashboard or thermostat dial |
 | `Morning warm-up 20° · cold morning — started early` | forecast pre-heat |
 | `Home — comfort 20° · heading home` | proximity pre-heat |
