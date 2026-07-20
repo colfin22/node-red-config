@@ -117,7 +117,7 @@ When `input_boolean.guest_mode` is on, only **Away** arming is suspended (guests
 When guest mode is turned **off**, the flow immediately re-evaluates the current house mode and arms accordingly — if the house is already Away it arms away, if Sleeping it arms night, if Home it does nothing.
 
 ## Alarm notifications + voice (same tab)
-Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, not on the HA bus). Five events → **push to all people + a spoken announcement** on the home audio group: **armed · disarmed · triggered · no-longer-triggered · failed-to-arm.** Trigger/failure messages carry the cause (open sensors). A visitor is only pushed while at home. On a **return from Away** the spoken *disarmed* line is suppressed in favour of the door-gated welcome above (the phone push still fires); the shed's disarm announcement is unaffected.
+Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, not on the HA bus). Five events → **push to all people + a spoken announcement** on the home audio group: **armed · disarmed · triggered · no-longer-triggered · failed-to-arm.** Trigger/failure messages carry the cause (open sensors); a failure is recognised both as an instant refusal and as an exit-delay arm that aborts back to disarmed with sensors open (a cancelled exit delay with nothing open stays a plain disarm). A visitor is only pushed while at home. On a **return from Away** the spoken *disarmed* line is suppressed in favour of the door-gated welcome above (the phone push still fires); the shed's disarm announcement is unaffected.
 
 ## Ways to disarm the house
 1. **House Mode → Home** — automatic on resident arrival (handled by House Mode tab).
