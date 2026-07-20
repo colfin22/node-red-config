@@ -4219,7 +4219,7 @@
         "type": "function",
         "z": "tab-iw",
         "name": "Escalation engine",
-        "func": "\nconst GRACE=90*1000, T2=10*60*1000, T3=15*60*1000, T3_SLOW=60*60*1000, MULTI=3;\nconst CORE={'Home Assistant':1,'MQTT broker':1,'Pi-hole primary':1,'Proxmox node1':1,'Proxmox node2':1,'Proxmox node3':1,'TrueNAS':1,'MikroTik RB5009 (gateway)':1};\nfunction dub(){return new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});}\nfunction dhour(){return parseInt(new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10);}\nfunction quiet(){var h=dhour();return (h>=22||h<7);}\nfunction hhmm(ts){return new Date(ts).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});}\nfunction dur(ms){var m=Math.max(1,Math.round(ms/60000));if(m<60)return m+'m';return Math.floor(m/60)+'h'+(m%60)+'m';}\nfunction durWords(ms){var m=Math.max(1,Math.round(ms/60000));var h=Math.floor(m/60),mm=m%60;var pp=[];if(h)pp.push(h+' hour'+(h>1?'s':''));if(mm||!h)pp.push(mm+' minute'+(mm===1?'':'s'));return pp.join(' and ');}\nfunction phone(t,m,tag){if(global.get('maintenance_mode')){log('[maint-suppressed] '+t+' — '+m);return;}node.send([{title:t,message:m,ndata:{tag:tag||'infra',channel:'Infra'}},null,null]);}\nfunction tts(m){if(global.get('maintenance_mode')){log('[maint-suppressed-tts] '+m);return;}node.send([null,{message:m},null]);}\nfunction log(s){node.send([null,null,{payload:dub()+'  '+s+'\\n'}]);}\nfunction countDown(){return Object.keys(context.get('S')||{}).length;}\nfunction clr(mon){var T=context.get('T')||{};var t=T[mon];if(t){if(t.grace)clearTimeout(t.grace);if(t.t2)clearTimeout(t.t2);if(t.t3)clearInterval(t.t3);delete T[mon];context.set('T',T);}}\n\nif(msg && msg.topic==='flush'){\n  var S=context.get('S')||{}, ON=context.get('ON')||[], lines=[];\n  for(var m in S){lines.push('• '+m+' still DOWN since '+hhmm(S[m].downSince));}\n  ON.filter(function(e){return e.type==='recovered';}).forEach(function(e){lines.push('• '+e.mon+' was down '+hhmm(e.from)+'–'+hhmm(e.to)+' (recovered)');});\n  if(lines.length){phone('🔧 Overnight infra summary',lines.join('\\n'),'infra_summary');log('[7am] '+lines.length+' item(s)');}\n  context.set('ON',[]);\n  return null;\n}\n\nvar p=msg.payload||{};\nvar mon=(p.monitor&&p.monitor.name)||p.name;\nif(!mon) return null;\nif((p.monitor&&p.monitor.type==='group')||({'Infra':1,'Services':1,'Network':1})[mon]) return null;\nvar st=(p.heartbeat&&p.heartbeat.status); if(st===undefined&&p.status!==undefined)st=p.status;\nvar core=!!CORE[mon];\nvar S=context.get('S')||{};\n\nif(st===0||st==='0'){\n  if(S[mon]) return null;\n  S[mon]={downSince:Date.now(),tier:0,core:core}; context.set('S',S);\n  var T=context.get('T')||{}; T[mon]={}; context.set('T',T);\n  log('[down-rcv] '+mon+(core?' (core)':''));\n  T[mon].grace=setTimeout(function(){\n    var S=context.get('S')||{}; if(!S[mon])return;\n    S[mon].tier=1; context.set('S',S);\n    if(quiet()){var ON=context.get('ON')||[];ON.push({type:'down',mon:mon,from:S[mon].downSince});context.set('ON',ON);log('[quiet] '+mon+' down held');}\n    else{phone((core?'🔴':'⚠️')+' '+mon+' is DOWN',mon+' down ~90s (since '+hhmm(S[mon].downSince)+').','infra_'+mon);log('[tier1] '+mon);}\n  },GRACE);\n  T[mon].t2=setTimeout(function(){\n    var S=context.get('S')||{}; if(!S[mon])return;\n    S[mon].tier=2; context.set('S',S);\n    if(quiet())return;\n    phone((core?'🔴':'⚠️')+' '+mon+' STILL DOWN',mon+' down '+dur(Date.now()-S[mon].downSince)+'.','infra_'+mon);\n    tts('Attention. '+mon+' has been down for '+durWords(Date.now()-S[mon].downSince)+'.');\n    log('[tier2] '+mon+' phone+tts');\n    var T=context.get('T')||{};\n    if(T[mon]&&!T[mon].t3){var iv=(core||countDown()>=MULTI)?T3:T3_SLOW;\n      T[mon].t3=setInterval(function(){\n        var S=context.get('S')||{}; if(!S[mon])return; if(quiet())return;\n        phone('🔴 '+mon+' STILL DOWN',mon+' down '+dur(Date.now()-S[mon].downSince)+'.','infra_'+mon);\n        tts(mon+' is still down after '+durWords(Date.now()-S[mon].downSince)+'.');\n        log('[tier3] '+mon+' repeat');\n      },iv);\n      context.set('T',T);\n    }\n  },T2);\n  context.set('T',T);\n}else if(st===1||st==='1'){\n  if(!S[mon])return null;\n  var ds=S[mon].downSince, tier=S[mon].tier;\n  clr(mon); delete S[mon]; context.set('S',S);\n  if(quiet()){var ON=context.get('ON')||[];ON.push({type:'recovered',mon:mon,from:ds,to:Date.now()});context.set('ON',ON);log('[quiet] '+mon+' recovered');}\n  else if(tier>=1){phone('✅ '+mon+' recovered',mon+' back up after '+dur(Date.now()-ds)+'.','infra_'+mon);if(tier>=2)tts(mon+' is back online, after '+durWords(Date.now()-ds)+' down.');log('[recovered] '+mon+(tier>=2?' (+tts)':''));}\n  else{log('[up] '+mon+' (within grace)');}\n}\nreturn null;\n",
+        "func": "\nconst GRACE=90*1000, T2=10*60*1000, T3=15*60*1000, T3_SLOW=60*60*1000, MULTI=3;\nconst CORE={'Home Assistant':1,'MQTT broker':1,'Pi-hole primary':1,'proxmox1':1,'proxmox2':1,'proxmox-remote':1,'TrueNAS':1,'MikroTik RB5009 (gateway)':1};\nfunction dub(){return new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});}\nfunction dhour(){return parseInt(new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10);}\nfunction quiet(){var h=dhour();return (h>=22||h<7);}\nfunction hhmm(ts){return new Date(ts).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});}\nfunction dur(ms){var m=Math.max(1,Math.round(ms/60000));if(m<60)return m+'m';return Math.floor(m/60)+'h'+(m%60)+'m';}\nfunction durWords(ms){var m=Math.max(1,Math.round(ms/60000));var h=Math.floor(m/60),mm=m%60;var pp=[];if(h)pp.push(h+' hour'+(h>1?'s':''));if(mm||!h)pp.push(mm+' minute'+(mm===1?'':'s'));return pp.join(' and ');}\nfunction phone(t,m,tag){if(global.get('maintenance_mode')){log('[maint-suppressed] '+t+' — '+m);return;}node.send([{title:t,message:m,ndata:{tag:tag||'infra',channel:'Infra'}},null,null]);}\nfunction tts(m){if(global.get('maintenance_mode')){log('[maint-suppressed-tts] '+m);return;}node.send([null,{message:m},null]);}\nfunction log(s){node.send([null,null,{payload:dub()+'  '+s+'\\n'}]);}\nfunction countDown(){return Object.keys(context.get('S')||{}).length;}\nfunction clr(mon){var T=context.get('T')||{};var t=T[mon];if(t){if(t.grace)clearTimeout(t.grace);if(t.t2)clearTimeout(t.t2);if(t.t3)clearInterval(t.t3);delete T[mon];context.set('T',T);}}\n\nif(msg && msg.topic==='flush'){\n  var S=context.get('S')||{}, ON=context.get('ON')||[], lines=[];\n  for(var m in S){lines.push('• '+m+' still DOWN since '+hhmm(S[m].downSince));}\n  ON.filter(function(e){return e.type==='recovered';}).forEach(function(e){lines.push('• '+e.mon+' was down '+hhmm(e.from)+'–'+hhmm(e.to)+' (recovered)');});\n  if(lines.length){phone('🔧 Overnight infra summary',lines.join('\\n'),'infra_summary');log('[7am] '+lines.length+' item(s)');}\n  context.set('ON',[]);\n  return null;\n}\n\nvar p=msg.payload||{};\nvar mon=(p.monitor&&p.monitor.name)||p.name;\nif(!mon) return null;\nif((p.monitor&&p.monitor.type==='group')||({'Infra':1,'Services':1,'Network':1})[mon]) return null;\nvar st=(p.heartbeat&&p.heartbeat.status); if(st===undefined&&p.status!==undefined)st=p.status;\nvar core=!!CORE[mon];\nvar S=context.get('S')||{};\n\nif(st===0||st==='0'){\n  if(S[mon]) return null;\n  S[mon]={downSince:Date.now(),tier:0,core:core}; context.set('S',S);\n  var T=context.get('T')||{}; T[mon]={}; context.set('T',T);\n  log('[down-rcv] '+mon+(core?' (core)':''));\n  T[mon].grace=setTimeout(function(){\n    var S=context.get('S')||{}; if(!S[mon])return;\n    S[mon].tier=1; context.set('S',S);\n    if(quiet()){var ON=context.get('ON')||[];ON.push({type:'down',mon:mon,from:S[mon].downSince});context.set('ON',ON);log('[quiet] '+mon+' down held');}\n    else{phone((core?'🔴':'⚠️')+' '+mon+' is DOWN',mon+' down ~90s (since '+hhmm(S[mon].downSince)+').','infra_'+mon);log('[tier1] '+mon);}\n  },GRACE);\n  T[mon].t2=setTimeout(function(){\n    var S=context.get('S')||{}; if(!S[mon])return;\n    S[mon].tier=2; context.set('S',S);\n    if(quiet())return;\n    phone((core?'🔴':'⚠️')+' '+mon+' STILL DOWN',mon+' down '+dur(Date.now()-S[mon].downSince)+'.','infra_'+mon);\n    tts('Attention. '+mon+' has been down for '+durWords(Date.now()-S[mon].downSince)+'.');\n    log('[tier2] '+mon+' phone+tts');\n    var T=context.get('T')||{};\n    if(T[mon]&&!T[mon].t3){var iv=(core||countDown()>=MULTI)?T3:T3_SLOW;\n      T[mon].t3=setInterval(function(){\n        var S=context.get('S')||{}; if(!S[mon])return; if(quiet())return;\n        phone('🔴 '+mon+' STILL DOWN',mon+' down '+dur(Date.now()-S[mon].downSince)+'.','infra_'+mon);\n        tts(mon+' is still down after '+durWords(Date.now()-S[mon].downSince)+'.');\n        log('[tier3] '+mon+' repeat');\n      },iv);\n      context.set('T',T);\n    }\n  },T2);\n  context.set('T',T);\n}else if(st===1||st==='1'){\n  if(!S[mon])return null;\n  var ds=S[mon].downSince, tier=S[mon].tier;\n  clr(mon); delete S[mon]; context.set('S',S);\n  if(quiet()){var ON=context.get('ON')||[];ON.push({type:'recovered',mon:mon,from:ds,to:Date.now()});context.set('ON',ON);log('[quiet] '+mon+' recovered');}\n  else if(tier>=1){phone('✅ '+mon+' recovered',mon+' back up after '+dur(Date.now()-ds)+'.','infra_'+mon);if(tier>=2)tts(mon+' is back online, after '+durWords(Date.now()-ds)+' down.');log('[recovered] '+mon+(tier>=2?' (+tts)':''));}\n  else{log('[up] '+mon+' (within grace)');}\n}\nreturn null;\n",
         "outputs": 3,
         "noerr": 0,
         "initialize": "",
@@ -4388,6 +4388,152 @@
         "y": 260,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "iw-maint-off",
+        "type": "server-state-changed",
+        "z": "tab-iw",
+        "name": "maintenance_mode off?",
+        "server": "ha-server",
+        "version": 6,
+        "outputs": 1,
+        "entities": {
+            "entity": [
+                "input_boolean.maintenance_mode"
+            ],
+            "substring": "",
+            "regex": ""
+        },
+        "outputInitially": false,
+        "stateType": "str",
+        "outputOnlyOnStateChange": true,
+        "for": 0,
+        "forType": "num",
+        "forUnits": "minutes",
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            }
+        ],
+        "entityidfiltertype": "list",
+        "x": 170,
+        "y": 300,
+        "wires": [
+            [
+                "iw-maint-gate"
+            ]
+        ]
+    },
+    {
+        "id": "iw-maint-gate",
+        "type": "function",
+        "z": "tab-iw",
+        "name": "on->off only",
+        "func": "var p=msg.payload||{};\nvar ns=p.new_state&&p.new_state.state, os=p.old_state&&p.old_state.state;\nif(ns!=='off'||os!=='on')return null;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 300,
+        "wires": [
+            [
+                "iw-sp-req"
+            ]
+        ]
+    },
+    {
+        "id": "iw-sp-req",
+        "type": "http request",
+        "z": "tab-iw",
+        "name": "UK status-page config",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://10.0.0.209:3001/api/status-page/homelab",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 560,
+        "y": 300,
+        "wires": [
+            [
+                "iw-sp-map"
+            ]
+        ]
+    },
+    {
+        "id": "iw-sp-map",
+        "type": "function",
+        "z": "tab-iw",
+        "name": "id->name map",
+        "func": "var map={};\n((msg.payload&&msg.payload.publicGroupList)||[]).forEach(function(g){(g.monitorList||[]).forEach(function(m){map[m.id]=m.name;});});\nmsg.idmap=map;\ndelete msg.payload;delete msg.headers;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 300,
+        "wires": [
+            [
+                "iw-hb-req"
+            ]
+        ]
+    },
+    {
+        "id": "iw-hb-req",
+        "type": "http request",
+        "z": "tab-iw",
+        "name": "UK heartbeats",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://10.0.0.209:3001/api/status-page/heartbeat/homelab",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 930,
+        "y": 300,
+        "wires": [
+            [
+                "iw-reconcile"
+            ]
+        ]
+    },
+    {
+        "id": "iw-reconcile",
+        "type": "function",
+        "z": "tab-iw",
+        "name": "inject UP for all up monitors",
+        "func": "var idmap=msg.idmap||{};\nvar hb=(msg.payload&&msg.payload.heartbeatList)||{};\nvar out=[];\nfor(var id in hb){var b=hb[id];if(!b||!b.length)continue;var last=b[b.length-1];\n if(last.status===1&&idmap[id]){out.push({payload:{heartbeat:{status:1,msg:'maintenance-off reconcile'},monitor:{name:idmap[id]}}});}}\nvar ts=new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});\nreturn [out,[{payload:ts+'  [maint-off-reconcile] injected '+out.length+' up-events\\n'}]];",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1150,
+        "y": 300,
+        "wires": [
+            [
+                "iw-engine"
+            ],
+            [
+                "iw-logfile"
+            ]
         ]
     }
 ]

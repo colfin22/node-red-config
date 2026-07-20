@@ -261,7 +261,7 @@ When `house_mode = Sleeping`, a **person** detected in the front car or van focu
 - **Tier 3** — long outages re-alert on a slow repeat so a dead service can't be silently forgotten.
 - Recovery sends an "up again" push and resets the monitor's state machine.
 - **Quiet hours (22:00–07:00)** hold non-urgent noise; anything still outstanding is delivered in an **07:00 overnight summary**.
-- While `maintenance_mode` is on, notifications are suppressed but the state machines keep running — anything still down when maintenance ends re-alerts on its next repeat.
+- While `maintenance_mode` is on, notifications are suppressed but the state machines keep running — anything still down when maintenance ends re-alerts on its next repeat. **When maintenance switches off, the watchdog also re-polls the uptime monitor's status page and injects a synthetic up-event for every monitor currently up** — this clears any down-state whose recovery happened during the window (the monitor's own maintenance window pauses its webhooks, so those recoveries would otherwise be missed and cause false "still down" alerts).
 
 Uptime Kuma stays the source of truth for *reachability*; the flow below handles *health*.
 
