@@ -156,6 +156,7 @@ eco 19 · night 19.5 · comfort 20 · hot 20.5 · frost 12
 - **Home** → comfort 20; **hot 20.5** between 19:00–22:00
 - **Sleeping** → night 19.5 overnight; comfort 20 from **07:00**
 - **Away** → eco 19; drops to frost 12 after 24 h empty (gated by the `Away 24h+` dashboard toggle, `input_boolean.heating_extended_away`)
+- The same 24 h-empty state also **stops the hot-water solar diverter** (no point heating water for an empty house); it goes back to normal when anyone returns, when a pre-warm boost is started, or when someone is heading home — and the flow only ever writes on those transitions, so a manually-stopped diverter is left alone
 
 ## Forecast pre-heat
 Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts the 07:00 warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to Colm + Olivia the night before, **only when the low is sub-zero**.
