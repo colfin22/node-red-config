@@ -154,8 +154,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 820,
-  "y": 140,
+  "x": 880,
+  "y": 60,
   "wires": [
    [
     "heat-dbg"
@@ -175,8 +175,8 @@
   "targetType": "msg",
   "statusVal": "info.target",
   "statusType": "msg",
-  "x": 1050,
-  "y": 140,
+  "x": 1230,
+  "y": 60,
   "wires": []
  },
  {
@@ -198,7 +198,7 @@
   "outputProperties": [],
   "queue": "none",
   "x": 870,
-  "y": 200,
+  "y": 120,
   "wires": [
    []
   ]
@@ -255,7 +255,7 @@
    }
   ],
   "queue": "none",
-  "x": 380,
+  "x": 330,
   "y": 400,
   "wires": [
    [
@@ -274,7 +274,7 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 600,
+  "x": 620,
   "y": 400,
   "wires": [
    [
@@ -301,8 +301,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 820,
-  "y": 390,
+  "x": 880,
+  "y": 360,
   "wires": [
    []
   ]
@@ -325,8 +325,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 820,
-  "y": 430,
+  "x": 880,
+  "y": 420,
   "wires": [
    []
   ]
@@ -452,7 +452,7 @@
   "outputProperties": [],
   "queue": "none",
   "x": 870,
-  "y": 260,
+  "y": 180,
   "wires": [
    []
   ]
@@ -478,7 +478,7 @@
   "outputProperties": [],
   "queue": "none",
   "x": 880,
-  "y": 320,
+  "y": 240,
   "wires": [
    []
   ]
@@ -503,8 +503,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 820,
-  "y": 260,
+  "x": 870,
+  "y": 300,
   "wires": [
    []
   ]

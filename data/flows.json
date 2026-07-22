@@ -1854,8 +1854,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 820,
-        "y": 140,
+        "x": 880,
+        "y": 60,
         "wires": [
             [
                 "heat-dbg"
@@ -1875,8 +1875,8 @@
         "targetType": "msg",
         "statusVal": "info.target",
         "statusType": "msg",
-        "x": 1050,
-        "y": 140,
+        "x": 1230,
+        "y": 60,
         "wires": []
     },
     {
@@ -1898,7 +1898,7 @@
         "outputProperties": [],
         "queue": "none",
         "x": 870,
-        "y": 200,
+        "y": 120,
         "wires": [
             []
         ]
@@ -1955,7 +1955,7 @@
             }
         ],
         "queue": "none",
-        "x": 380,
+        "x": 330,
         "y": 400,
         "wires": [
             [
@@ -1974,7 +1974,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 600,
+        "x": 620,
         "y": 400,
         "wires": [
             [
@@ -2001,8 +2001,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 820,
-        "y": 390,
+        "x": 880,
+        "y": 360,
         "wires": [
             []
         ]
@@ -2025,8 +2025,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 820,
-        "y": 430,
+        "x": 880,
+        "y": 420,
         "wires": [
             []
         ]
@@ -2152,7 +2152,7 @@
         "outputProperties": [],
         "queue": "none",
         "x": 870,
-        "y": 260,
+        "y": 180,
         "wires": [
             []
         ]
@@ -2178,7 +2178,33 @@
         "outputProperties": [],
         "queue": "none",
         "x": 880,
-        "y": 320,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "heat-eddi",
+        "type": "api-call-service",
+        "z": "5a86c1a3371ffe9e",
+        "name": "Eddi diverter mode",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "select.select_option",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "select.myenergi_eddi_23323250_operating_mode"
+        ],
+        "data": "{\"option\": msg.eddiOption}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 870,
+        "y": 300,
         "wires": [
             []
         ]
@@ -4537,32 +4563,6 @@
             [
                 "iw-logfile"
             ]
-        ]
-    },
-    {
-        "id": "heat-eddi",
-        "type": "api-call-service",
-        "z": "5a86c1a3371ffe9e",
-        "name": "Eddi diverter mode",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "select.select_option",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [
-            "select.myenergi_eddi_23323250_operating_mode"
-        ],
-        "data": "{\"option\": msg.eddiOption}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 820,
-        "y": 260,
-        "wires": [
-            []
         ]
     }
 ]
