@@ -887,8 +887,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 90,
-        "y": 400,
+        "x": 110,
+        "y": 300,
         "wires": [
             [
                 "cam-fn-review",
@@ -937,8 +937,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1130,
-        "y": 360,
+        "x": 1310,
+        "y": 380,
         "wires": [
             []
         ]
@@ -961,8 +961,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1140,
-        "y": 280,
+        "x": 1320,
+        "y": 300,
         "wires": [
             []
         ]
@@ -987,8 +987,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 830,
-        "y": 580,
+        "x": 1090,
+        "y": 620,
         "wires": [
             [
                 "cam-cast"
@@ -1015,7 +1015,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1220,
+        "x": 1320,
         "y": 540,
         "wires": [
             [
@@ -1040,8 +1040,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 1270,
-        "y": 660,
+        "x": 1310,
+        "y": 640,
         "wires": [
             [
                 "cam-cast-off"
@@ -1092,8 +1092,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1130,
-        "y": 440,
+        "x": 1310,
+        "y": 460,
         "wires": [
             []
         ]
@@ -1163,7 +1163,7 @@
         ],
         "entityidfiltertype": "list",
         "x": 90,
-        "y": 40,
+        "y": 60,
         "wires": [
             [
                 "cam-fn-courier"
@@ -1181,8 +1181,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 490,
-        "y": 40,
+        "x": 470,
+        "y": 60,
         "wires": [
             [
                 "cam-delay-courier",
@@ -1208,8 +1208,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1170,
-        "y": 40,
+        "x": 1150,
+        "y": 60,
         "wires": [
             []
         ]
@@ -1260,7 +1260,7 @@
         ],
         "entityidfiltertype": "list",
         "x": 110,
-        "y": 100,
+        "y": 120,
         "wires": [
             [
                 "cam-fn-postman"
@@ -1279,7 +1279,7 @@
         "finalize": "",
         "libs": [],
         "x": 470,
-        "y": 100,
+        "y": 120,
         "wires": [
             [
                 "cam-delay-postman",
@@ -1305,8 +1305,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1180,
-        "y": 100,
+        "x": 1160,
+        "y": 120,
         "wires": [
             []
         ]
@@ -1322,8 +1322,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 800,
-        "y": 200,
+        "x": 820,
+        "y": 220,
         "wires": [
             [
                 "cam-logfile"
@@ -1341,8 +1341,8 @@
         "createDir": true,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 1070,
-        "y": 200,
+        "x": 1150,
+        "y": 1100,
         "wires": [
             []
         ]
@@ -1365,7 +1365,7 @@
         "allowrate": false,
         "outputs": 1,
         "x": 380,
-        "y": 440,
+        "y": 500,
         "wires": [
             [
                 "cam-door-get"
@@ -1390,8 +1390,8 @@
         "output_location_type": "msg",
         "output_location": "entities",
         "output_results_count": 1,
-        "x": 590,
-        "y": 440,
+        "x": 570,
+        "y": 500,
         "wires": [
             [
                 "cam-door-fn"
@@ -1410,8 +1410,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 810,
-        "y": 440,
+        "x": 950,
+        "y": 500,
         "wires": [
             [
                 "cam-shield"
@@ -1436,8 +1436,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 490,
-        "y": 680,
+        "x": 330,
+        "y": 700,
         "wires": [
             [
                 "cam-car-strobe"
@@ -1469,7 +1469,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 900,
+        "x": 860,
         "y": 680,
         "wires": [
             []
@@ -1728,6 +1728,48 @@
         "wires": [
             [
                 "cam-tts-courier"
+            ]
+        ]
+    },
+    {
+        "id": "cam-desc-mqtt",
+        "type": "mqtt in",
+        "z": "tab-cam",
+        "name": "frigate/tracked_object_update",
+        "topic": "frigate/tracked_object_update",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "mqtt-frigate",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 380,
+        "wires": [
+            [
+                "cam-desc-fn"
+            ]
+        ]
+    },
+    {
+        "id": "cam-desc-fn",
+        "type": "function",
+        "z": "tab-cam",
+        "name": "doorbell genai desc",
+        "func": "const p=msg.payload||{};\nif(p.type!=='description'||!p.id||!p.description) return null;\nconst dm=flow.get('descmap')||{};\nconst rec=dm[p.id];\nif(!rec) return null;                 // not a doorbell person event we notified\ndelete dm[p.id]; flow.set('descmap',dm); // one-shot\nconst desc=String(p.description).trim();\nif(!desc) return null;\nconst grp=flow.get(rec.gkey)||{};\nconst image=grp.gif||grp.snap||null;   // keep the picture on the same-tag update\nconst ndata={tag:rec.tag,channel:'Cameras'};\nif(image) ndata.image=image;\nif(grp.clip){ndata.clickAction=grp.clip;ndata.url=grp.clip;}\nnode.warn('[cam] doorbell genai desc '+p.id+': '+desc.slice(0,80));\nreturn [{title:rec.title||'📷 Doorbell',message:desc,ndata:ndata}];\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 380,
+        "wires": [
+            [
+                "cam-notify-np3",
+                "cam-notify-olivia"
             ]
         ]
     },
@@ -4589,47 +4631,5 @@
                 "iw-logfile"
             ]
         ]
-    },
-    {
-        "id": "cam-desc-mqtt",
-        "type": "mqtt in",
-        "z": "tab-cam",
-        "name": "frigate/tracked_object_update",
-        "topic": "frigate/tracked_object_update",
-        "qos": "0",
-        "datatype": "json",
-        "broker": "mqtt-frigate",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "wires": [
-            [
-                "cam-desc-fn"
-            ]
-        ],
-        "x": 170,
-        "y": 600
-    },
-    {
-        "id": "cam-desc-fn",
-        "type": "function",
-        "z": "tab-cam",
-        "name": "doorbell genai desc",
-        "func": "const p=msg.payload||{};\nif(p.type!=='description'||!p.id||!p.description) return null;\nconst dm=flow.get('descmap')||{};\nconst rec=dm[p.id];\nif(!rec) return null;                 // not a doorbell person event we notified\ndelete dm[p.id]; flow.set('descmap',dm); // one-shot\nconst desc=String(p.description).trim();\nif(!desc) return null;\nconst grp=flow.get(rec.gkey)||{};\nconst image=grp.gif||grp.snap||null;   // keep the picture on the same-tag update\nconst ndata={tag:rec.tag,channel:'Cameras'};\nif(image) ndata.image=image;\nif(grp.clip){ndata.clickAction=grp.clip;ndata.url=grp.clip;}\nnode.warn('[cam] doorbell genai desc '+p.id+': '+desc.slice(0,80));\nreturn [{title:rec.title||'📷 Doorbell',message:desc,ndata:ndata}];\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "wires": [
-            [
-                "cam-notify-np3",
-                "cam-notify-olivia"
-            ]
-        ],
-        "x": 470,
-        "y": 600
     }
 ]
