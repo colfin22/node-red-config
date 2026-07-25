@@ -333,7 +333,7 @@
   "entityId": [
    "input_text.alarm_status_by"
   ],
-  "data": "{\"value\": msg.statusBy}",
+  "data": "{\"value\": statusBy}",
   "dataType": "jsonata",
   "mergeContext": "",
   "mustacheAltTags": false,
