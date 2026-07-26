@@ -888,7 +888,7 @@
         "rh": 0,
         "inputs": 0,
         "x": 110,
-        "y": 300,
+        "y": 420,
         "wires": [
             [
                 "cam-fn-review",
@@ -907,8 +907,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 430,
-        "y": 300,
+        "x": 510,
+        "y": 500,
         "wires": [
             [
                 "cam-away-boost"
@@ -938,7 +938,7 @@
         "outputProperties": [],
         "queue": "none",
         "x": 1310,
-        "y": 380,
+        "y": 580,
         "wires": [
             []
         ]
@@ -962,7 +962,7 @@
         "outputProperties": [],
         "queue": "none",
         "x": 1320,
-        "y": 300,
+        "y": 500,
         "wires": [
             []
         ]
@@ -987,8 +987,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1090,
-        "y": 620,
+        "x": 930,
+        "y": 860,
         "wires": [
             [
                 "cam-cast"
@@ -1016,7 +1016,7 @@
         "outputProperties": [],
         "queue": "none",
         "x": 1320,
-        "y": 540,
+        "y": 740,
         "wires": [
             [
                 "cam-cast-delay"
@@ -1040,8 +1040,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 1310,
-        "y": 640,
+        "x": 1370,
+        "y": 880,
         "wires": [
             [
                 "cam-cast-off"
@@ -1068,8 +1068,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1390,
-        "y": 740,
+        "x": 1450,
+        "y": 1000,
         "wires": [
             []
         ]
@@ -1093,7 +1093,7 @@
         "outputProperties": [],
         "queue": "none",
         "x": 1310,
-        "y": 460,
+        "y": 660,
         "wires": [
             []
         ]
@@ -1162,7 +1162,7 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 90,
+        "x": 330,
         "y": 60,
         "wires": [
             [
@@ -1181,7 +1181,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 470,
+        "x": 770,
         "y": 60,
         "wires": [
             [
@@ -1208,7 +1208,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1150,
+        "x": 1410,
         "y": 60,
         "wires": [
             []
@@ -1259,7 +1259,7 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 110,
+        "x": 330,
         "y": 120,
         "wires": [
             [
@@ -1278,7 +1278,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 470,
+        "x": 770,
         "y": 120,
         "wires": [
             [
@@ -1305,7 +1305,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1160,
+        "x": 1420,
         "y": 120,
         "wires": [
             []
@@ -1322,8 +1322,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 820,
-        "y": 220,
+        "x": 1100,
+        "y": 240,
         "wires": [
             [
                 "cam-logfile"
@@ -1341,8 +1341,8 @@
         "createDir": true,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 1150,
-        "y": 1100,
+        "x": 1210,
+        "y": 360,
         "wires": [
             []
         ]
@@ -1365,7 +1365,7 @@
         "allowrate": false,
         "outputs": 1,
         "x": 380,
-        "y": 500,
+        "y": 700,
         "wires": [
             [
                 "cam-door-get"
@@ -1390,8 +1390,8 @@
         "output_location_type": "msg",
         "output_location": "entities",
         "output_results_count": 1,
-        "x": 570,
-        "y": 500,
+        "x": 650,
+        "y": 700,
         "wires": [
             [
                 "cam-door-fn"
@@ -1410,8 +1410,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 950,
-        "y": 500,
+        "x": 930,
+        "y": 700,
         "wires": [
             [
                 "cam-shield"
@@ -1436,8 +1436,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 330,
-        "y": 700,
+        "x": 350,
+        "y": 340,
         "wires": [
             [
                 "cam-car-strobe"
@@ -1469,8 +1469,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 860,
-        "y": 680,
+        "x": 720,
+        "y": 180,
         "wires": [
             []
         ]
@@ -1493,8 +1493,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 880,
-        "y": 760,
+        "x": 700,
+        "y": 280,
         "wires": [
             []
         ]
@@ -1517,8 +1517,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 880,
-        "y": 840,
+        "x": 700,
+        "y": 240,
         "wires": [
             []
         ]
@@ -1562,8 +1562,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 140,
-        "y": 820,
+        "x": 130,
+        "y": 800,
         "wires": [
             [
                 "cam-hm-fn"
@@ -1582,8 +1582,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 370,
-        "y": 820,
+        "x": 390,
+        "y": 800,
         "wires": [
             []
         ]
@@ -1671,8 +1671,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 730,
-        "y": 300,
+        "x": 930,
+        "y": 480,
         "wires": [
             [
                 "cam-notify-np3",
@@ -1698,7 +1698,7 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 820,
+        "x": 1100,
         "y": 120,
         "wires": [
             [
@@ -1723,7 +1723,7 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 820,
+        "x": 1120,
         "y": 60,
         "wires": [
             [
@@ -1744,8 +1744,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 180,
-        "y": 380,
+        "x": 680,
+        "y": 580,
         "wires": [
             [
                 "cam-desc-fn"
@@ -1764,8 +1764,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 750,
-        "y": 380,
+        "x": 930,
+        "y": 580,
         "wires": [
             [
                 "cam-notify-np3",
@@ -3492,7 +3492,7 @@
         "func": "// 22:00 nightly: arm the shed ONLY if it is disarmed AND the door is closed.\nconst ents=Array.isArray(msg.payload)?msg.payload:[];\nconst S=id=>{const e=ents.find(x=>x.entity_id===id);return e&&e.state;};\nconst shed=S('alarm_control_panel.shed');\nconst door=S('binary_sensor.shed_door_contact');   // on=open, off=closed\nif(shed==='disarmed' && door==='off'){\n  node.warn('[nfc] 22:00 nightly: shed disarmed + door closed -> arm');\n  return {};   // -> arm shed\n}\nreturn null;   // already armed, or door open -> do nothing\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 530,
+        "x": 630,
         "y": 360,
         "wires": [
             [
