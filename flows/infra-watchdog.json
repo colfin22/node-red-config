@@ -228,7 +228,7 @@
   "type": "function",
   "z": "tab-iw",
   "name": "on->off only",
-  "func": "var p=msg.payload||{};\nvar ns=p.new_state&&p.new_state.state, os=p.old_state&&p.old_state.state;\nif(ns!=='off'||os!=='on')return null;\nreturn msg;",
+  "func": "var p=msg.payload||{};\nvar ns=p.new_state&&p.new_state.state, os=p.old_state&&p.old_state.state;\nif(ns!=='off'||os!=='on')return null;\nmsg.reconSrc='maint-off';msg.reconAttempt=1;\nreturn msg;",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -314,8 +314,8 @@
   "type": "function",
   "z": "tab-iw",
   "name": "inject UP for all up monitors",
-  "func": "var idmap=msg.idmap||{};\nvar hb=(msg.payload&&msg.payload.heartbeatList)||{};\nvar out=[];\nfor(var id in hb){var b=hb[id];if(!b||!b.length)continue;var last=b[b.length-1];\n if(last.status===1&&idmap[id]){out.push({payload:{heartbeat:{status:1,msg:'maintenance-off reconcile'},monitor:{name:idmap[id]}}});}}\nvar ts=new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});\nreturn [out,[{payload:ts+'  [maint-off-reconcile] injected '+out.length+' up-events\\n'}]];",
-  "outputs": 2,
+  "func": "var idmap=msg.idmap||{};\nvar hb=(msg.payload&&msg.payload.heartbeatList)||{};\nvar src=msg.reconSrc||'maint-off';\nvar out=[],maint=0,seen=0;\nfor(var id in hb){\n  var b=hb[id];\n  if(!b||b.length<3)continue;\n  if(!idmap[id])continue;\n  seen++;\n  if(b[b.length-1].status===3)maint++;\n  var tail=b.slice(-3);\n  var allUp=tail.every(function(x){return x&&x.status===1;});\n  if(allUp){out.push({payload:{heartbeat:{status:1,msg:src+' reconcile'},monitor:{name:idmap[id]}}});}\n}\nif(src==='periodic'){return [out,null,null];}\nvar att=msg.reconAttempt||1;\nvar retry=(maint>0&&att<10)?{reconSrc:'maint-off',reconAttempt:att+1}:null;\nvar ts=new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});\nvar line=ts+'  [maint-off-reconcile] attempt '+att+' injected '+out.length+' up-events ('+maint+'/'+seen+' still in maintenance'+(retry?', retry in 30s':'')+')\\n';\nreturn [out,[{payload:line}],retry?[retry]:null];\n",
+  "outputs": 3,
   "noerr": 0,
   "initialize": "",
   "finalize": "",
@@ -328,6 +328,34 @@
    ],
    [
     "iw-logfile"
+   ],
+   [
+    "iw-recon-retry"
+   ]
+  ]
+ },
+ {
+  "id": "iw-recon-retry",
+  "type": "delay",
+  "z": "tab-iw",
+  "name": "maint-off retry (30s)",
+  "pauseType": "delay",
+  "timeout": "30",
+  "timeoutUnits": "seconds",
+  "rate": "1",
+  "nbRateUnits": "1",
+  "rateUnits": "second",
+  "randomFirst": "1",
+  "randomLast": "5",
+  "randomUnits": "seconds",
+  "drop": false,
+  "allowrate": false,
+  "outputs": 1,
+  "x": 260,
+  "y": 270,
+  "wires": [
+   [
+    "iw-sp-req"
    ]
   ]
  },
