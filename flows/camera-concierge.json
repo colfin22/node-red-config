@@ -125,7 +125,7 @@
   "id": "cam-notify-np3",
   "type": "api-call-service",
   "z": "tab-cam",
-  "name": "Push Colm (np3)",
+  "name": "Push person 1",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -146,10 +146,10 @@
   ]
  },
  {
-  "id": "cam-notify-olivia",
+  "id": "cam-notify-person-2",
   "type": "api-call-service",
   "z": "tab-cam",
-  "name": "Push Olivia (pixel_6a)",
+  "name": "Push person 2",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -623,7 +623,7 @@
    ],
    [
     "cam-notify-np3",
-    "cam-notify-olivia"
+    "cam-notify-person-2"
    ]
   ]
  },
@@ -878,7 +878,7 @@
   "wires": [
    [
     "cam-notify-np3",
-    "cam-notify-olivia",
+    "cam-notify-person-2",
     "cam-log"
    ]
   ]
@@ -971,7 +971,7 @@
   "wires": [
    [
     "cam-notify-np3",
-    "cam-notify-olivia"
+    "cam-notify-person-2"
    ]
   ]
  },
@@ -1002,7 +1002,7 @@
   "id": "mqtt-frigate",
   "type": "mqtt-broker",
   "name": "Frigate MQTT",
-  "broker": "10.0.0.229",
+  "broker": "${MQTT_HOST}",
   "port": "1883",
   "clientid": "node-red-cam",
   "autoConnect": true,

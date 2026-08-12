@@ -7,3 +7,8 @@ data/*
 
 # runtime secrets (PVE token, Nabu Casa URL, adminAuth hash)
 .env
+
+# never commit any env file or a local backup copy
+.env*
+*.bak
+*.bak-*

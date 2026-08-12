@@ -53,7 +53,7 @@
     "iw-notify"
    ],
    [
-    "iw-colm-home"
+    "iw-presence-gate"
    ],
    [
     "iw-logfile"
@@ -64,7 +64,7 @@
   "id": "iw-notify",
   "type": "api-call-service",
   "z": "tab-iw",
-  "name": "Notify Colm (np3)",
+  "name": "Notify person 1",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -85,17 +85,17 @@
   ]
  },
  {
-  "id": "iw-colm-home",
+  "id": "iw-presence-gate",
   "type": "api-current-state",
   "z": "tab-iw",
-  "name": "Colm home?",
+  "name": "Person 1 home?",
   "server": "ha-server",
   "version": 3,
   "outputs": 2,
   "halt_if": "home",
   "halt_if_type": "str",
   "halt_if_compare": "is",
-  "entity_id": "person.colm_finn",
+  "entity_id": "${PERSON_1_ENTITY}",
   "state_type": "str",
   "blockInputOverrides": true,
   "outputProperties": [],
@@ -250,7 +250,7 @@
   "method": "GET",
   "ret": "obj",
   "paytoqs": "ignore",
-  "url": "http://10.0.0.209:3001/api/status-page/homelab",
+  "url": "${KUMA_STATUS_URL}",
   "tls": "",
   "persist": false,
   "proxy": "",
@@ -293,7 +293,7 @@
   "method": "GET",
   "ret": "obj",
   "paytoqs": "ignore",
-  "url": "http://10.0.0.209:3001/api/status-page/heartbeat/homelab",
+  "url": "${KUMA_HEARTBEAT_URL}",
   "tls": "",
   "persist": false,
   "proxy": "",
@@ -353,6 +353,31 @@
   "outputs": 1,
   "x": 260,
   "y": 270,
+  "wires": [
+   [
+    "iw-sp-req"
+   ]
+  ]
+ },
+ {
+  "id": "iw-recon-cron",
+  "type": "inject",
+  "z": "tab-iw",
+  "name": "periodic reconcile (5m)",
+  "props": [
+   {
+    "p": "reconSrc",
+    "v": "periodic",
+    "vt": "str"
+   }
+  ],
+  "repeat": "300",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "60",
+  "topic": "",
+  "x": 180,
+  "y": 460,
   "wires": [
    [
     "iw-sp-req"

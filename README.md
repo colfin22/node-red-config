@@ -16,32 +16,14 @@
 
 ---
 
-The Node-RED flows + config behind the automations in [colfin22/ha-config](https://github.com/colfin22/ha-config). Home Assistant handles the simple, single-trigger stuff; the multi-input, **stateful** logic lives here — deciding the house's mode, arming the alarm, making heating calls from presence + forecast + tariff, and turning camera detections into one smart notification. Runs in Docker in a Proxmox LXC (also backed up nightly by PBS); this repo adds flow versioning + quick recovery.
+The Node-RED flows + config behind the automations in [colfin22/ha-config](https://github.com/colfin22/ha-config). Home Assistant handles the simple, single-trigger stuff; the multi-input, **stateful** logic lives here — deciding the house's mode, arming the alarm, making heating calls from presence + forecast + tariff, and turning camera detections into one smart notification. Runs in Docker alongside Home Assistant; this repo adds flow versioning and quick recovery.
 
 **Seven flows, each documented below with a screenshot:** House Mode · House &amp; Shed Alarm · Alarm NFC Tags · Camera Concierge · Heating Control · Infra Watchdog · Infra Health &amp; Alerts.
 
-## Tracked
-- `docker-compose.yml` — container definition
-- `data/flows.json` — flows: House Mode, House Alarm, Alarm NFC Tags, Camera Concierge, Infra Watchdog, Infra Health & Alerts, Heating Control
-- `data/settings.js` — config; editor adminAuth reads its credentials from the gitignored `.env`
-- `data/package.json` + `data/package-lock.json` — installed palette (reinstalls on first start)
-- `git-backup.sh` — the daily backup script
-
-## NOT tracked (re-enter on restore — simple re-entry)
-- `data/flows_cred.json` (encrypted credentials) + `data/.config.runtime.json` (their decrypt secret)
-- On restore, re-add two secrets in the editor: the **Home Assistant** long-lived token on the `ha-server` config node, and the **MQTT** password on the `mqtt-frigate` broker node.
-- `.env` (gitignored) — recreate it next to `docker-compose.yml` before starting. A commented
-  template with the same keys is tracked as [`.env.example`](.env.example), so copy that and fill it in:
-  ```
-  PVE_API_TOKEN=PVEAPIToken=<user>@pve!<tokenid>=<secret>   # read-only audit token for the backup watchdog
-  NABU_URL=https://<your-id>.ui.nabu.casa                   # remote base URL for notification images
-  NR_ADMIN_USER=<editor username>
-  NR_ADMIN_HASH=<bcrypt hash, with every $ escaped as $$>    # editor login (adminAuth reads these from the environment)
-  ```
-
 ## Start here if you only want one flow
-Most visitors want a single flow, not this whole setup. The **Restore** steps below are for
-rebuilding my instance, so skip them. Do this instead:
+
+Most visitors want a single flow, not this whole setup. Nothing below assumes you run anything the
+way I do.
 
 1. **Grab the tab you want** from the [`flows/`](flows/) directory. Each file is an importable
    JSON for one tab, regenerated automatically on every nightly backup.
@@ -51,14 +33,42 @@ rebuilding my instance, so skip them. Do this instead:
 3. **Point the config nodes at your own setup.** Double-click any Home Assistant node, edit the
    server, and fill in your Base URL (with the scheme and port, e.g. `http://192.168.1.10:8123`)
    and a Long-Lived Access Token. Same for the MQTT broker on the camera flow.
-4. **Set any environment variables the flow needs.** There is no `docker-compose.yml` in play
-   when you import a single tab, so `.env` does not apply. Set them in the editor instead:
-   double-click the flow tab name, then the **Environment Variables** tab. That tab needs
-   Node-RED 2.1 or newer. The Camera Concierge needs `NABU_URL`, the Infra Watchdog needs
-   `PVE_API_TOKEN`. See [`.env.example`](.env.example) for what each one holds.
-5. **Search and replace my house for yours** (below).
+4. **Set the environment variables the flow needs** (next section).
+5. **Replace the entity ids that are still mine** (the table after that).
+
+## Configuration lives in environment variables
+
+Anything specific to a household — who lives there, which phones to notify, which server to poll —
+is read from environment variables rather than written into the flows. Copy
+[`.env.example`](.env.example), which documents every variable, and fill in your own values.
+
+**Setting them when you imported a single tab:** there is no `docker-compose.yml` in play, so `.env`
+does not apply. Set them in the editor instead: double-click the flow tab's name, then the
+**Environment Variables** tab. That needs Node-RED 2.1 or newer.
+
+**People** are numbered slots, and the same slot is used by every flow:
+
+| Variable | Example | Meaning |
+|---|---|---|
+| `PERSON_1_NAME` | `Alice` | Display name, used in spoken and pushed messages |
+| `PERSON_1_ENTITY` | `person.alice` | Their HA person entity |
+| `PERSON_1_PING` | `binary_sensor.alice_phone` | Optional second presence signal, OR'd with the person entity |
+| `PERSON_1_NOTIFY` | `notify.mobile_app_alice` | Where their push notifications go |
+| `PERSON_1_ROLE` | `resident` | `resident` counts towards the house being empty; `guest` never does |
+| `PERSON_1_ONLY_WHEN_HOME` | `true` | Optional. Only notify this person while they are at home |
+| `PERSON_1_BATTERY` | `sensor.alice_phone_battery_level` | Optional. Enables their low-battery alerts |
+| `PERSON_1_HA_USER_ID` | `da119…` | Optional. Attributes "who changed the heating" and who scanned an NFC tag |
+
+Add people by filling `PERSON_2_*`, `PERSON_3_*` and so on — up to eight slots are read, and empty
+slots are skipped. **One exception needs an edit rather than a variable:** the House Mode presence
+node watches slots 1 to 3 explicitly, so if you have more than three tracked people, add
+`${PERSON_4_ENTITY}` and `${PERSON_4_PING}` to its entity list.
+
+If no person resolves, the people-config nodes log a warning and keep whatever they had rather than
+treating the house as empty — so a typo degrades loudly instead of arming the alarm on you.
 
 ### What to search and replace
+
 Every id below is mine and will not exist on your system. Nothing errors when a name does not
 match, the branch just silently never fires, so work through the list rather than waiting for
 an error to tell you.
@@ -66,22 +76,17 @@ an error to tell you.
 | What | Mine | Where |
 |---|---|---|
 | Camera names | `Doorbell`, `Front_Car`, `Front_Van`, `Rear_Door`, `Rear_Shed` | Camera Concierge. **Must match your Frigate config exactly, capitals and all** |
-| Phone notify targets | `notify.mobile_app_np3`, `notify.mobile_app_pixel_6a` | Camera Concierge, alarm, watchdog |
 | House mode | `input_select.house_mode` | Every flow. This is the orchestrator, it drives most of the logic |
+| Maintenance switch | `input_boolean.maintenance_mode` | Both infra flows — suppresses alerts during planned work |
 | Patio door switch | `input_boolean.patio_door_open` | Camera Concierge (silences the rear cameras) |
-| Speakers and displays | `media_player.kitchen_display_cast`, `media_player.sitting_room_speaker_cast`, `media_player.colm_bedroom_speaker_cast`, `notify.nvidia_shield` | Camera Concierge TTS, alarm voice |
-| Lights | `light.hallway`, `light.sitting_room` | Camera Concierge deterrent, alarm strobe |
+| Speakers and displays | `media_player.kitchen_display_cast`, `media_player.sitting_room_speaker_cast`, `notify.nvidia_shield` | Camera Concierge TTS, alarm voice |
+| Bedroom speaker | `media_player.*_bedroom_speaker_cast` | Person-at-the-car deterrent |
+| Lights | `light.hallway`, `light.sitting_room`, and the per-room lights in the House Mode activity watcher | Camera Concierge deterrent, alarm strobe, House Mode activity |
+| Motion and presence | `binary_sensor.hallway_motion_sensor_occupancy` and the other three indoor sensors | House Mode — these are what "activity" means |
 | Courier counters | `sensor.front_car_<courier>_count`, `sensor.front_van_<courier>_count` | Camera Concierge courier TTS |
-| People | see the `hm-cfg` node | House Mode |
-
-## Restore
-1. PBS-restore or rebuild the LXC (Debian + Docker + compose).
-2. `git clone https://github.com/colfin22/node-red-config.git /opt/node-red` (or via the repo's SSH deploy-key alias)
-3. Recreate `.env` (see above), then `cd /opt/node-red && docker compose up -d`
-4. Open the editor, re-enter the HA token (`ha-server`) + MQTT password (`mqtt-frigate`), Deploy.
-
-## Auto-backup
-`node-red-backup.timer` (systemd) runs `git-backup.sh` daily at 02:30 — regenerates `flows/`, then commits + pushes if anything changed. The repo is public, so the script **refuses to push and raises an alert** if anything committed matches a secret pattern (API tokens, bcrypt hashes, JWTs, private keys, remote-access URLs).
+| TVs | `binary_sensor.lg_tv_online`, `binary_sensor.samsung_tv_online` | House Mode quiet detection |
+| Weather warnings | `sensor.met_eireann_warning_level` | House Mode storm overlay (Irish-specific) |
+| Infrastructure sensors | the `sensor.proxmox_*`, `sensor.proxmox2_*` and `sensor.truenas_*` families | Infra Health & Alerts rule engine |
 
 ---
 
@@ -101,13 +106,13 @@ The **House Mode** tab (`tab-hm`) is the household state orchestrator. It comput
 ## Away detection
 All residents out → 20-minute timer → `Away`. At the fire point the engine checks the indoor sensors (sitting-room mmWave, office, landing, hallway) for motion in the last 15 minutes — if anyone is still moving around, it holds off and retries every 20 minutes. `maintenance_mode` also blocks the transition. Anyone arriving during the countdown cancels it immediately.
 
-**Dead/low-phone safeguards** live here: if a resident's phone is off Wi-Fi and its battery sensor is unavailable (genuinely dead/off), the engine treats that person as *unconfirmed-away* and won't set Away — it pushes a notification instead. A low-but-alive phone still reports location and is trusted. A nudge fires when a phone drops below 15 % so presence keeps working. These alerts go to Colm and Olivia only.
+**Dead/low-phone safeguards** live here: if a resident's phone is off Wi-Fi and its battery sensor is unavailable (genuinely dead/off), the engine treats that person as *unconfirmed-away* and won't set Away — it pushes a notification instead. A low-but-alive phone still reports location and is trusted. A nudge fires when a phone drops below 15 % so presence keeps working. These alerts go to the residents only.
 
 ## Sleeping detection (auto, 22:00–07:00)
 Requires: mode is `Home`, a resident is home, `maintenance_mode` off, and no activity for 20 minutes — where activity means any of the 25 tracked lights, either TV, any dimmer press, or any indoor sensor. A 2-hour re-entry block prevents flipping back to Sleeping straight after waking. Nothing wakes before 06:00; first activity from 06:00 returns to Home.
 
 ## People config (`hm-cfg` node)
-Residents (Colm, Olivia) enable Sleeping and trigger Away. Guests (Daire) only contribute to `anyoneHome()` — they prevent Away when physically present but don't enable Sleeping. Cian (no phone, 12) is excluded from both; indoor sensors are his safety net.
+Residents (`PERSON_n_ROLE=resident`) enable Sleeping and trigger Away. Guests (`PERSON_n_ROLE=guest`) only contribute to `anyoneHome()` — they prevent Away when physically present but don't enable Sleeping. Anyone in the house with no tracked phone is excluded from both, and the indoor sensors are their safety net.
 
 ### Implementation notes
 - All Away evaluations use a fresh live HA snapshot via `ha-get-entities` — no stale flow context.
@@ -187,7 +192,7 @@ eco 19 · night 19.5 · comfort 20 · hot 20.5 · frost 12
 - The same 24 h-empty state also **stops the hot-water solar diverter** (no point heating water for an empty house); it goes back to normal when anyone returns, when a pre-warm boost is started, or when someone is heading home — and the flow only ever writes on those transitions, so a manually-stopped diverter is left alone
 
 ## Forecast pre-heat
-Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts the 07:00 warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to Colm + Olivia the night before, **only when the low is sub-zero**.
+Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts the 07:00 warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to the residents the night before, **only when the low is sub-zero**.
 
 ## Proximity pre-heat
 When the house is empty and someone is driving home (within 10 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival. The pre-heat **latches** once triggered — a GPS wobble flipping "towards" to "away from" for a moment can't bounce the setpoint mid-approach; it releases only when they arrive (house leaves Away) or genuinely leave the area again (beyond 12 km).
@@ -279,7 +284,7 @@ Within a zone the snapshot, GIF and tap-link all come from the camera that **det
 The notification's tap action (`clickAction`/`url`) opens the **event clip** (`clip.mp4`) of that first-detecting camera — straight to the footage.
 
 ## Who gets what
-- **Phone push** (text → snapshot → GIF) → **both phones**: Colm (`mobile_app_np3`) + Olivia (`mobile_app_pixel_6a`).
+- **Phone push** (text → snapshot → GIF) → **both phones**: `PERSON_1_NOTIFY` and `PERSON_2_NOTIFY`.
 - **Doorbell + person** also casts a snapshot to the **kitchen display** (20 s) and an overlay on the **Shield TV**.
 - **Couriers** (DPD/GLS/Amazon/UPS/FedEx/DHL/An Post on the front cameras) → spoken **"\<courier\> has landed"** on the home audio group — suppressed when `house_mode = Sleeping`.
 - **Postman** at the doorbell → spoken **"the postman has been detected"** — suppressed when `house_mode = Sleeping`.
@@ -329,6 +334,13 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
 - **Data-freshness checks** — e.g. an hourly check that the ESB Networks smart-meter add-on has polled recently; a stale poll timestamp means the add-on is wedged even though its sensors still show plausible values.
 
 **Delivery:** shared quiet-hours gate — alerts between 22:00 and 07:00 are held and flushed at 07:00 with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
+
+---
+
+## Rebuilding my own instance
+
+The restore steps, what is and is not tracked, and how the nightly backup works have moved to
+[RESTORE.md](RESTORE.md). You do not need any of it to use a flow.
 
 ## Licence
 Built by Colm Finn — [MIT licensed](LICENSE).
