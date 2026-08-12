@@ -30,7 +30,8 @@ The Node-RED flows + config behind the automations in [colfin22/ha-config](https
 ## NOT tracked (re-enter on restore — simple re-entry)
 - `data/flows_cred.json` (encrypted credentials) + `data/.config.runtime.json` (their decrypt secret)
 - On restore, re-add two secrets in the editor: the **Home Assistant** long-lived token on the `ha-server` config node, and the **MQTT** password on the `mqtt-frigate` broker node.
-- `.env` (gitignored) — recreate it next to `docker-compose.yml` before starting:
+- `.env` (gitignored) — recreate it next to `docker-compose.yml` before starting. A commented
+  template with the same keys is tracked as [`.env.example`](.env.example), so copy that and fill it in:
   ```
   PVE_API_TOKEN=PVEAPIToken=<user>@pve!<tokenid>=<secret>   # read-only audit token for the backup watchdog
   NABU_URL=https://<your-id>.ui.nabu.casa                   # remote base URL for notification images
@@ -38,13 +39,40 @@ The Node-RED flows + config behind the automations in [colfin22/ha-config](https
   NR_ADMIN_HASH=<bcrypt hash, with every $ escaped as $$>    # editor login (adminAuth reads these from the environment)
   ```
 
-## Want one of these flows? (per-tab exports)
-The `flows/` directory holds an **importable JSON per tab**, regenerated automatically on
-every nightly backup — grab a file and paste it into Node-RED via **Menu → Import**. Each
-file includes the config nodes its flow references (a Home Assistant server node, and the
-MQTT broker for the camera flow) — after importing, point those at your own HA/MQTT and add
-your credentials; they are exported without secrets. Entity ids, camera names and notify
-targets are this house's — expect to search-and-replace.
+## Start here if you only want one flow
+Most visitors want a single flow, not this whole setup. The **Restore** steps below are for
+rebuilding my instance, so skip them. Do this instead:
+
+1. **Grab the tab you want** from the [`flows/`](flows/) directory. Each file is an importable
+   JSON for one tab, regenerated automatically on every nightly backup.
+2. **Import it** into your own Node-RED via **Menu → Import**. Each file already includes the
+   config nodes its flow references (a Home Assistant server node, and the MQTT broker for the
+   camera flow). They are exported without secrets.
+3. **Point the config nodes at your own setup.** Double-click any Home Assistant node, edit the
+   server, and fill in your Base URL (with the scheme and port, e.g. `http://192.168.1.10:8123`)
+   and a Long-Lived Access Token. Same for the MQTT broker on the camera flow.
+4. **Set any environment variables the flow needs.** There is no `docker-compose.yml` in play
+   when you import a single tab, so `.env` does not apply. Set them in the editor instead:
+   double-click the flow tab name, then the **Environment Variables** tab. That tab needs
+   Node-RED 2.1 or newer. The Camera Concierge needs `NABU_URL`, the Infra Watchdog needs
+   `PVE_API_TOKEN`. See [`.env.example`](.env.example) for what each one holds.
+5. **Search and replace my house for yours** (below).
+
+### What to search and replace
+Every id below is mine and will not exist on your system. Nothing errors when a name does not
+match, the branch just silently never fires, so work through the list rather than waiting for
+an error to tell you.
+
+| What | Mine | Where |
+|---|---|---|
+| Camera names | `Doorbell`, `Front_Car`, `Front_Van`, `Rear_Door`, `Rear_Shed` | Camera Concierge. **Must match your Frigate config exactly, capitals and all** |
+| Phone notify targets | `notify.mobile_app_np3`, `notify.mobile_app_pixel_6a` | Camera Concierge, alarm, watchdog |
+| House mode | `input_select.house_mode` | Every flow. This is the orchestrator, it drives most of the logic |
+| Patio door switch | `input_boolean.patio_door_open` | Camera Concierge (silences the rear cameras) |
+| Speakers and displays | `media_player.kitchen_display_cast`, `media_player.sitting_room_speaker_cast`, `media_player.colm_bedroom_speaker_cast`, `notify.nvidia_shield` | Camera Concierge TTS, alarm voice |
+| Lights | `light.hallway`, `light.sitting_room` | Camera Concierge deterrent, alarm strobe |
+| Courier counters | `sensor.front_car_<courier>_count`, `sensor.front_van_<courier>_count` | Camera Concierge courier TTS |
+| People | see the `hm-cfg` node | House Mode |
 
 ## Restore
 1. PBS-restore or rebuild the LXC (Debian + Docker + compose).
@@ -197,6 +225,30 @@ While `input_boolean.guest_mode` is on the heating never drops to the Away setba
 ![The Camera Concierge flow in the Node-RED editor](docs/camera-concierge.png)
 
 The **Camera Concierge** (tab `Camera Concierge`) is the sole handler of Frigate camera notifications. It turns Frigate detections into smart, consolidated phone alerts. It replaced six separate HA automations and the old package concierge.
+
+## Prerequisites
+Four things have to be in place before this flow does anything. Most "nothing happens" reports
+come down to one of them.
+
+- **The Frigate integration from HACS**, installed in Home Assistant. It is what serves the
+  `/api/frigate/notifications/…` paths that every snapshot, GIF and tap-link in this flow is
+  built from. Without it the links have nothing on the other end. Note this is *not* the Frigate
+  Proxy add-on, which only puts Frigate in the HA sidebar and plays no part here.
+- **An MQTT broker** that both Frigate and Node-RED can reach, with Frigate publishing to it.
+  The flow subscribes to `frigate/reviews`.
+- **The `node-red-contrib-home-assistant-websocket` palette**, with its server config node
+  pointed at your HA and holding a Long-Lived Access Token.
+- **`NABU_URL`** set as an environment variable (see
+  [Start here if you only want one flow](#start-here-if-you-only-want-one-flow)). It is just the
+  base URL your phone can reach HA on, with no trailing slash. Never put a token in it: those
+  notification paths are unauthenticated on purpose so the phone can fetch the image without
+  logging in. If it is unset, the URLs start at `/api/` with no host and iOS reports
+  "Failed to load attachment, unsupported URL".
+
+**Alert severity is Frigate's call, not this flow's.** The flow only acts on `severity: alert`
+and drops everything else, so if nothing arrives, check the `review` section of your Frigate
+config first. That is where you list which labels count as alerts, and where `required_zones`
+promotes an object to alert only once it enters a zone you care about.
 
 ## Signal it listens to
 - **Primary:** MQTT topic **`frigate/reviews`** (broker `10.0.0.229`). Frigate only publishes a review at **`severity: alert`** when an object enters an alert zone — so masks/zones (e.g. the driveway car-mask) are honoured upstream, and the concierge only acts on real, zone-qualified events.
