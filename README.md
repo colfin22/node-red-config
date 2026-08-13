@@ -298,6 +298,7 @@ When `house_mode = Sleeping`, a **person** detected in the front car or van focu
 
 ## Anti-spam / suppression
 - Rear silenced while the patio-door switch is on.
+- Doorbell silenced on an exit: while the front door is open, or for 60 seconds after it closes, the Shield overlay, the kitchen display and all three doorbell pushes are held back. `house_mode = Away` overrides it. The verdict is latched per incident so the late GIF push cannot arrive on its own.
 - Courier/postman TTS silenced when `house_mode = Sleeping` (push still goes to phones).
 - Per-incident grouping (multiple cameras = one notification).
 - 120 s incident window + courier/postman cooldowns to avoid repeats.
@@ -310,6 +311,8 @@ When `house_mode = Sleeping`, a **person** detected in the front car or van focu
 - Real Frigate camera names are **title-case**: `Doorbell`, `Front_Van`, `Front_Car`, `Rear_Door`, `Rear_Shed`.
 - Notify `data` must be built with explicit JSONata (`{"title":…, "message":…, "data":…}`) — otherwise the nested `data` (image/clickAction) gets flattened.
 - `house_mode` is mirrored into flow context (`flow.house_mode`) so the courier/postman TTS suppression and the person-at-the-car deterrent can read it cheaply. A `server-state-changed` watcher updates it on every change (**with `for:0, forType:num` — a missing/empty `for` throws `ConfigError: Invalid config value for 'for'` on every change**), and a startup inject → `ha-get-entities` → function seeds the current mode on restart. The watcher uses `outputInitially:false`, so the **seed is what keeps Sleeping-based behaviour correct after a Node-RED restart mid-Sleeping/Away** — the seed's `ha-get-entities` **must** output to `msg.payload` (`outputLocationType:msg`, not `none`) or it silently falls back to a default.
+- The **front door** is mirrored into flow context the same way (`flow.front_door` = `{state, at}`), because `cam-fn-review` fires the instant the MQTT review lands and fetches no entity states, so it cannot look the door up itself. Same watcher plus 120 second seed shape, same `for:0` and `msg.payload` requirements as above. The seed takes its timestamp from the entity's `last_changed`, the watcher from the moment the event arrives.
+- The doorbell exit gate keys off the **incident tag prefix** (`frig_doorbell_`) rather than the camera name, because all three push families carry that same tag and none of them carries the camera in a single common field. That is what lets one gate cover all three without editing any of the three source nodes.
 - Context keys derived from review ids are sanitised (dots → `_`) because Frigate review ids contain a dot (which Node-RED would otherwise treat as a nested-context path).
 
 # Infra Watchdog — how it works
