@@ -6,8 +6,8 @@ cd /opt/node-red || exit 1
 python3 split_flows.py > /dev/null
 
 PATTERNS='PVEAPIToken=|\$2[aby]\$[0-9]{2}\$|eyJ[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{10,}|github_pat_|nabu\.casa|AKIA[0-9A-Z]{16}|xox[baprs]-|-----BEGIN .*PRIVATE KEY'
-HITS=$(grep -InE "$PATTERNS" data/flows.json data/settings.js docker-compose.yml flows/*.json 2>/dev/null \
-       | grep -vE 'env\.get|process\.env|zZWtXTja')
+HITS=$(grep -InE "$PATTERNS" data/flows.json data/settings.js docker-compose.yml flows/*.json README.md .env.example 2>/dev/null \
+       | grep -vE 'env\.get|process\.env|zZWtXTja|PVEAPIToken=<|your-id>?\.ui\.nabu\.casa')
 if [ -n "$HITS" ]; then
   echo "$HITS" > /opt/node-red/secret-scan-blocked.txt
   curl -s -m 10 -X POST -H 'Content-Type: application/json' \
