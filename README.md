@@ -79,6 +79,7 @@ an error to tell you.
 | House mode | `input_select.house_mode` | Every flow. This is the orchestrator, it drives most of the logic |
 | Maintenance switch | `input_boolean.maintenance_mode` | Both infra flows — suppresses alerts during planned work |
 | Patio door switch | `input_boolean.patio_door_open` | Camera Concierge (silences the rear cameras) |
+| Front door contact | `binary_sensor.front_door_contact` | Camera Concierge (silences the doorbell popup on the way out) |
 | Speakers and displays | `media_player.kitchen_display_cast`, `media_player.sitting_room_speaker_cast`, `notify.nvidia_shield` | Camera Concierge TTS, alarm voice |
 | Bedroom speaker | `media_player.*_bedroom_speaker_cast` | Person-at-the-car deterrent |
 | Lights | `light.hallway`, `light.sitting_room`, and the per-room lights in the House Mode activity watcher | Camera Concierge deterrent, alarm strobe, House Mode activity |
@@ -285,7 +286,7 @@ The notification's tap action (`clickAction`/`url`) opens the **event clip** (`c
 
 ## Who gets what
 - **Phone push** (text → snapshot → GIF) → **both phones**: `PERSON_1_NOTIFY` and `PERSON_2_NOTIFY`.
-- **Doorbell + person** also casts a snapshot to the **kitchen display** (20 s) and an overlay on the **Shield TV**.
+- **Doorbell + person** also casts a snapshot to the **kitchen display** (20 s) and an overlay on the **Shield TV**. This only fires for an arrival. If the front door is open, or closed less than 60 seconds ago, both popups are skipped, because whoever is on camera has already come through it. The phone push still sends.
 - **Couriers** (DPD/GLS/Amazon/UPS/FedEx/DHL/An Post on the front cameras) → spoken **"\<courier\> has landed"** on the home audio group — suppressed when `house_mode = Sleeping`.
 - **Postman** at the doorbell → spoken **"the postman has been detected"** — suppressed when `house_mode = Sleeping`.
 - The two TTS branches share a 2-minute cooldown so one An Post delivery never announces twice.
