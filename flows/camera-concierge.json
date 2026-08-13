@@ -622,8 +622,7 @@
     "cam-cast"
    ],
    [
-    "cam-notify-np3",
-    "cam-notify-person-2"
+    "cam-fd-gate"
    ]
   ]
  },
@@ -877,9 +876,8 @@
   "y": 480,
   "wires": [
    [
-    "cam-notify-np3",
-    "cam-notify-person-2",
-    "cam-log"
+    "cam-log",
+    "cam-fd-gate"
    ]
   ]
  },
@@ -970,9 +968,168 @@
   "y": 580,
   "wires": [
    [
+    "cam-fd-gate"
+   ]
+  ]
+ },
+ {
+  "id": "cam-fd-gate",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "doorbell exit gate",
+  "func": "// Doorbell exit guard for the phone pushes.\n// Every doorbell push family (grouped text/snapshot/GIF, the named person push,\n// the Frigate description) carries the same group tag, so gate on the tag and\n// LATCH the verdict for the whole incident. The GIF push arrives 44s to 159s\n// after the first one, well past the window, so deciding per message would\n// silence the openers and then let a lone GIF through a minute later.\n// Window kept in step with cam-door-fn's DOOR_WINDOW.\nconst DOOR_WINDOW = 60000;\nconst LATCH_TTL = 600000;\nconst now = Date.now();\n\nconst nd = msg.ndata || {};\nconst tag = nd.tag ? String(nd.tag) : '';\nif (tag.indexOf('frig_doorbell_') !== 0) return msg;   // doorbell only\nif (flow.get('house_mode') === 'Away') return msg;     // Away overrides\n\n// Drop expired latches so the context does not grow without bound.\nconst keys = flow.keys ? flow.keys() : [];\nfor (const k of keys) {\n  if (k.indexOf('supp_') === 0) {\n    const v = flow.get(k);\n    if (!v || (now - v.at) > LATCH_TTL) flow.set(k, undefined);\n  }\n}\n\nconst key = 'supp_' + tag;\nlet latch = flow.get(key);\nif (!latch) {\n  const fd = flow.get('front_door');\n  let verdict, why;\n  if (!fd || !fd.state) {\n    verdict = false; why = 'no front door state';\n  } else if (fd.state === 'on') {\n    verdict = true; why = 'front door is open';\n  } else {\n    const age = now - fd.at;\n    verdict = age < DOOR_WINDOW;\n    why = 'front door closed ' + Math.round(age / 1000) + 's ago';\n  }\n  latch = { verdict: verdict, why: why, at: now };\n  flow.set(key, latch);\n}\n\nif (latch.verdict) {\n  node.warn('[cam] doorbell push suppressed: ' + latch.why + ' [' + tag + ']');\n  return null;\n}\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1120,
+  "y": 540,
+  "wires": [
+   [
     "cam-notify-np3",
     "cam-notify-person-2"
    ]
+  ]
+ },
+ {
+  "id": "cam-fd-watch",
+  "type": "server-state-changed",
+  "z": "tab-cam",
+  "name": "front_door_contact",
+  "server": "ha-server",
+  "version": 6,
+  "outputs": 1,
+  "exposeAsEntityConfig": "",
+  "entities": {
+   "entity": [
+    "binary_sensor.front_door_contact"
+   ],
+   "substring": "",
+   "regex": ""
+  },
+  "outputInitially": false,
+  "stateType": "str",
+  "ifState": "",
+  "ifStateType": "str",
+  "ifStateOperator": "is",
+  "outputOnlyOnStateChange": true,
+  "for": 0,
+  "forType": "num",
+  "forUnits": "minutes",
+  "ignorePrevStateNull": true,
+  "ignorePrevStateUnknown": true,
+  "ignorePrevStateUnavailable": true,
+  "ignoreCurrentStateUnknown": false,
+  "ignoreCurrentStateUnavailable": false,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityState"
+   },
+   {
+    "property": "topic",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "entityId"
+   }
+  ],
+  "entityidfiltertype": "list",
+  "x": 150,
+  "y": 1120,
+  "wires": [
+   [
+    "cam-fd-set"
+   ]
+  ]
+ },
+ {
+  "id": "cam-fd-set",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "store front door state",
+  "func": "// Front door into flow context for cam-fd-gate. The review path fires the moment\n// MQTT lands and fetches no entity states, so it cannot look the door up itself.\nflow.set('front_door', { state: msg.payload, at: Date.now() });\nreturn null;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 400,
+  "y": 1120,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-fd-init",
+  "type": "inject",
+  "z": "tab-cam",
+  "name": "front door seed (2s)",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": 2,
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 130,
+  "y": 1220,
+  "wires": [
+   [
+    "cam-fd-init-get"
+   ]
+  ]
+ },
+ {
+  "id": "cam-fd-init-get",
+  "type": "ha-get-entities",
+  "z": "tab-cam",
+  "name": "get front_door_contact",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [
+   {
+    "property": "entity_id",
+    "logic": "is",
+    "value": "binary_sensor.front_door_contact",
+    "valueType": "str"
+   }
+  ],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "x": 400,
+  "y": 1220,
+  "wires": [
+   [
+    "cam-fd-seed"
+   ]
+  ]
+ },
+ {
+  "id": "cam-fd-seed",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "seed front door",
+  "func": "// Self-healing seed, re-runs every 120s to cover a missed state change.\n// Warn only when the value CHANGES, or this writes ~720 noise lines a day.\nconst ents = Array.isArray(msg.payload) ? msg.payload : [];\nconst e = ents.find(x => x.entity_id === 'binary_sensor.front_door_contact');\nif (!e) return null;\nconst at = e.last_changed ? Date.parse(e.last_changed) : Date.now();\nconst prev = flow.get('front_door');\nflow.set('front_door', { state: e.state, at: at });\nif (!prev || prev.state !== e.state) node.warn('[cam-concierge] front_door seeded: ' + e.state);\nreturn null;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 690,
+  "y": 1220,
+  "wires": [
+   []
   ]
  },
  {
