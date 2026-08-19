@@ -109,8 +109,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 510,
-  "y": 500,
+  "x": 410,
+  "y": 460,
   "wires": [
    [
     "cam-away-boost"
@@ -119,54 +119,6 @@
     "cam-door-delay",
     "cam-log"
    ]
-  ]
- },
- {
-  "id": "cam-notify-np3",
-  "type": "api-call-service",
-  "z": "tab-cam",
-  "name": "Push person 1",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_np3",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:cctv\"}])}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 1310,
-  "y": 580,
-  "wires": [
-   []
-  ]
- },
- {
-  "id": "cam-notify-person-2",
-  "type": "api-call-service",
-  "z": "tab-cam",
-  "name": "Push person 2",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_pixel_6a",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:cctv\"}])}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 1320,
-  "y": 500,
-  "wires": [
-   []
   ]
  },
  {
@@ -872,8 +824,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 930,
-  "y": 480,
+  "x": 850,
+  "y": 460,
   "wires": [
    [
     "cam-log",
@@ -944,7 +896,7 @@
   "rap": true,
   "rh": 0,
   "inputs": 0,
-  "x": 680,
+  "x": 500,
   "y": 580,
   "wires": [
    [
@@ -964,7 +916,7 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 930,
+  "x": 750,
   "y": 580,
   "wires": [
    [
@@ -983,12 +935,11 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 1120,
+  "x": 1070,
   "y": 540,
   "wires": [
    [
-    "cam-notify-np3",
-    "cam-notify-person-2"
+    "cam-notify-dispatch"
    ]
   ]
  },
@@ -1128,6 +1079,49 @@
   "libs": [],
   "x": 690,
   "y": 1220,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "cam-notify-dispatch",
+  "type": "function",
+  "z": "tab-cam",
+  "name": "dispatch: camera",
+  "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.camera && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1310,
+  "y": 540,
+  "wires": [
+   [
+    "cam-notify-dynamic"
+   ]
+  ]
+ },
+ {
+  "id": "cam-notify-dynamic",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "notify (per person_config)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "{{action}}",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:cctv\"}])}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1570,
+  "y": 540,
   "wires": [
    []
   ]

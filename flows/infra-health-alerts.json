@@ -139,35 +139,11 @@
   "y": 640,
   "wires": [
    [
-    "ih-notify"
+    "ih-notify-dispatch"
    ],
    [
     "ih-logfile"
    ]
-  ]
- },
- {
-  "id": "ih-notify",
-  "type": "api-call-service",
-  "z": "tab-ih",
-  "name": "Notify person 1",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_np3",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server\"}])}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 1410,
-  "y": 640,
-  "wires": [
-   []
   ]
  },
  {
@@ -785,6 +761,49 @@
    [
     "ih-send"
    ]
+  ]
+ },
+ {
+  "id": "ih-notify-dispatch",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "dispatch: infra_alerts",
+  "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.infra_alerts && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1260,
+  "y": 640,
+  "wires": [
+   [
+    "ih-notify-dynamic"
+   ]
+  ]
+ },
+ {
+  "id": "ih-notify-dynamic",
+  "type": "api-call-service",
+  "z": "tab-ih",
+  "name": "notify (per person_config)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "{{action}}",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server\"}])}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1510,
+  "y": 640,
+  "wires": [
+   []
   ]
  },
  {

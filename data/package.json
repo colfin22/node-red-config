@@ -4,6 +4,7 @@
     "version": "0.0.1",
     "private": true,
     "dependencies": {
+        "@flowfuse/node-red-dashboard": "^1.30.2",
         "node-red-contrib-home-assistant-websocket": "^0.80.3"
     }
 }

@@ -16,10 +16,10 @@
     "p": "payload"
    }
   ],
-  "repeat": "",
+  "repeat": "120",
   "crontab": "",
   "once": true,
-  "onceDelay": "0.3",
+  "onceDelay": "5",
   "topic": "",
   "payload": "",
   "payloadType": "date",
@@ -36,7 +36,7 @@
   "type": "function",
   "z": "096ff268dc7bd2f0",
   "name": "people config",
-  "func": "// SINGLE source of truth for alarm people, built from the PERSON_1_* .. PERSON_n_*\n// environment variables (see .env.example). Add someone by filling the next free\n// slot, no code change needed. ONLY_WHEN_HOME=true notifies them only while home.\nconst MAX=8;\nvar PEOPLE=[];\nfor(var i=1;i<=MAX;i++){\n  var ent=env.get('PERSON_'+i+'_ENTITY');\n  if(!ent||typeof ent!=='string'||ent.charAt(0)==='$')continue;\n  var rec={\n    name:env.get('PERSON_'+i+'_NAME')||('Person '+i),\n    person:ent,\n    ping:env.get('PERSON_'+i+'_PING')||'',\n    notify:env.get('PERSON_'+i+'_NOTIFY')||''\n  };\n  if(String(env.get('PERSON_'+i+'_ONLY_WHEN_HOME')||'').toLowerCase()==='true')rec.onlyWhenHome=true;\n  PEOPLE.push(rec);\n}\nif(!PEOPLE.length){\n  node.warn('people config: no people resolved from PERSON_*_ENTITY, keeping previous values');\n  return null;\n}\nflow.set('people',PEOPLE);\nglobal.set('people',PEOPLE);   // shared with the Alarm NFC Tags flow\nreturn null;",
+  "func": "// Single source of truth: Person Config dashboard page (tab-pc) writes\n// global.person_config. Filters to people with the Security toggle on AND a\n// resolvable notify target (Aoife etc. excluded automatically, not silently).\nconst PC = global.get('person_config') || {};\nvar PEOPLE = [];\nObject.keys(PC).forEach(function(pid){\n  var c = PC[pid];\n  if (!c || !c.security || !c.notify_service) return;\n  var rec = {name: c.name || pid, person: pid, ping: c.ping || '', notify: c.notify_service};\n  if (c.role === 'guest') rec.onlyWhenHome = true;\n  PEOPLE.push(rec);\n});\nif (!PEOPLE.length) {\n  node.warn('people config: no people resolved from person_config, keeping previous values');\n  return null;\n}\nflow.set('people', PEOPLE);\nglobal.set('people', PEOPLE);   // shared with the Alarm NFC Tags flow\nreturn null;",
   "outputs": 0,
   "timeout": 0,
   "noerr": 0,

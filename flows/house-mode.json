@@ -436,10 +436,10 @@
   "z": "tab-hm",
   "name": "seed on deploy",
   "props": [],
-  "repeat": "",
+  "repeat": "120",
   "crontab": "",
   "once": true,
-  "onceDelay": "2",
+  "onceDelay": "5",
   "topic": "",
   "x": 150,
   "y": 600,
@@ -524,7 +524,7 @@
     "hm-overlay-off"
    ],
    [
-    "hm-notify"
+    "hm-notify-dispatch"
    ],
    [
     "hm-logfile"
@@ -607,30 +607,6 @@
   ]
  },
  {
-  "id": "hm-notify",
-  "type": "api-call-service",
-  "z": "tab-hm",
-  "name": "notify person 1",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_np3",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": \"\ud83c\udfe0 House Mode\", \"message\": msg.payload, \"data\": {\"notification_icon\": \"mdi:home-account\"}}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 1210,
-  "y": 440,
-  "wires": [
-   []
-  ]
- },
- {
   "id": "hm-logfile",
   "type": "file",
   "z": "tab-hm",
@@ -641,8 +617,8 @@
   "createDir": true,
   "overwriteFile": "false",
   "encoding": "none",
-  "x": 1210,
-  "y": 600,
+  "x": 1190,
+  "y": 540,
   "wires": [
    []
   ]
@@ -652,7 +628,7 @@
   "type": "function",
   "z": "tab-hm",
   "name": "people config",
-  "func": "// People come from environment variables so no household details live in the flow.\n// Fill PERSON_1_* .. PERSON_n_* (see .env.example). ROLE is 'resident' or 'guest':\n// residents are who the house waits for before going Away, guests never set it.\n// A slot with no _ENTITY is skipped, so unused slots can be left unset.\nconst MAX=8;\nvar residents=[],guests=[];\nfor(var i=1;i<=MAX;i++){\n  var ent=env.get('PERSON_'+i+'_ENTITY');\n  if(!ent||typeof ent!=='string'||ent.charAt(0)==='$')continue;\n  var rec={person:ent,ping:env.get('PERSON_'+i+'_PING')||''};\n  var role=String(env.get('PERSON_'+i+'_ROLE')||'resident').toLowerCase();\n  (role==='guest'?guests:residents).push(rec);\n}\nif(!residents.length){\n  node.warn('people config: no residents resolved from PERSON_*_ENTITY, keeping previous values');\n  return null;\n}\nflow.set('residents',residents);\nflow.set('guests',guests);\nreturn msg;",
+  "func": "// Single source of truth: the Person Config dashboard page (tab-pc) writes\n// global.person_config keyed by person.* entity id. This reads it fresh on\n// every deploy/tick, so a role change on the dashboard takes effect live\n// with no redeploy needed here.\nconst PC = global.get('person_config') || {};\nvar residents=[], guests=[];\nObject.keys(PC).forEach(function(pid){\n  var c = PC[pid];\n  if (!c || !c.role || c.role==='none') return;\n  var rec = {person: pid, ping: c.ping || ''};\n  (c.role==='guest' ? guests : residents).push(rec);\n});\nif (!residents.length) {\n  node.warn('people config: no residents resolved from person_config, keeping previous values');\n  return null;\n}\nflow.set('residents', residents);\nflow.set('guests', guests);\nreturn msg;",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -707,8 +683,51 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1230,
-  "y": 520,
+  "x": 1250,
+  "y": 640,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "hm-notify-dispatch",
+  "type": "function",
+  "z": "tab-hm",
+  "name": "dispatch: house_mode_change",
+  "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.house_mode_change && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1130,
+  "y": 440,
+  "wires": [
+   [
+    "hm-notify-dynamic"
+   ]
+  ]
+ },
+ {
+  "id": "hm-notify-dynamic",
+  "type": "api-call-service",
+  "z": "tab-hm",
+  "name": "notify (per person_config)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "{{action}}",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": \"\ud83c\udfe0 House Mode\", \"message\": msg.payload, \"data\": {\"notification_icon\": \"mdi:home-account\"}}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1450,
+  "y": 440,
   "wires": [
    []
   ]

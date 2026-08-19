@@ -49,6 +49,14 @@
         "info": ""
     },
     {
+        "id": "tab-pc",
+        "type": "tab",
+        "label": "Person Config",
+        "disabled": false,
+        "info": "Household person config: House Mode role + notification toggles, single source for hm-cfg/aa-cfg/camera/heating/hm-notify consumers.",
+        "env": []
+    },
+    {
         "id": "ha-server",
         "type": "server",
         "name": "Home Assistant",
@@ -96,6 +104,93 @@
         "protocolVersion": "4",
         "keepalive": "60",
         "cleansession": true
+    },
+    {
+        "id": "pc-ui-base",
+        "type": "ui-base",
+        "name": "Household Dashboard",
+        "path": "/dashboard",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 1,
+        "showDisconnectNotification": true,
+        "allowInstall": false
+    },
+    {
+        "id": "pc-ui-theme",
+        "type": "ui-theme",
+        "name": "Default",
+        "colors": {
+            "surface": "#ffffff",
+            "primary": "#0094CE",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "density": "default",
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "pc-ui-page",
+        "type": "ui-page",
+        "name": "Household Config",
+        "ui": "pc-ui-base",
+        "path": "/household",
+        "icon": "home",
+        "layout": "grid",
+        "theme": "pc-ui-theme",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "order": 99,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "pc-ui-group",
+        "type": "ui-group",
+        "name": "People",
+        "page": "pc-ui-page",
+        "width": "12",
+        "height": "1",
+        "order": 1,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
     },
     {
         "id": "hm-presence",
@@ -527,10 +622,10 @@
         "z": "tab-hm",
         "name": "seed on deploy",
         "props": [],
-        "repeat": "",
+        "repeat": "120",
         "crontab": "",
         "once": true,
-        "onceDelay": "2",
+        "onceDelay": "5",
         "topic": "",
         "x": 150,
         "y": 600,
@@ -615,7 +710,7 @@
                 "hm-overlay-off"
             ],
             [
-                "hm-notify"
+                "hm-notify-dispatch"
             ],
             [
                 "hm-logfile"
@@ -698,30 +793,6 @@
         ]
     },
     {
-        "id": "hm-notify",
-        "type": "api-call-service",
-        "z": "tab-hm",
-        "name": "notify person 1",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "notify.mobile_app_np3",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"title\": \"🏠 House Mode\", \"message\": msg.payload, \"data\": {\"notification_icon\": \"mdi:home-account\"}}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 1210,
-        "y": 440,
-        "wires": [
-            []
-        ]
-    },
-    {
         "id": "hm-logfile",
         "type": "file",
         "z": "tab-hm",
@@ -732,8 +803,8 @@
         "createDir": true,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 1210,
-        "y": 600,
+        "x": 1190,
+        "y": 540,
         "wires": [
             []
         ]
@@ -743,7 +814,7 @@
         "type": "function",
         "z": "tab-hm",
         "name": "people config",
-        "func": "// People come from environment variables so no household details live in the flow.\n// Fill PERSON_1_* .. PERSON_n_* (see .env.example). ROLE is 'resident' or 'guest':\n// residents are who the house waits for before going Away, guests never set it.\n// A slot with no _ENTITY is skipped, so unused slots can be left unset.\nconst MAX=8;\nvar residents=[],guests=[];\nfor(var i=1;i<=MAX;i++){\n  var ent=env.get('PERSON_'+i+'_ENTITY');\n  if(!ent||typeof ent!=='string'||ent.charAt(0)==='$')continue;\n  var rec={person:ent,ping:env.get('PERSON_'+i+'_PING')||''};\n  var role=String(env.get('PERSON_'+i+'_ROLE')||'resident').toLowerCase();\n  (role==='guest'?guests:residents).push(rec);\n}\nif(!residents.length){\n  node.warn('people config: no residents resolved from PERSON_*_ENTITY, keeping previous values');\n  return null;\n}\nflow.set('residents',residents);\nflow.set('guests',guests);\nreturn msg;",
+        "func": "// Single source of truth: the Person Config dashboard page (tab-pc) writes\n// global.person_config keyed by person.* entity id. This reads it fresh on\n// every deploy/tick, so a role change on the dashboard takes effect live\n// with no redeploy needed here.\nconst PC = global.get('person_config') || {};\nvar residents=[], guests=[];\nObject.keys(PC).forEach(function(pid){\n  var c = PC[pid];\n  if (!c || !c.role || c.role==='none') return;\n  var rec = {person: pid, ping: c.ping || ''};\n  (c.role==='guest' ? guests : residents).push(rec);\n});\nif (!residents.length) {\n  node.warn('people config: no residents resolved from person_config, keeping previous values');\n  return null;\n}\nflow.set('residents', residents);\nflow.set('guests', guests);\nreturn msg;",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -798,8 +869,51 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1230,
-        "y": 520,
+        "x": 1250,
+        "y": 640,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "hm-notify-dispatch",
+        "type": "function",
+        "z": "tab-hm",
+        "name": "dispatch: house_mode_change",
+        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.house_mode_change && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1130,
+        "y": 440,
+        "wires": [
+            [
+                "hm-notify-dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "hm-notify-dynamic",
+        "type": "api-call-service",
+        "z": "tab-hm",
+        "name": "notify (per person_config)",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "{{action}}",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "{\"title\": \"🏠 House Mode\", \"message\": msg.payload, \"data\": {\"notification_icon\": \"mdi:home-account\"}}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1450,
+        "y": 440,
         "wires": [
             []
         ]
@@ -907,8 +1021,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 510,
-        "y": 500,
+        "x": 410,
+        "y": 460,
         "wires": [
             [
                 "cam-away-boost"
@@ -917,54 +1031,6 @@
                 "cam-door-delay",
                 "cam-log"
             ]
-        ]
-    },
-    {
-        "id": "cam-notify-np3",
-        "type": "api-call-service",
-        "z": "tab-cam",
-        "name": "Push person 1",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "notify.mobile_app_np3",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:cctv\"}])}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 1310,
-        "y": 580,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "cam-notify-person-2",
-        "type": "api-call-service",
-        "z": "tab-cam",
-        "name": "Push person 2",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "notify.mobile_app_pixel_6a",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:cctv\"}])}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 1320,
-        "y": 500,
-        "wires": [
-            []
         ]
     },
     {
@@ -1670,8 +1736,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 930,
-        "y": 480,
+        "x": 850,
+        "y": 460,
         "wires": [
             [
                 "cam-log",
@@ -1742,7 +1808,7 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 680,
+        "x": 500,
         "y": 580,
         "wires": [
             [
@@ -1762,7 +1828,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 930,
+        "x": 750,
         "y": 580,
         "wires": [
             [
@@ -1781,12 +1847,11 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1120,
+        "x": 1070,
         "y": 540,
         "wires": [
             [
-                "cam-notify-np3",
-                "cam-notify-person-2"
+                "cam-notify-dispatch"
             ]
         ]
     },
@@ -1931,6 +1996,49 @@
         ]
     },
     {
+        "id": "cam-notify-dispatch",
+        "type": "function",
+        "z": "tab-cam",
+        "name": "dispatch: camera",
+        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.camera && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1310,
+        "y": 540,
+        "wires": [
+            [
+                "cam-notify-dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "cam-notify-dynamic",
+        "type": "api-call-service",
+        "z": "tab-cam",
+        "name": "notify (per person_config)",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "{{action}}",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:cctv\"}])}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1570,
+        "y": 540,
+        "wires": [
+            []
+        ]
+    },
+    {
         "id": "heat-tick",
         "type": "inject",
         "z": "5a86c1a3371ffe9e",
@@ -2020,8 +2128,8 @@
         "output_location_type": "msg",
         "output_location": "payload",
         "output_results_count": 1,
-        "x": 380,
-        "y": 150,
+        "x": 360,
+        "y": 240,
         "wires": [
             [
                 "heat-fn"
@@ -2041,13 +2149,13 @@
         "finalize": "",
         "libs": [],
         "x": 590,
-        "y": 150,
+        "y": 240,
         "wires": [
             [
                 "heat-set"
             ],
             [
-                "heat-notify"
+                "heat-notify-dispatch"
             ],
             [
                 "heat-status",
@@ -2078,7 +2186,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 880,
+        "x": 900,
         "y": 60,
         "wires": [
             [
@@ -2102,30 +2210,6 @@
         "x": 1230,
         "y": 60,
         "wires": []
-    },
-    {
-        "id": "heat-notify",
-        "type": "api-call-service",
-        "z": "5a86c1a3371ffe9e",
-        "name": "Notify person 1 (test)",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "notify.mobile_app_np3",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:radiator\"}}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 870,
-        "y": 120,
-        "wires": [
-            []
-        ]
     },
     {
         "id": "heat-fc-cron",
@@ -2198,61 +2282,12 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 620,
-        "y": 400,
+        "x": 400,
+        "y": 540,
         "wires": [
             [
-                "heat-fc-np3",
-                "heat-fc-oli"
+                "heat-fc-notify-dispatch"
             ]
-        ]
-    },
-    {
-        "id": "heat-fc-np3",
-        "type": "api-call-service",
-        "z": "5a86c1a3371ffe9e",
-        "name": "Notify person 1 (freezing)",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "notify.mobile_app_np3",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:snowflake-alert\"}}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 880,
-        "y": 360,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "heat-fc-oli",
-        "type": "api-call-service",
-        "z": "5a86c1a3371ffe9e",
-        "name": "Notify person 2 (freezing)",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "notify.mobile_app_pixel_6a",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:snowflake-alert\"}}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 880,
-        "y": 420,
-        "wires": [
-            []
         ]
     },
     {
@@ -2375,8 +2410,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 870,
-        "y": 180,
+        "x": 970,
+        "y": 240,
         "wires": [
             []
         ]
@@ -2401,8 +2436,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 880,
-        "y": 240,
+        "x": 980,
+        "y": 340,
         "wires": [
             []
         ]
@@ -2427,8 +2462,94 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 870,
-        "y": 300,
+        "x": 990,
+        "y": 440,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "heat-notify-dispatch",
+        "type": "function",
+        "z": "5a86c1a3371ffe9e",
+        "name": "dispatch: heating_routine",
+        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.heating_routine && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 930,
+        "y": 160,
+        "wires": [
+            [
+                "heat-notify-dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "heat-notify-dynamic",
+        "type": "api-call-service",
+        "z": "5a86c1a3371ffe9e",
+        "name": "notify (per person_config)",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "{{action}}",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:radiator\"}}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1250,
+        "y": 160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "heat-fc-notify-dispatch",
+        "type": "function",
+        "z": "5a86c1a3371ffe9e",
+        "name": "dispatch: heating_freeze",
+        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.heating_freeze && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 790,
+        "y": 540,
+        "wires": [
+            [
+                "heat-fc-notify-dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "heat-fc-notify-dynamic",
+        "type": "api-call-service",
+        "z": "5a86c1a3371ffe9e",
+        "name": "notify (per person_config)",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "{{action}}",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:snowflake-alert\"}}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1270,
+        "y": 540,
         "wires": [
             []
         ]
@@ -2443,10 +2564,10 @@
                 "p": "payload"
             }
         ],
-        "repeat": "",
+        "repeat": "120",
         "crontab": "",
         "once": true,
-        "onceDelay": "0.3",
+        "onceDelay": "5",
         "topic": "",
         "payload": "",
         "payloadType": "date",
@@ -2463,7 +2584,7 @@
         "type": "function",
         "z": "096ff268dc7bd2f0",
         "name": "people config",
-        "func": "// SINGLE source of truth for alarm people, built from the PERSON_1_* .. PERSON_n_*\n// environment variables (see .env.example). Add someone by filling the next free\n// slot, no code change needed. ONLY_WHEN_HOME=true notifies them only while home.\nconst MAX=8;\nvar PEOPLE=[];\nfor(var i=1;i<=MAX;i++){\n  var ent=env.get('PERSON_'+i+'_ENTITY');\n  if(!ent||typeof ent!=='string'||ent.charAt(0)==='$')continue;\n  var rec={\n    name:env.get('PERSON_'+i+'_NAME')||('Person '+i),\n    person:ent,\n    ping:env.get('PERSON_'+i+'_PING')||'',\n    notify:env.get('PERSON_'+i+'_NOTIFY')||''\n  };\n  if(String(env.get('PERSON_'+i+'_ONLY_WHEN_HOME')||'').toLowerCase()==='true')rec.onlyWhenHome=true;\n  PEOPLE.push(rec);\n}\nif(!PEOPLE.length){\n  node.warn('people config: no people resolved from PERSON_*_ENTITY, keeping previous values');\n  return null;\n}\nflow.set('people',PEOPLE);\nglobal.set('people',PEOPLE);   // shared with the Alarm NFC Tags flow\nreturn null;",
+        "func": "// Single source of truth: Person Config dashboard page (tab-pc) writes\n// global.person_config. Filters to people with the Security toggle on AND a\n// resolvable notify target (Aoife etc. excluded automatically, not silently).\nconst PC = global.get('person_config') || {};\nvar PEOPLE = [];\nObject.keys(PC).forEach(function(pid){\n  var c = PC[pid];\n  if (!c || !c.security || !c.notify_service) return;\n  var rec = {name: c.name || pid, person: pid, ping: c.ping || '', notify: c.notify_service};\n  if (c.role === 'guest') rec.onlyWhenHome = true;\n  PEOPLE.push(rec);\n});\nif (!PEOPLE.length) {\n  node.warn('people config: no people resolved from person_config, keeping previous values');\n  return null;\n}\nflow.set('people', PEOPLE);\nglobal.set('people', PEOPLE);   // shared with the Alarm NFC Tags flow\nreturn null;",
         "outputs": 0,
         "timeout": 0,
         "noerr": 0,
@@ -3816,35 +3937,11 @@
         "y": 640,
         "wires": [
             [
-                "ih-notify"
+                "ih-notify-dispatch"
             ],
             [
                 "ih-logfile"
             ]
-        ]
-    },
-    {
-        "id": "ih-notify",
-        "type": "api-call-service",
-        "z": "tab-ih",
-        "name": "Notify person 1",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "notify.mobile_app_np3",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server\"}])}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 1410,
-        "y": 640,
-        "wires": [
-            []
         ]
     },
     {
@@ -4465,6 +4562,49 @@
         ]
     },
     {
+        "id": "ih-notify-dispatch",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "dispatch: infra_alerts",
+        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.infra_alerts && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1260,
+        "y": 640,
+        "wires": [
+            [
+                "ih-notify-dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "ih-notify-dynamic",
+        "type": "api-call-service",
+        "z": "tab-ih",
+        "name": "notify (per person_config)",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "{{action}}",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server\"}])}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1510,
+        "y": 640,
+        "wires": [
+            []
+        ]
+    },
+    {
         "id": "iw-http",
         "type": "http in",
         "z": "tab-iw",
@@ -4508,70 +4648,14 @@
         "y": 200,
         "wires": [
             [
-                "iw-notify"
+                "iw-notify-dispatch"
             ],
             [
-                "iw-presence-gate"
+                "iw-tts-get"
             ],
             [
                 "iw-logfile"
             ]
-        ]
-    },
-    {
-        "id": "iw-notify",
-        "type": "api-call-service",
-        "z": "tab-iw",
-        "name": "Notify person 1",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "notify.mobile_app_np3",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server-network\"}])}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 970,
-        "y": 120,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "iw-presence-gate",
-        "type": "api-current-state",
-        "z": "tab-iw",
-        "name": "Person 1 home?",
-        "server": "ha-server",
-        "version": 3,
-        "outputs": 2,
-        "halt_if": "home",
-        "halt_if_type": "str",
-        "halt_if_compare": "is",
-        "entity_id": "${PERSON_1_ENTITY}",
-        "state_type": "str",
-        "blockInputOverrides": true,
-        "outputProperties": [],
-        "for": "0",
-        "forType": "num",
-        "forUnits": "minutes",
-        "override_topic": false,
-        "state_location": "",
-        "override_payload": "none",
-        "entity_location": "",
-        "override_data": "none",
-        "x": 830,
-        "y": 260,
-        "wires": [
-            [
-                "iw-tts"
-            ],
-            []
         ]
     },
     {
@@ -4595,8 +4679,8 @@
         "outputProperties": [],
         "queue": "none",
         "blockInputOverrides": false,
-        "x": 1150,
-        "y": 260,
+        "x": 1490,
+        "y": 220,
         "wires": [
             []
         ]
@@ -4612,8 +4696,8 @@
         "createDir": true,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 810,
-        "y": 400,
+        "x": 1250,
+        "y": 380,
         "wires": [
             []
         ]
@@ -4674,7 +4758,7 @@
         ],
         "entityidfiltertype": "list",
         "x": 140,
-        "y": 460,
+        "y": 800,
         "wires": [
             [
                 "iw-maint-gate"
@@ -4692,8 +4776,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 350,
-        "y": 560,
+        "x": 370,
+        "y": 900,
         "wires": [
             [
                 "iw-sp-req"
@@ -4778,8 +4862,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 520,
-        "y": 360,
+        "x": 760,
+        "y": 400,
         "wires": [
             [
                 "iw-engine"
@@ -4809,8 +4893,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 260,
-        "y": 270,
+        "x": 290,
+        "y": 520,
         "wires": [
             [
                 "iw-sp-req"
@@ -4834,12 +4918,288 @@
         "once": true,
         "onceDelay": "60",
         "topic": "",
-        "x": 180,
-        "y": 460,
+        "x": 170,
+        "y": 660,
         "wires": [
             [
                 "iw-sp-req"
             ]
+        ]
+    },
+    {
+        "id": "iw-tts-get",
+        "type": "ha-get-entities",
+        "z": "tab-iw",
+        "name": "all entities",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "payload",
+        "outputResultsCount": 1,
+        "output_type": "array",
+        "output_empty_results": true,
+        "output_location_type": "msg",
+        "output_location": "payload",
+        "output_results_count": 1,
+        "x": 940,
+        "y": 220,
+        "wires": [
+            [
+                "iw-tts-gate-fn"
+            ]
+        ]
+    },
+    {
+        "id": "iw-tts-gate-fn",
+        "type": "function",
+        "z": "tab-iw",
+        "name": "anyone toggled-on home?",
+        "func": "const PC = global.get('person_config') || {};\nconst ents = msg.payload || [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst anyoneHome = Object.keys(PC).some(function(pid){\n  var c = PC[pid];\n  return c && c.infra_alerts && S(pid) === 'home';\n});\nif (!anyoneHome) return null;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1190,
+        "y": 220,
+        "wires": [
+            [
+                "iw-tts"
+            ]
+        ]
+    },
+    {
+        "id": "iw-notify-dispatch",
+        "type": "function",
+        "z": "tab-iw",
+        "name": "dispatch: infra_alerts",
+        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.infra_alerts && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 970,
+        "y": 120,
+        "wires": [
+            [
+                "iw-notify-dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "iw-notify-dynamic",
+        "type": "api-call-service",
+        "z": "tab-iw",
+        "name": "notify (per person_config)",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "{{action}}",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server-network\"}])}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1230,
+        "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pc-boot",
+        "type": "inject",
+        "z": "tab-pc",
+        "name": "load + 120s refresh",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "120",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 80,
+        "wires": [
+            [
+                "pc-file-read"
+            ]
+        ]
+    },
+    {
+        "id": "pc-file-read",
+        "type": "file in",
+        "z": "tab-pc",
+        "name": "read person_config.json",
+        "filename": "/data/person_config.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": true,
+        "encoding": "none",
+        "allProps": false,
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "pc-keep-raw"
+            ]
+        ]
+    },
+    {
+        "id": "pc-keep-raw",
+        "type": "function",
+        "z": "tab-pc",
+        "name": "stash raw json",
+        "func": "msg.cfgRaw = msg.payload;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 80,
+        "wires": [
+            [
+                "pc-get-persons"
+            ]
+        ]
+    },
+    {
+        "id": "pc-get-persons",
+        "type": "ha-get-entities",
+        "z": "tab-pc",
+        "name": "all entities",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "payload",
+        "outputResultsCount": 1,
+        "output_type": "array",
+        "output_empty_results": true,
+        "output_location_type": "msg",
+        "output_location": "payload",
+        "output_results_count": 1,
+        "x": 320,
+        "y": 340,
+        "wires": [
+            [
+                "pc-merge"
+            ]
+        ]
+    },
+    {
+        "id": "pc-merge",
+        "type": "function",
+        "z": "tab-pc",
+        "name": "merge live persons + stored config",
+        "func": "\nconst NOTIFY_MAP = {\n  'person.colm_finn':'notify.mobile_app_np3',\n  'person.olivia_finn':'notify.mobile_app_pixel_6a',\n  'person.daire_finn':'notify.mobile_app_pixel_9a',\n  'person.cian_finn':'notify.pixel_7a'\n};\nconst DEFAULTS = {role:'none',security:false,camera:false,house_mode_change:false,heating_routine:false,heating_freeze:false,infra_alerts:false};\nconst PING_MAP = {\n  'person.colm_finn':'binary_sensor.colm_phone_home',\n  'person.olivia_finn':'binary_sensor.olivia_phone_home',\n  'person.daire_finn':'binary_sensor.daire_phone_home'\n};\n\nlet cfg = {};\ntry { cfg = JSON.parse(msg.cfgRaw || '{}'); } catch (e) {\n  node.warn('person_config.json parse failed, starting from empty: ' + e.message);\n  cfg = {};\n}\n\nconst all = msg.payload || [];\nconst persons = all.filter(function(e){ return e && e.entity_id && e.entity_id.indexOf('person.') === 0; });\n\nlet changed = false;\npersons.forEach(function(p){\n  var fname = (p.attributes && p.attributes.friendly_name) || p.entity_id;\n  if (!cfg[p.entity_id]) {\n    cfg[p.entity_id] = Object.assign({}, DEFAULTS, { notify_service: NOTIFY_MAP[p.entity_id] || null, ping: PING_MAP[p.entity_id] || '', name: fname });\n    changed = true;\n    node.warn('person config: new person ' + p.entity_id + ' auto-added with safe defaults (role none, all off)');\n  } else {\n    if (cfg[p.entity_id].ping === undefined) { cfg[p.entity_id].ping = PING_MAP[p.entity_id] || ''; changed = true; }\n    if (cfg[p.entity_id].name !== fname) { cfg[p.entity_id].name = fname; changed = true; }\n    if (cfg[p.entity_id].infra_alerts === undefined) { cfg[p.entity_id].infra_alerts = false; changed = true; }\n  }\n});\n\nconst rows = persons.map(function(p){\n  const c = cfg[p.entity_id];\n  return Object.assign({\n    entity_id: p.entity_id,\n    name: (p.attributes && p.attributes.friendly_name) || p.entity_id\n  }, c);\n});\n\nconst ORDER = ['person.colm_finn','person.olivia_finn','person.daire_finn','person.cian_finn','person.aoife_finn'];\nrows.sort(function(a,b){\n  var ia = ORDER.indexOf(a.entity_id); if (ia === -1) ia = ORDER.length;\n  var ib = ORDER.indexOf(b.entity_id); if (ib === -1) ib = ORDER.length;\n  if (ia !== ib) return ia - ib;\n  return a.name.localeCompare(b.name);\n});\n\nglobal.set('person_config', cfg);\n\nconst rowMsg = { payload: rows };\nconst writeMsg = changed ? { payload: JSON.stringify(cfg, null, 2) } : null;\nreturn [rowMsg, writeMsg];\n",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 340,
+        "wires": [
+            [
+                "pc-ui-template"
+            ],
+            [
+                "pc-file-write-new"
+            ]
+        ]
+    },
+    {
+        "id": "pc-file-write-new",
+        "type": "file",
+        "z": "tab-pc",
+        "name": "persist new-person defaults",
+        "filename": "/data/person_config.json",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": false,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 1080,
+        "y": 520,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pc-ui-template",
+        "type": "ui-template",
+        "z": "tab-pc",
+        "group": "pc-ui-group",
+        "name": "People table",
+        "order": 1,
+        "width": "12",
+        "height": "8",
+        "format": "<template>\n  <div style=\"overflow-x:auto;\">\n    <table class=\"pc-table\" style=\"width:100%; border-collapse:collapse;\">\n      <thead>\n        <tr>\n          <th style=\"text-align:left;\">Person</th>\n          <th style=\"text-align:left;\">House Mode role</th>\n          <th style=\"text-align:center;\">Security</th>\n          <th style=\"text-align:center;\">Camera / Doorbell</th>\n          <th style=\"text-align:center;\">Mode-change</th>\n          <th style=\"text-align:center;\">Heating changes</th>\n          <th style=\"text-align:center;\">Freeze warning</th>\n          <th style=\"text-align:center;\">Infra alerts</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr v-for=\"row in (msg.payload || [])\" :key=\"row.entity_id\" style=\"border-top:1px solid #ddd;\">\n          <td>{{ row.name }}</td>\n          <td style=\"min-width:130px\">\n            <v-select :items=\"['none','guest','resident']\" v-model=\"row.role\" density=\"compact\" hide-details\n              @update:modelValue=\"send({ payload: row })\"></v-select>\n          </td>\n          <td style=\"text-align:center;\" :title=\"row.notify_service ? '' : 'No linked device — ' + row.entity_id + ' has no device_tracker/notify'\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.security\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.camera\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.house_mode_change\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.heating_routine\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.heating_freeze\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.infra_alerts\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</template>\n",
+        "storeOutMessages": true,
+        "passthru": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 990,
+        "y": 340,
+        "wires": [
+            [
+                "pc-save"
+            ]
+        ]
+    },
+    {
+        "id": "pc-save",
+        "type": "function",
+        "z": "tab-pc",
+        "name": "save toggle to global + disk",
+        "func": "\nconst row = msg.payload || {};\nif (!row.entity_id) return null;\n\nlet cfg = global.get('person_config') || {};\nconst existing = cfg[row.entity_id] || {};\ncfg[row.entity_id] = {\n  role: row.role,\n  security: !!row.security,\n  camera: !!row.camera,\n  house_mode_change: !!row.house_mode_change,\n  heating_routine: !!row.heating_routine,\n  heating_freeze: !!row.heating_freeze,\n  infra_alerts: !!row.infra_alerts,\n  notify_service: existing.notify_service !== undefined ? existing.notify_service : (row.notify_service || null)\n};\nglobal.set('person_config', cfg);\nmsg.payload = JSON.stringify(cfg, null, 2);\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1240,
+        "y": 340,
+        "wires": [
+            [
+                "pc-file-write"
+            ]
+        ]
+    },
+    {
+        "id": "pc-file-write",
+        "type": "file",
+        "z": "tab-pc",
+        "name": "write person_config.json",
+        "filename": "/data/person_config.json",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": false,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 1530,
+        "y": 340,
+        "wires": [
+            []
         ]
     }
 ]

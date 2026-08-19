@@ -96,8 +96,8 @@
   "output_location_type": "msg",
   "output_location": "payload",
   "output_results_count": 1,
-  "x": 380,
-  "y": 150,
+  "x": 360,
+  "y": 240,
   "wires": [
    [
     "heat-fn"
@@ -117,13 +117,13 @@
   "finalize": "",
   "libs": [],
   "x": 590,
-  "y": 150,
+  "y": 240,
   "wires": [
    [
     "heat-set"
    ],
    [
-    "heat-notify"
+    "heat-notify-dispatch"
    ],
    [
     "heat-status",
@@ -154,7 +154,7 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 880,
+  "x": 900,
   "y": 60,
   "wires": [
    [
@@ -178,30 +178,6 @@
   "x": 1230,
   "y": 60,
   "wires": []
- },
- {
-  "id": "heat-notify",
-  "type": "api-call-service",
-  "z": "5a86c1a3371ffe9e",
-  "name": "Notify person 1 (test)",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_np3",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:radiator\"}}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 870,
-  "y": 120,
-  "wires": [
-   []
-  ]
  },
  {
   "id": "heat-fc-cron",
@@ -274,61 +250,12 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 620,
-  "y": 400,
+  "x": 400,
+  "y": 540,
   "wires": [
    [
-    "heat-fc-np3",
-    "heat-fc-oli"
+    "heat-fc-notify-dispatch"
    ]
-  ]
- },
- {
-  "id": "heat-fc-np3",
-  "type": "api-call-service",
-  "z": "5a86c1a3371ffe9e",
-  "name": "Notify person 1 (freezing)",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_np3",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:snowflake-alert\"}}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 880,
-  "y": 360,
-  "wires": [
-   []
-  ]
- },
- {
-  "id": "heat-fc-oli",
-  "type": "api-call-service",
-  "z": "5a86c1a3371ffe9e",
-  "name": "Notify person 2 (freezing)",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_pixel_6a",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:snowflake-alert\"}}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 880,
-  "y": 420,
-  "wires": [
-   []
   ]
  },
  {
@@ -451,8 +378,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 870,
-  "y": 180,
+  "x": 970,
+  "y": 240,
   "wires": [
    []
   ]
@@ -477,8 +404,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 880,
-  "y": 240,
+  "x": 980,
+  "y": 340,
   "wires": [
    []
   ]
@@ -503,8 +430,94 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 870,
-  "y": 300,
+  "x": 990,
+  "y": 440,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "heat-notify-dispatch",
+  "type": "function",
+  "z": "5a86c1a3371ffe9e",
+  "name": "dispatch: heating_routine",
+  "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.heating_routine && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 930,
+  "y": 160,
+  "wires": [
+   [
+    "heat-notify-dynamic"
+   ]
+  ]
+ },
+ {
+  "id": "heat-notify-dynamic",
+  "type": "api-call-service",
+  "z": "5a86c1a3371ffe9e",
+  "name": "notify (per person_config)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "{{action}}",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:radiator\"}}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1250,
+  "y": 160,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "heat-fc-notify-dispatch",
+  "type": "function",
+  "z": "5a86c1a3371ffe9e",
+  "name": "dispatch: heating_freeze",
+  "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.heating_freeze && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 790,
+  "y": 540,
+  "wires": [
+   [
+    "heat-fc-notify-dynamic"
+   ]
+  ]
+ },
+ {
+  "id": "heat-fc-notify-dynamic",
+  "type": "api-call-service",
+  "z": "5a86c1a3371ffe9e",
+  "name": "notify (per person_config)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "{{action}}",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.notify_title, \"message\": msg.notify_message, \"data\": {\"notification_icon\": \"mdi:snowflake-alert\"}}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1270,
+  "y": 540,
   "wires": [
    []
   ]

@@ -1,0 +1,234 @@
+[
+ {
+  "id": "tab-pc",
+  "type": "tab",
+  "label": "Person Config",
+  "disabled": false,
+  "info": "Household person config: House Mode role + notification toggles, single source for hm-cfg/aa-cfg/camera/heating/hm-notify consumers.",
+  "env": []
+ },
+ {
+  "id": "pc-boot",
+  "type": "inject",
+  "z": "tab-pc",
+  "name": "load + 120s refresh",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 180,
+  "y": 80,
+  "wires": [
+   [
+    "pc-file-read"
+   ]
+  ]
+ },
+ {
+  "id": "pc-file-read",
+  "type": "file in",
+  "z": "tab-pc",
+  "name": "read person_config.json",
+  "filename": "/data/person_config.json",
+  "filenameType": "str",
+  "format": "utf8",
+  "chunk": false,
+  "sendError": true,
+  "encoding": "none",
+  "allProps": false,
+  "x": 420,
+  "y": 80,
+  "wires": [
+   [
+    "pc-keep-raw"
+   ]
+  ]
+ },
+ {
+  "id": "pc-keep-raw",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "stash raw json",
+  "func": "msg.cfgRaw = msg.payload;\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 650,
+  "y": 80,
+  "wires": [
+   [
+    "pc-get-persons"
+   ]
+  ]
+ },
+ {
+  "id": "pc-get-persons",
+  "type": "ha-get-entities",
+  "z": "tab-pc",
+  "name": "all entities",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "output_type": "array",
+  "output_empty_results": true,
+  "output_location_type": "msg",
+  "output_location": "payload",
+  "output_results_count": 1,
+  "x": 320,
+  "y": 340,
+  "wires": [
+   [
+    "pc-merge"
+   ]
+  ]
+ },
+ {
+  "id": "pc-merge",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "merge live persons + stored config",
+  "func": "\nconst NOTIFY_MAP = {\n  'person.colm_finn':'notify.mobile_app_np3',\n  'person.olivia_finn':'notify.mobile_app_pixel_6a',\n  'person.daire_finn':'notify.mobile_app_pixel_9a',\n  'person.cian_finn':'notify.pixel_7a'\n};\nconst DEFAULTS = {role:'none',security:false,camera:false,house_mode_change:false,heating_routine:false,heating_freeze:false,infra_alerts:false};\nconst PING_MAP = {\n  'person.colm_finn':'binary_sensor.colm_phone_home',\n  'person.olivia_finn':'binary_sensor.olivia_phone_home',\n  'person.daire_finn':'binary_sensor.daire_phone_home'\n};\n\nlet cfg = {};\ntry { cfg = JSON.parse(msg.cfgRaw || '{}'); } catch (e) {\n  node.warn('person_config.json parse failed, starting from empty: ' + e.message);\n  cfg = {};\n}\n\nconst all = msg.payload || [];\nconst persons = all.filter(function(e){ return e && e.entity_id && e.entity_id.indexOf('person.') === 0; });\n\nlet changed = false;\npersons.forEach(function(p){\n  var fname = (p.attributes && p.attributes.friendly_name) || p.entity_id;\n  if (!cfg[p.entity_id]) {\n    cfg[p.entity_id] = Object.assign({}, DEFAULTS, { notify_service: NOTIFY_MAP[p.entity_id] || null, ping: PING_MAP[p.entity_id] || '', name: fname });\n    changed = true;\n    node.warn('person config: new person ' + p.entity_id + ' auto-added with safe defaults (role none, all off)');\n  } else {\n    if (cfg[p.entity_id].ping === undefined) { cfg[p.entity_id].ping = PING_MAP[p.entity_id] || ''; changed = true; }\n    if (cfg[p.entity_id].name !== fname) { cfg[p.entity_id].name = fname; changed = true; }\n    if (cfg[p.entity_id].infra_alerts === undefined) { cfg[p.entity_id].infra_alerts = false; changed = true; }\n  }\n});\n\nconst rows = persons.map(function(p){\n  const c = cfg[p.entity_id];\n  return Object.assign({\n    entity_id: p.entity_id,\n    name: (p.attributes && p.attributes.friendly_name) || p.entity_id\n  }, c);\n});\n\nconst ORDER = ['person.colm_finn','person.olivia_finn','person.daire_finn','person.cian_finn','person.aoife_finn'];\nrows.sort(function(a,b){\n  var ia = ORDER.indexOf(a.entity_id); if (ia === -1) ia = ORDER.length;\n  var ib = ORDER.indexOf(b.entity_id); if (ib === -1) ib = ORDER.length;\n  if (ia !== ib) return ia - ib;\n  return a.name.localeCompare(b.name);\n});\n\nglobal.set('person_config', cfg);\n\nconst rowMsg = { payload: rows };\nconst writeMsg = changed ? { payload: JSON.stringify(cfg, null, 2) } : null;\nreturn [rowMsg, writeMsg];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 660,
+  "y": 340,
+  "wires": [
+   [
+    "pc-ui-template"
+   ],
+   [
+    "pc-file-write-new"
+   ]
+  ]
+ },
+ {
+  "id": "pc-file-write-new",
+  "type": "file",
+  "z": "tab-pc",
+  "name": "persist new-person defaults",
+  "filename": "/data/person_config.json",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": false,
+  "overwriteFile": "true",
+  "encoding": "none",
+  "x": 1080,
+  "y": 520,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "pc-ui-template",
+  "type": "ui-template",
+  "z": "tab-pc",
+  "group": "pc-ui-group",
+  "name": "People table",
+  "order": 1,
+  "width": "12",
+  "height": "8",
+  "format": "<template>\n  <div style=\"overflow-x:auto;\">\n    <table class=\"pc-table\" style=\"width:100%; border-collapse:collapse;\">\n      <thead>\n        <tr>\n          <th style=\"text-align:left;\">Person</th>\n          <th style=\"text-align:left;\">House Mode role</th>\n          <th style=\"text-align:center;\">Security</th>\n          <th style=\"text-align:center;\">Camera / Doorbell</th>\n          <th style=\"text-align:center;\">Mode-change</th>\n          <th style=\"text-align:center;\">Heating changes</th>\n          <th style=\"text-align:center;\">Freeze warning</th>\n          <th style=\"text-align:center;\">Infra alerts</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr v-for=\"row in (msg.payload || [])\" :key=\"row.entity_id\" style=\"border-top:1px solid #ddd;\">\n          <td>{{ row.name }}</td>\n          <td style=\"min-width:130px\">\n            <v-select :items=\"['none','guest','resident']\" v-model=\"row.role\" density=\"compact\" hide-details\n              @update:modelValue=\"send({ payload: row })\"></v-select>\n          </td>\n          <td style=\"text-align:center;\" :title=\"row.notify_service ? '' : 'No linked device \u2014 ' + row.entity_id + ' has no device_tracker/notify'\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.security\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.camera\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.house_mode_change\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.heating_routine\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.heating_freeze\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.infra_alerts\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</template>\n",
+  "storeOutMessages": true,
+  "passthru": false,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "className": "",
+  "x": 990,
+  "y": 340,
+  "wires": [
+   [
+    "pc-save"
+   ]
+  ]
+ },
+ {
+  "id": "pc-save",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "save toggle to global + disk",
+  "func": "\nconst row = msg.payload || {};\nif (!row.entity_id) return null;\n\nlet cfg = global.get('person_config') || {};\nconst existing = cfg[row.entity_id] || {};\ncfg[row.entity_id] = {\n  role: row.role,\n  security: !!row.security,\n  camera: !!row.camera,\n  house_mode_change: !!row.house_mode_change,\n  heating_routine: !!row.heating_routine,\n  heating_freeze: !!row.heating_freeze,\n  infra_alerts: !!row.infra_alerts,\n  notify_service: existing.notify_service !== undefined ? existing.notify_service : (row.notify_service || null)\n};\nglobal.set('person_config', cfg);\nmsg.payload = JSON.stringify(cfg, null, 2);\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1240,
+  "y": 340,
+  "wires": [
+   [
+    "pc-file-write"
+   ]
+  ]
+ },
+ {
+  "id": "pc-file-write",
+  "type": "file",
+  "z": "tab-pc",
+  "name": "write person_config.json",
+  "filename": "/data/person_config.json",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": false,
+  "overwriteFile": "true",
+  "encoding": "none",
+  "x": 1530,
+  "y": 340,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "ha-server",
+  "type": "server",
+  "name": "Home Assistant",
+  "version": 5,
+  "addon": false,
+  "rejectUnauthorizedCerts": false,
+  "ha_boolean": "y|yes|true|on|home|open",
+  "connectionDelay": true,
+  "cacheJson": true,
+  "heartbeat": true,
+  "heartbeatInterval": 30,
+  "areaSelector": "friendly",
+  "deviceSelector": "friendly",
+  "entitySelector": "friendly",
+  "statusSeparator": "at: ",
+  "statusYear": "hidden",
+  "statusMonth": "short",
+  "statusDay": "numeric",
+  "statusHourCycle": "h23",
+  "statusTimeFormat": "h:m",
+  "enableGlobalContextStore": false
+ },
+ {
+  "id": "pc-ui-group",
+  "type": "ui-group",
+  "name": "People",
+  "page": "pc-ui-page",
+  "width": "12",
+  "height": "1",
+  "order": 1,
+  "showTitle": true,
+  "className": "",
+  "visible": "true",
+  "disabled": "false"
+ }
+]

@@ -50,70 +50,14 @@
   "y": 200,
   "wires": [
    [
-    "iw-notify"
+    "iw-notify-dispatch"
    ],
    [
-    "iw-presence-gate"
+    "iw-tts-get"
    ],
    [
     "iw-logfile"
    ]
-  ]
- },
- {
-  "id": "iw-notify",
-  "type": "api-call-service",
-  "z": "tab-iw",
-  "name": "Notify person 1",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "notify.mobile_app_np3",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [],
-  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server-network\"}])}",
-  "dataType": "jsonata",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 970,
-  "y": 120,
-  "wires": [
-   []
-  ]
- },
- {
-  "id": "iw-presence-gate",
-  "type": "api-current-state",
-  "z": "tab-iw",
-  "name": "Person 1 home?",
-  "server": "ha-server",
-  "version": 3,
-  "outputs": 2,
-  "halt_if": "home",
-  "halt_if_type": "str",
-  "halt_if_compare": "is",
-  "entity_id": "${PERSON_1_ENTITY}",
-  "state_type": "str",
-  "blockInputOverrides": true,
-  "outputProperties": [],
-  "for": "0",
-  "forType": "num",
-  "forUnits": "minutes",
-  "override_topic": false,
-  "state_location": "",
-  "override_payload": "none",
-  "entity_location": "",
-  "override_data": "none",
-  "x": 830,
-  "y": 260,
-  "wires": [
-   [
-    "iw-tts"
-   ],
-   []
   ]
  },
  {
@@ -137,8 +81,8 @@
   "outputProperties": [],
   "queue": "none",
   "blockInputOverrides": false,
-  "x": 1150,
-  "y": 260,
+  "x": 1490,
+  "y": 220,
   "wires": [
    []
   ]
@@ -154,8 +98,8 @@
   "createDir": true,
   "overwriteFile": "false",
   "encoding": "none",
-  "x": 810,
-  "y": 400,
+  "x": 1250,
+  "y": 380,
   "wires": [
    []
   ]
@@ -216,7 +160,7 @@
   ],
   "entityidfiltertype": "list",
   "x": 140,
-  "y": 460,
+  "y": 800,
   "wires": [
    [
     "iw-maint-gate"
@@ -234,8 +178,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 350,
-  "y": 560,
+  "x": 370,
+  "y": 900,
   "wires": [
    [
     "iw-sp-req"
@@ -320,8 +264,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 520,
-  "y": 360,
+  "x": 760,
+  "y": 400,
   "wires": [
    [
     "iw-engine"
@@ -351,8 +295,8 @@
   "drop": false,
   "allowrate": false,
   "outputs": 1,
-  "x": 260,
-  "y": 270,
+  "x": 290,
+  "y": 520,
   "wires": [
    [
     "iw-sp-req"
@@ -376,12 +320,100 @@
   "once": true,
   "onceDelay": "60",
   "topic": "",
-  "x": 180,
-  "y": 460,
+  "x": 170,
+  "y": 660,
   "wires": [
    [
     "iw-sp-req"
    ]
+  ]
+ },
+ {
+  "id": "iw-tts-get",
+  "type": "ha-get-entities",
+  "z": "tab-iw",
+  "name": "all entities",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "output_type": "array",
+  "output_empty_results": true,
+  "output_location_type": "msg",
+  "output_location": "payload",
+  "output_results_count": 1,
+  "x": 940,
+  "y": 220,
+  "wires": [
+   [
+    "iw-tts-gate-fn"
+   ]
+  ]
+ },
+ {
+  "id": "iw-tts-gate-fn",
+  "type": "function",
+  "z": "tab-iw",
+  "name": "anyone toggled-on home?",
+  "func": "const PC = global.get('person_config') || {};\nconst ents = msg.payload || [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst anyoneHome = Object.keys(PC).some(function(pid){\n  var c = PC[pid];\n  return c && c.infra_alerts && S(pid) === 'home';\n});\nif (!anyoneHome) return null;\nreturn msg;",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1190,
+  "y": 220,
+  "wires": [
+   [
+    "iw-tts"
+   ]
+  ]
+ },
+ {
+  "id": "iw-notify-dispatch",
+  "type": "function",
+  "z": "tab-iw",
+  "name": "dispatch: infra_alerts",
+  "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.infra_alerts && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 970,
+  "y": 120,
+  "wires": [
+   [
+    "iw-notify-dynamic"
+   ]
+  ]
+ },
+ {
+  "id": "iw-notify-dynamic",
+  "type": "api-call-service",
+  "z": "tab-iw",
+  "name": "notify (per person_config)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "{{action}}",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:server-network\"}])}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1230,
+  "y": 120,
+  "wires": [
+   []
   ]
  },
  {
