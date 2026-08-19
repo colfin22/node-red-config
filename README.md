@@ -4,7 +4,7 @@
 
 [![Node-RED](https://img.shields.io/badge/Node--RED-flows-8F0000?logo=nodered&logoColor=white)](https://nodered.org/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-companion-41BDF5?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
-[![Flows](https://img.shields.io/badge/Flows-7-success?logo=nodered&logoColor=white)](data/flows.json)
+[![Flows](https://img.shields.io/badge/Flows-8-success?logo=nodered&logoColor=white)](data/flows.json)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Repo](https://img.shields.io/badge/Repo-Public-brightgreen)](https://github.com/colfin22/node-red-config)
 
@@ -18,7 +18,7 @@
 
 The Node-RED flows + config behind the automations in [colfin22/ha-config](https://github.com/colfin22/ha-config). Home Assistant handles the simple, single-trigger stuff; the multi-input, **stateful** logic lives here — deciding the house's mode, arming the alarm, making heating calls from presence + forecast + tariff, and turning camera detections into one smart notification. Runs in Docker alongside Home Assistant; this repo adds flow versioning and quick recovery.
 
-**Seven flows, each documented below with a screenshot:** House Mode · House &amp; Shed Alarm · Alarm NFC Tags · Camera Concierge · Heating Control · Infra Watchdog · Infra Health &amp; Alerts.
+**Eight flows:** House Mode · House &amp; Shed Alarm · Alarm NFC Tags · Camera Concierge · Heating Control · Infra Watchdog · Infra Health &amp; Alerts · Person Config (dashboard, no screenshot yet).
 
 ## Start here if you only want one flow
 
@@ -66,6 +66,37 @@ node watches slots 1 to 3 explicitly, so if you have more than three tracked peo
 
 If no person resolves, the people-config nodes log a warning and keep whatever they had rather than
 treating the house as empty — so a typo degrades loudly instead of arming the alarm on you.
+
+**`PERSON_n_ROLE`, `PERSON_n_NOTIFY` and `PERSON_n_ONLY_WHEN_HOME` are superseded by the Household
+Config dashboard page** (below) for House Mode role and every notification channel it covers —
+those three variables are no longer read anywhere. `PERSON_n_ENTITY`, `PERSON_n_PING`,
+`PERSON_n_NAME`, `PERSON_n_BATTERY` and `PERSON_n_HA_USER_ID` are still read directly from the
+environment (NFC scan-attribution naming, the alarm's spoken possessive names, and the battery
+watchdog don't go through the dashboard).
+
+## Household Config dashboard — who gets what, without editing a flow
+
+A **Node-RED Dashboard 2.0** page (`@flowfuse/node-red-dashboard`, install with `npm install
+@flowfuse/node-red-dashboard` inside the container) at **`/dashboard/household`** lists every HA
+`person.*` entity — fetched live, so a person added in HA just appears on next refresh with safe
+defaults (House Mode role `none`, every toggle off) rather than needing a flow edit. Per person:
+
+- **House Mode role** — `none` / `guest` / `resident` (feeds the House Mode tab's residents/guests
+  list directly).
+- **Security** — alarm arm/disarm/trigger pushes + the door-gated welcome naming.
+- **Camera / Doorbell** — Camera Concierge pushes.
+- **House-mode-change** — the mode-change push itself.
+- **Heating changes** / **Freeze warning** — the two heating notification types.
+- **Infra alerts** — Infra Watchdog + Infra Health & Alerts phone pushes, and (dynamically, for
+  whoever currently has it on and is home) the Infra Watchdog TTS announcement.
+
+A toggle with no resolvable notify target (no linked `device_tracker`/`notify` entity) renders
+disabled with a reason, rather than silently doing nothing. Backing store is
+`data/person_config.json` (tracked in this repo, entity ids + booleans only, no secrets), loaded
+into `global` context on deploy/tick so every consumer flow reads it live — no redeploy needed
+after a toggle change. Every consumer that reads it (House Mode, House Alarm, Camera Concierge,
+Heating Control, both infra flows) builds its notify list dynamically from whoever currently has
+that channel on, so it scales to any number of people without a flow edit.
 
 ### What to search and replace
 
@@ -285,7 +316,8 @@ Within a zone the snapshot, GIF and tap-link all come from the camera that **det
 The notification's tap action (`clickAction`/`url`) opens the **event clip** (`clip.mp4`) of that first-detecting camera — straight to the footage.
 
 ## Who gets what
-- **Phone push** (text → snapshot → GIF) → **both phones**: `PERSON_1_NOTIFY` and `PERSON_2_NOTIFY`.
+- **Phone push** (text → snapshot → GIF) → everyone with the **Camera / Doorbell** toggle on in the
+  [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow).
 - **Doorbell + person** also casts a snapshot to the **kitchen display** (20 s) and an overlay on the **Shield TV**. This only fires for an arrival. If the front door is open, or closed less than 60 seconds ago, both popups are skipped, because whoever is on camera has already come through it.
 - **Doorbell pushes are held back on an exit too** — all three kinds, latched for the whole incident so the late GIF cannot slip through alone. `house_mode = Away` overrides it.
 - **Couriers** (DPD/GLS/Amazon/UPS/FedEx/DHL/An Post on the front cameras) → spoken **"\<courier\> has landed"** on the home audio group — suppressed when `house_mode = Sleeping`.
