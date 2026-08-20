@@ -48,24 +48,23 @@ does not apply. Set them in the editor instead: double-click the flow tab's name
 
 **People** are numbered slots, and the same slot is used by every flow:
 
+**Only two of these are still read from the environment** — everything else about a person now
+lives on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow)
+instead:
+
 | Variable | Example | Meaning |
 |---|---|---|
-| `PERSON_1_NAME` | `Alice` | Display name, used in spoken and pushed messages |
-| `PERSON_1_ENTITY` | `person.alice` | Their HA person entity |
-| `PERSON_1_PING` | `binary_sensor.alice_phone` | Optional second presence signal, OR'd with the person entity |
-| `PERSON_1_NOTIFY` | `notify.mobile_app_alice` | Where their push notifications go |
-| `PERSON_1_ROLE` | `resident` | `resident` counts towards the house being empty; `guest` never does |
-| `PERSON_1_ONLY_WHEN_HOME` | `true` | Optional. Only notify this person while they are at home |
-| `PERSON_1_BATTERY` | `sensor.alice_phone_battery_level` | Optional. Enables their low-battery alerts |
-| `PERSON_1_HA_USER_ID` | `da119…` | Optional. Attributes "who changed the heating" and who scanned an NFC tag |
+| `PERSON_1_NAME` | `Alice` | Still read directly. Display name, used in spoken messages and NFC/heating attribution |
+| `PERSON_1_HA_USER_ID` | `da119…` | Still read directly. Attributes "who changed the heating" and who scanned an NFC tag |
 
-Add people by filling `PERSON_2_*`, `PERSON_3_*` and so on — up to eight slots are read, and empty
-slots are skipped. **One exception needs an edit rather than a variable:** the House Mode presence
-node watches slots 1 to 3 explicitly, so if you have more than three tracked people, add
-`${PERSON_4_ENTITY}` and `${PERSON_4_PING}` to its entity list.
+`PERSON_n_ENTITY` / `PERSON_n_PING` / `PERSON_n_NOTIFY` / `PERSON_n_ROLE` / `PERSON_n_ONLY_WHEN_HOME`
+/ `PERSON_n_BATTERY` are **no longer read anywhere** — a fresh clone of this repo with no `person.*`
+entities in its own HA and no dashboard toggles set will simply show nobody as a resident, which
+degrades loudly (nothing arms/sleeps) rather than silently. Set people up from the dashboard once
+Node-RED is running against your own HA instead.
 
-If no person resolves, the people-config nodes log a warning and keep whatever they had rather than
-treating the house as empty — so a typo degrades loudly instead of arming the alarm on you.
+Add people by filling `PERSON_2_NAME`, `PERSON_3_NAME` and so on — up to eight slots are read, and
+empty slots are skipped.
 
 **`PERSON_n_ROLE`, `PERSON_n_NOTIFY` and `PERSON_n_ONLY_WHEN_HOME` are superseded by the Household
 Config dashboard page** (below) for House Mode role and every notification channel it covers —
@@ -82,21 +81,31 @@ A **Node-RED Dashboard 2.0** page (`@flowfuse/node-red-dashboard`, install with 
 defaults (House Mode role `none`, every toggle off) rather than needing a flow edit. Per person:
 
 - **House Mode role** — `none` / `guest` / `resident` (feeds the House Mode tab's residents/guests
-  list directly).
+  list directly). Presence for whoever has a role is watched via a whole-house `state_changed`
+  event filter, not a fixed entity list — so promoting a person on the page gets them real-time
+  Home/Away/Sleeping reactions immediately, no flow edit.
 - **Security** — alarm arm/disarm/trigger pushes + the door-gated welcome naming.
+- **Only when home** — only push Security notifications to this person while they're physically
+  present (the old `PERSON_n_ONLY_WHEN_HOME`, now per-person and independent of role).
 - **Camera / Doorbell** — Camera Concierge pushes.
 - **House-mode-change** — the mode-change push itself.
 - **Heating changes** / **Freeze warning** — the two heating notification types.
 - **Infra alerts** — Infra Watchdog + Infra Health & Alerts phone pushes, and (dynamically, for
   whoever currently has it on and is home) the Infra Watchdog TTS announcement.
+- **Battery sensor** — free-text entity id (e.g. `sensor.xxx_battery_level`); low-battery
+  monitoring only runs for **Resident**s with this set (the old `PERSON_n_BATTERY`, now per-person
+  and dashboard-editable). Notified to whoever currently has Security on.
 
 A toggle with no resolvable notify target (no linked `device_tracker`/`notify` entity) renders
 disabled with a reason, rather than silently doing nothing. Backing store is
 `data/person_config.json` (tracked in this repo, entity ids + booleans only, no secrets), loaded
 into `global` context on deploy/tick so every consumer flow reads it live — no redeploy needed
 after a toggle change. Every consumer that reads it (House Mode, House Alarm, Camera Concierge,
-Heating Control, both infra flows) builds its notify list dynamically from whoever currently has
-that channel on, so it scales to any number of people without a flow edit.
+Heating Control, both infra flows, battery monitoring) builds its notify/watch list dynamically
+from whoever currently has that channel/role on, so it scales to any number of people without a
+flow edit. `PERSON_n_NAME` and `PERSON_n_HA_USER_ID` are still read directly from the environment
+— they're only used for spoken possessive naming and "who did it" attribution (NFC/heating), not
+migrated to the dashboard.
 
 ### What to search and replace
 
