@@ -196,19 +196,13 @@
         "id": "hm-presence",
         "type": "server-state-changed",
         "z": "tab-hm",
-        "name": "presence + indoor",
+        "name": "indoor motion",
         "server": "ha-server",
         "version": 6,
         "outputs": 1,
         "exposeAsEntityConfig": "",
         "entities": {
             "entity": [
-                "${PERSON_1_ENTITY}",
-                "${PERSON_2_ENTITY}",
-                "${PERSON_3_ENTITY}",
-                "${PERSON_1_PING}",
-                "${PERSON_2_PING}",
-                "${PERSON_3_PING}",
                 "binary_sensor.hallway_motion_sensor_occupancy",
                 "binary_sensor.landing_motion_sensor_occupancy",
                 "binary_sensor.sitting_room_presence_occupancy",
@@ -5202,6 +5196,53 @@
         "wires": [
             [
                 "aa-batt-notify-dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "hm-presence-ev",
+        "type": "server-events",
+        "z": "tab-hm",
+        "name": "person/ping state_changed",
+        "server": "ha-server",
+        "version": 3,
+        "exposeAsEntityConfig": "",
+        "eventType": "state_changed",
+        "event_type": "state_changed",
+        "waitForRunning": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            }
+        ],
+        "x": 310,
+        "y": 100,
+        "wires": [
+            [
+                "hm-presence-dyn-fn"
+            ]
+        ]
+    },
+    {
+        "id": "hm-presence-dyn-fn",
+        "type": "function",
+        "z": "tab-hm",
+        "name": "filter: current role != none",
+        "func": "const D = (msg.payload && msg.payload.event) || msg.payload;\nconst eid = D && D.entity_id;\nif (!eid) return null;\nconst PC = global.get('person_config') || {};\nlet matched = null;\nif (PC[eid] && PC[eid].role && PC[eid].role !== 'none') {\n  matched = eid;\n} else {\n  matched = Object.keys(PC).find(function(pid){\n    var c = PC[pid];\n    return c && c.role && c.role !== 'none' && c.ping && c.ping === eid;\n  });\n}\nif (!matched) return null;\nconst ns = D.new_state ? D.new_state.state : undefined;\nif (ns === undefined) return null;\nmsg.payload = ns;\nmsg.eid = eid;\nmsg.topic = 'presence';\nmsg.evt = D;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 100,
+        "wires": [
+            [
+                "hm-pres-get",
+                "hm-engine"
             ]
         ]
     }
