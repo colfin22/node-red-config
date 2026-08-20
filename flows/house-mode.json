@@ -440,7 +440,7 @@
   "crontab": "",
   "once": true,
   "onceDelay": "5",
-  "topic": "",
+  "topic": "tick",
   "x": 150,
   "y": 600,
   "wires": [
