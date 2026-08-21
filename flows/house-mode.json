@@ -66,8 +66,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 310,
-  "y": 40,
+  "x": 150,
+  "y": 120,
   "wires": [
    [
     "hm-pres-get",
@@ -156,8 +156,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 150,
-  "y": 200,
+  "x": 160,
+  "y": 300,
   "wires": [
    [
     "hm-engine"
@@ -224,8 +224,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 150,
-  "y": 280,
+  "x": 160,
+  "y": 380,
   "wires": [
    [
     "hm-engine"
@@ -290,8 +290,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 150,
-  "y": 360,
+  "x": 140,
+  "y": 460,
   "wires": [
    [
     "hm-engine"
@@ -349,8 +349,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 150,
-  "y": 440,
+  "x": 160,
+  "y": 540,
   "wires": [
    [
     "hm-engine"
@@ -416,8 +416,8 @@
    }
   ],
   "entityidfiltertype": "list",
-  "x": 150,
-  "y": 520,
+  "x": 160,
+  "y": 620,
   "wires": [
    [
     "hm-engine"
@@ -435,8 +435,8 @@
   "once": true,
   "onceDelay": "5",
   "topic": "tick",
-  "x": 150,
-  "y": 600,
+  "x": 120,
+  "y": 720,
   "wires": [
    [
     "hm-cfg"
@@ -461,8 +461,8 @@
   "output_location_type": "msg",
   "output_location": "payload",
   "output_results_count": 1,
-  "x": 530,
-  "y": 600,
+  "x": 560,
+  "y": 720,
   "wires": [
    [
     "hm-engine"
@@ -486,8 +486,8 @@
   "once": false,
   "onceDelay": 0.1,
   "topic": "tick",
-  "x": 320,
-  "y": 680,
+  "x": 340,
+  "y": 800,
   "wires": [
    [
     "hm-get"
@@ -505,7 +505,7 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 750,
+  "x": 810,
   "y": 360,
   "wires": [
    [
@@ -628,8 +628,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 340,
-  "y": 600,
+  "x": 330,
+  "y": 720,
   "wires": [
    [
     "hm-get"
@@ -649,8 +649,8 @@
   "outputLocationType": "msg",
   "outputLocation": "payload",
   "outputResultsCount": 1,
-  "x": 270,
-  "y": 140,
+  "x": 170,
+  "y": 220,
   "wires": [
    [
     "hm-engine"
@@ -735,7 +735,6 @@
   "version": 3,
   "exposeAsEntityConfig": "",
   "eventType": "state_changed",
-  "event_type": "state_changed",
   "waitForRunning": true,
   "outputProperties": [
    {
@@ -745,8 +744,9 @@
     "valueType": "eventData"
    }
   ],
-  "x": 310,
-  "y": 100,
+  "event_type": "state_changed",
+  "x": 210,
+  "y": 40,
   "wires": [
    [
     "hm-presence-dyn-fn"
@@ -764,8 +764,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 550,
-  "y": 100,
+  "x": 490,
+  "y": 80,
   "wires": [
    [
     "hm-pres-get",

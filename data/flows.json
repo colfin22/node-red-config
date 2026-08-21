@@ -252,8 +252,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 310,
-        "y": 40,
+        "x": 150,
+        "y": 120,
         "wires": [
             [
                 "hm-pres-get",
@@ -342,8 +342,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 150,
-        "y": 200,
+        "x": 160,
+        "y": 300,
         "wires": [
             [
                 "hm-engine"
@@ -410,8 +410,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 150,
-        "y": 280,
+        "x": 160,
+        "y": 380,
         "wires": [
             [
                 "hm-engine"
@@ -476,8 +476,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 150,
-        "y": 360,
+        "x": 140,
+        "y": 460,
         "wires": [
             [
                 "hm-engine"
@@ -535,8 +535,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 150,
-        "y": 440,
+        "x": 160,
+        "y": 540,
         "wires": [
             [
                 "hm-engine"
@@ -602,8 +602,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 150,
-        "y": 520,
+        "x": 160,
+        "y": 620,
         "wires": [
             [
                 "hm-engine"
@@ -621,8 +621,8 @@
         "once": true,
         "onceDelay": "5",
         "topic": "tick",
-        "x": 150,
-        "y": 600,
+        "x": 120,
+        "y": 720,
         "wires": [
             [
                 "hm-cfg"
@@ -647,8 +647,8 @@
         "output_location_type": "msg",
         "output_location": "payload",
         "output_results_count": 1,
-        "x": 530,
-        "y": 600,
+        "x": 560,
+        "y": 720,
         "wires": [
             [
                 "hm-engine"
@@ -672,8 +672,8 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "tick",
-        "x": 320,
-        "y": 680,
+        "x": 340,
+        "y": 800,
         "wires": [
             [
                 "hm-get"
@@ -691,7 +691,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 750,
+        "x": 810,
         "y": 360,
         "wires": [
             [
@@ -814,8 +814,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 340,
-        "y": 600,
+        "x": 330,
+        "y": 720,
         "wires": [
             [
                 "hm-get"
@@ -835,8 +835,8 @@
         "outputLocationType": "msg",
         "outputLocation": "payload",
         "outputResultsCount": 1,
-        "x": 270,
-        "y": 140,
+        "x": 170,
+        "y": 220,
         "wires": [
             [
                 "hm-engine"
@@ -910,6 +910,53 @@
         "y": 440,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "hm-presence-ev",
+        "type": "server-events",
+        "z": "tab-hm",
+        "name": "person/ping state_changed",
+        "server": "ha-server",
+        "version": 3,
+        "exposeAsEntityConfig": "",
+        "eventType": "state_changed",
+        "waitForRunning": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            }
+        ],
+        "event_type": "state_changed",
+        "x": 210,
+        "y": 40,
+        "wires": [
+            [
+                "hm-presence-dyn-fn"
+            ]
+        ]
+    },
+    {
+        "id": "hm-presence-dyn-fn",
+        "type": "function",
+        "z": "tab-hm",
+        "name": "filter: current role != none",
+        "func": "const D = (msg.payload && msg.payload.event) || msg.payload;\nconst eid = D && D.entity_id;\nif (!eid) return null;\nconst PC = global.get('person_config') || {};\nlet matched = null;\nif (PC[eid] && PC[eid].role && PC[eid].role !== 'none') {\n  matched = eid;\n} else {\n  matched = Object.keys(PC).find(function(pid){\n    var c = PC[pid];\n    return c && c.role && c.role !== 'none' && c.ping && c.ping === eid;\n  });\n}\nif (!matched) return null;\nconst ns = D.new_state ? D.new_state.state : undefined;\nif (ns === undefined) return null;\nmsg.payload = ns;\nmsg.eid = eid;\nmsg.topic = 'presence';\nmsg.evt = D;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 80,
+        "wires": [
+            [
+                "hm-pres-get",
+                "hm-engine"
+            ]
         ]
     },
     {
@@ -3338,6 +3385,131 @@
         ]
     },
     {
+        "id": "aa-batt-poll",
+        "type": "inject",
+        "z": "096ff268dc7bd2f0",
+        "name": "battery poll 5min",
+        "props": [],
+        "repeat": "300",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "10",
+        "topic": "",
+        "x": 400,
+        "y": 820,
+        "wires": [
+            [
+                "aa-batt-poll-get"
+            ]
+        ]
+    },
+    {
+        "id": "aa-batt-poll-get",
+        "type": "ha-get-entities",
+        "z": "096ff268dc7bd2f0",
+        "name": "all entities",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "payload",
+        "outputResultsCount": 1,
+        "output_type": "array",
+        "output_empty_results": true,
+        "output_location_type": "msg",
+        "output_location": "payload",
+        "output_results_count": 1,
+        "x": 600,
+        "y": 820,
+        "wires": [
+            [
+                "aa-batt-poll-fn"
+            ]
+        ]
+    },
+    {
+        "id": "aa-batt-poll-fn",
+        "type": "function",
+        "z": "096ff268dc7bd2f0",
+        "name": "low-battery check (residents)",
+        "func": "const PC = global.get('person_config') || {};\nconst RES = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.role === 'resident' && c.battery_sensor;\n});\nif (!RES.length) return null;\nconst ents = msg.payload || [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e ? e.state : undefined; };\nconst h = new Date().getHours();\nconst night = (h >= 22 || h < 7);\nconst hhmm = () => { const t = new Date(); return ('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2); };\nconst last = context.get('battLast') || {};\nlet out = [];\nRES.forEach(function(pid){\n  var c = PC[pid];\n  var eid = c.battery_sensor;\n  var stateEid = eid.replace(/_level$/, '_state');\n  var nv = parseFloat(S(eid));\n  if (isNaN(nv)) return;\n  var ov = last[eid];\n  last[eid] = nv;\n  if (ov === undefined) return;  // first poll after (re)start: baseline only, no crossing\n  var charging = S(stateEid) === 'charging';\n  var who = c.name + \"'s\";\n  if (nv < 15 && !(ov < 15)) {\n    if (night) {\n      var rec = flow.get('battNight') || {};\n      rec[eid] = { who: who, lowPct: nv, lowAt: hhmm(), recovered: false };\n      flow.set('battNight', rec);\n      node.warn('[low-batt] night low ' + eid + ' ' + nv + '% recorded');\n    } else {\n      node.warn('[low-batt] ' + eid + ' ' + nv + '%');\n      out.push({ title: 'Phone battery low', message: who + ' phone is at ' + nv + '% - charge it so the alarm presence keeps working.' });\n    }\n  } else if (nv >= 15 && ov < 15 && charging) {\n    if (night) {\n      var rec2 = flow.get('battNight') || {};\n      var e = rec2[eid] || { who: who, recovered: false };\n      e.recovered = true; e.recPct = nv; e.recAt = hhmm();\n      rec2[eid] = e; flow.set('battNight', rec2);\n      node.warn('[low-batt] night recovery ' + eid + ' ' + nv + '% recorded');\n    } else {\n      node.warn('[low-batt] recovery ' + eid + ' ' + nv + '%');\n      out.push({ title: 'Phone battery recovering', message: who + ' phone is back above 15% (' + nv + '%) and charging - alarm presence is covered again.' });\n    }\n  }\n});\ncontext.set('battLast', last);\nif (!out.length) return null;\nreturn [out];",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 820,
+        "wires": [
+            [
+                "aa-batt-dispatch"
+            ]
+        ]
+    },
+    {
+        "id": "aa-batt-dispatch",
+        "type": "function",
+        "z": "096ff268dc7bd2f0",
+        "name": "dispatch: security notify list",
+        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.security && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length || !Array.isArray(msg.payload)) return null;\nconst alerts = msg.payload;\nconst out = [];\nalerts.forEach(function(a){\n  targets.forEach(function(t){\n    out.push({ action: t, data: { title: a.title, message: a.message, data: { notification_icon: 'mdi:battery-alert' } } });\n  });\n});\nreturn [out.map(function(o){ return { payload: o }; })];",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1060,
+        "y": 820,
+        "wires": [
+            [
+                "aa-batt-notify-dynamic"
+            ]
+        ]
+    },
+    {
+        "id": "aa-batt-notify-dynamic",
+        "type": "api-call-service",
+        "z": "096ff268dc7bd2f0",
+        "name": "notify (per person_config)",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "{{payload.action}}",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1290,
+        "y": 820,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "aa-batt-sum-dispatch",
+        "type": "function",
+        "z": "096ff268dc7bd2f0",
+        "name": "dispatch: security notify list",
+        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.security && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length || !msg.title) return null;\nreturn [targets.map(function(t){\n  return { payload: { action: t, data: { title: msg.title, message: msg.message, data: { notification_icon: 'mdi:battery-clock' } } } };\n})];",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1300,
+        "y": 900,
+        "wires": [
+            [
+                "aa-batt-notify-dynamic"
+            ]
+        ]
+    },
+    {
         "id": "nfc-ev",
         "type": "server-events",
         "z": "657e6b8b07b4cdf7",
@@ -5072,178 +5244,6 @@
         "y": 340,
         "wires": [
             []
-        ]
-    },
-    {
-        "id": "aa-batt-poll",
-        "type": "inject",
-        "z": "096ff268dc7bd2f0",
-        "name": "battery poll 5min",
-        "props": [],
-        "repeat": "300",
-        "crontab": "",
-        "once": true,
-        "onceDelay": "10",
-        "topic": "",
-        "x": 400,
-        "y": 820,
-        "wires": [
-            [
-                "aa-batt-poll-get"
-            ]
-        ]
-    },
-    {
-        "id": "aa-batt-poll-get",
-        "type": "ha-get-entities",
-        "z": "096ff268dc7bd2f0",
-        "name": "all entities",
-        "server": "ha-server",
-        "version": 3,
-        "rules": [],
-        "outputType": "array",
-        "outputEmptyResults": true,
-        "outputLocationType": "msg",
-        "outputLocation": "payload",
-        "outputResultsCount": 1,
-        "output_type": "array",
-        "output_empty_results": true,
-        "output_location_type": "msg",
-        "output_location": "payload",
-        "output_results_count": 1,
-        "x": 600,
-        "y": 820,
-        "wires": [
-            [
-                "aa-batt-poll-fn"
-            ]
-        ]
-    },
-    {
-        "id": "aa-batt-poll-fn",
-        "type": "function",
-        "z": "096ff268dc7bd2f0",
-        "name": "low-battery check (residents)",
-        "func": "const PC = global.get('person_config') || {};\nconst RES = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.role === 'resident' && c.battery_sensor;\n});\nif (!RES.length) return null;\nconst ents = msg.payload || [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e ? e.state : undefined; };\nconst h = new Date().getHours();\nconst night = (h >= 22 || h < 7);\nconst hhmm = () => { const t = new Date(); return ('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2); };\nconst last = context.get('battLast') || {};\nlet out = [];\nRES.forEach(function(pid){\n  var c = PC[pid];\n  var eid = c.battery_sensor;\n  var stateEid = eid.replace(/_level$/, '_state');\n  var nv = parseFloat(S(eid));\n  if (isNaN(nv)) return;\n  var ov = last[eid];\n  last[eid] = nv;\n  if (ov === undefined) return;  // first poll after (re)start: baseline only, no crossing\n  var charging = S(stateEid) === 'charging';\n  var who = c.name + \"'s\";\n  if (nv < 15 && !(ov < 15)) {\n    if (night) {\n      var rec = flow.get('battNight') || {};\n      rec[eid] = { who: who, lowPct: nv, lowAt: hhmm(), recovered: false };\n      flow.set('battNight', rec);\n      node.warn('[low-batt] night low ' + eid + ' ' + nv + '% recorded');\n    } else {\n      node.warn('[low-batt] ' + eid + ' ' + nv + '%');\n      out.push({ title: 'Phone battery low', message: who + ' phone is at ' + nv + '% - charge it so the alarm presence keeps working.' });\n    }\n  } else if (nv >= 15 && ov < 15 && charging) {\n    if (night) {\n      var rec2 = flow.get('battNight') || {};\n      var e = rec2[eid] || { who: who, recovered: false };\n      e.recovered = true; e.recPct = nv; e.recAt = hhmm();\n      rec2[eid] = e; flow.set('battNight', rec2);\n      node.warn('[low-batt] night recovery ' + eid + ' ' + nv + '% recorded');\n    } else {\n      node.warn('[low-batt] recovery ' + eid + ' ' + nv + '%');\n      out.push({ title: 'Phone battery recovering', message: who + ' phone is back above 15% (' + nv + '%) and charging - alarm presence is covered again.' });\n    }\n  }\n});\ncontext.set('battLast', last);\nif (!out.length) return null;\nreturn [out];",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 830,
-        "y": 820,
-        "wires": [
-            [
-                "aa-batt-dispatch"
-            ]
-        ]
-    },
-    {
-        "id": "aa-batt-dispatch",
-        "type": "function",
-        "z": "096ff268dc7bd2f0",
-        "name": "dispatch: security notify list",
-        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.security && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length || !Array.isArray(msg.payload)) return null;\nconst alerts = msg.payload;\nconst out = [];\nalerts.forEach(function(a){\n  targets.forEach(function(t){\n    out.push({ action: t, data: { title: a.title, message: a.message, data: { notification_icon: 'mdi:battery-alert' } } });\n  });\n});\nreturn [out.map(function(o){ return { payload: o }; })];",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1060,
-        "y": 820,
-        "wires": [
-            [
-                "aa-batt-notify-dynamic"
-            ]
-        ]
-    },
-    {
-        "id": "aa-batt-notify-dynamic",
-        "type": "api-call-service",
-        "z": "096ff268dc7bd2f0",
-        "name": "notify (per person_config)",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "{{payload.action}}",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 1290,
-        "y": 820,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "aa-batt-sum-dispatch",
-        "type": "function",
-        "z": "096ff268dc7bd2f0",
-        "name": "dispatch: security notify list",
-        "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.security && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length || !msg.title) return null;\nreturn [targets.map(function(t){\n  return { payload: { action: t, data: { title: msg.title, message: msg.message, data: { notification_icon: 'mdi:battery-clock' } } } };\n})];",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1300,
-        "y": 900,
-        "wires": [
-            [
-                "aa-batt-notify-dynamic"
-            ]
-        ]
-    },
-    {
-        "id": "hm-presence-ev",
-        "type": "server-events",
-        "z": "tab-hm",
-        "name": "person/ping state_changed",
-        "server": "ha-server",
-        "version": 3,
-        "exposeAsEntityConfig": "",
-        "eventType": "state_changed",
-        "event_type": "state_changed",
-        "waitForRunning": true,
-        "outputProperties": [
-            {
-                "property": "payload",
-                "propertyType": "msg",
-                "value": "",
-                "valueType": "eventData"
-            }
-        ],
-        "x": 310,
-        "y": 100,
-        "wires": [
-            [
-                "hm-presence-dyn-fn"
-            ]
-        ]
-    },
-    {
-        "id": "hm-presence-dyn-fn",
-        "type": "function",
-        "z": "tab-hm",
-        "name": "filter: current role != none",
-        "func": "const D = (msg.payload && msg.payload.event) || msg.payload;\nconst eid = D && D.entity_id;\nif (!eid) return null;\nconst PC = global.get('person_config') || {};\nlet matched = null;\nif (PC[eid] && PC[eid].role && PC[eid].role !== 'none') {\n  matched = eid;\n} else {\n  matched = Object.keys(PC).find(function(pid){\n    var c = PC[pid];\n    return c && c.role && c.role !== 'none' && c.ping && c.ping === eid;\n  });\n}\nif (!matched) return null;\nconst ns = D.new_state ? D.new_state.state : undefined;\nif (ns === undefined) return null;\nmsg.payload = ns;\nmsg.eid = eid;\nmsg.topic = 'presence';\nmsg.evt = D;\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 550,
-        "y": 100,
-        "wires": [
-            [
-                "hm-pres-get",
-                "hm-engine"
-            ]
         ]
     }
 ]
