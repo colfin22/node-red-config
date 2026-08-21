@@ -615,7 +615,13 @@
         "type": "inject",
         "z": "tab-hm",
         "name": "seed on deploy",
-        "props": [],
+        "props": [
+            {
+                "p": "topic",
+                "v": "tick",
+                "vt": "str"
+            }
+        ],
         "repeat": "120",
         "crontab": "",
         "once": true,
@@ -647,7 +653,7 @@
         "output_location_type": "msg",
         "output_location": "payload",
         "output_results_count": 1,
-        "x": 560,
+        "x": 720,
         "y": 720,
         "wires": [
             [
@@ -691,8 +697,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 810,
-        "y": 360,
+        "x": 1150,
+        "y": 400,
         "wires": [
             [
                 "hm-set-mode"
@@ -732,8 +738,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1220,
-        "y": 240,
+        "x": 2010,
+        "y": 300,
         "wires": [
             []
         ]
@@ -756,8 +762,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1220,
-        "y": 300,
+        "x": 2000,
+        "y": 360,
         "wires": [
             []
         ]
@@ -780,8 +786,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1220,
-        "y": 360,
+        "x": 2000,
+        "y": 420,
         "wires": [
             []
         ]
@@ -797,8 +803,8 @@
         "createDir": true,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 1190,
-        "y": 540,
+        "x": 1690,
+        "y": 660,
         "wires": [
             []
         ]
@@ -814,7 +820,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 330,
+        "x": 410,
         "y": 720,
         "wires": [
             [
@@ -863,8 +869,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1250,
-        "y": 640,
+        "x": 1790,
+        "y": 820,
         "wires": [
             []
         ]
@@ -880,8 +886,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1130,
-        "y": 440,
+        "x": 1610,
+        "y": 500,
         "wires": [
             [
                 "hm-notify-dynamic"
@@ -906,8 +912,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1450,
-        "y": 440,
+        "x": 2030,
+        "y": 500,
         "wires": [
             []
         ]
@@ -950,8 +956,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 490,
-        "y": 80,
+        "x": 570,
+        "y": 40,
         "wires": [
             [
                 "hm-pres-get",
@@ -1042,8 +1048,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 110,
-        "y": 420,
+        "x": 150,
+        "y": 300,
         "wires": [
             [
                 "cam-fn-review",
@@ -1207,68 +1213,17 @@
     },
     {
         "id": "cam-courier-trg",
-        "type": "server-state-changed",
+        "type": "mqtt in",
         "z": "tab-cam",
-        "name": "courier counts",
-        "server": "ha-server",
-        "version": 6,
-        "outputs": 1,
-        "exposeAsEntityConfig": "",
-        "entities": {
-            "entity": [
-                "sensor.front_car_dpd_count",
-                "sensor.front_car_gls_count",
-                "sensor.front_car_amazon_count",
-                "sensor.front_car_ups_count",
-                "sensor.front_car_fedex_count",
-                "sensor.front_car_dhl_count",
-                "sensor.front_car_an_post_count",
-                "sensor.front_van_dpd_count",
-                "sensor.front_van_gls_count",
-                "sensor.front_van_amazon_count",
-                "sensor.front_van_ups_count",
-                "sensor.front_van_fedex_count",
-                "sensor.front_van_dhl_count",
-                "sensor.front_van_an_post_count"
-            ],
-            "substring": "",
-            "regex": ""
-        },
-        "outputInitially": false,
-        "stateType": "str",
-        "ifState": "",
-        "ifStateType": "str",
-        "ifStateOperator": "is",
-        "outputOnlyOnStateChange": true,
-        "for": 0,
-        "forType": "num",
-        "forUnits": "minutes",
-        "ignorePrevStateNull": true,
-        "ignorePrevStateUnknown": true,
-        "ignorePrevStateUnavailable": true,
-        "ignoreCurrentStateUnknown": false,
-        "ignoreCurrentStateUnavailable": false,
-        "outputProperties": [
-            {
-                "property": "payload",
-                "propertyType": "msg",
-                "value": "",
-                "valueType": "entityState"
-            },
-            {
-                "property": "topic",
-                "propertyType": "msg",
-                "value": "",
-                "valueType": "entityId"
-            },
-            {
-                "property": "data",
-                "propertyType": "msg",
-                "value": "",
-                "valueType": "eventData"
-            }
-        ],
-        "entityidfiltertype": "list",
+        "name": "frigate/events (courier, road zones)",
+        "topic": "frigate/events",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "mqtt-frigate",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
         "x": 330,
         "y": 60,
         "wires": [
@@ -1281,8 +1236,8 @@
         "id": "cam-fn-courier",
         "type": "function",
         "z": "tab-cam",
-        "name": "Courier (rising+dedupe)",
-        "func": "if (flow.get('house_mode') === 'Sleeping') return null;\nconst newv = Number(msg.payload);\nif (!(newv > 0)) return null;\n// entityId valueType is flaky on this palette version (came through empty on a\n// real An Post detection 17-06-2026 -> blank \" has landed\"). Prefer eventData.\nconst eid = (msg.data && (msg.data.entity_id || (msg.data.new_state && msg.data.new_state.entity_id))) || msg.topic || '';\nconst key = eid.replace('sensor.front_car_','').replace('sensor.front_van_','').replace('_count','');\nconst names = {dpd:'DPD', gls:'GLS', amazon:'Amazon', ups:'UPS', fedex:'FedEx', dhl:'DHL', an_post:'On Fwuisht'};\nconst name = names[key];\nif (!name) { node.warn('courier: unresolved entity_id \"' + eid + '\" topic \"' + (msg.topic || '') + '\" - no announcement'); return null; }\nconst now = Date.now();\nif (now - (flow.get('cour_' + key) || 0) < 300000) return null;\nflow.set('cour_' + key, now);\nif (now - (flow.get('delivery_tts') || 0) < 120000) return null;\nflow.set('delivery_tts', now);\nmsg._src = 'courier'; msg.message = name + ' has landed.';\nreturn msg;\n",
+        "name": "Courier (road-zone dedupe)",
+        "func": "if (flow.get('house_mode') === 'Sleeping') return null;\nconst ev = msg.payload || {};\nconst obj = ev.after;\nif (!obj) return null;\nconst zones = obj.current_zones || [];\nif (!zones.includes('Front_Road_Zone1') && !zones.includes('Front_Road_Zone2')) return null;\nconst names = {dpd:'DPD', gls:'GLS', amazon:'Amazon', ups:'UPS', fedex:'FedEx', dhl:'DHL', an_post:'On Fwuisht'};\nconst key = obj.label;\nconst name = names[key];\nif (!name) return null;\nconst now = Date.now();\nif (now - (flow.get('cour_' + key) || 0) < 300000) return null;\nflow.set('cour_' + key, now);\nif (now - (flow.get('delivery_tts') || 0) < 120000) return null;\nflow.set('delivery_tts', now);\nmsg._src = 'courier'; msg.message = name + ' has landed.';\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -1315,7 +1270,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1410,
+        "x": 1670,
         "y": 60,
         "wires": [
             []
@@ -1412,7 +1367,7 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1420,
+        "x": 1680,
         "y": 120,
         "wires": [
             []
@@ -1429,7 +1384,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1100,
+        "x": 1000,
         "y": 240,
         "wires": [
             [
@@ -1448,8 +1403,8 @@
         "createDir": true,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 1210,
-        "y": 360,
+        "x": 1690,
+        "y": 400,
         "wires": [
             []
         ]
@@ -1542,8 +1497,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 350,
-        "y": 340,
+        "x": 1150,
+        "y": 360,
         "wires": [
             [
                 "cam-car-strobe"
@@ -1575,8 +1530,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 720,
-        "y": 180,
+        "x": 1700,
+        "y": 200,
         "wires": [
             []
         ]
@@ -1599,8 +1554,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 700,
-        "y": 280,
+        "x": 1700,
+        "y": 320,
         "wires": [
             []
         ]
@@ -1623,8 +1578,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 700,
-        "y": 240,
+        "x": 1700,
+        "y": 260,
         "wires": [
             []
         ]
@@ -1849,7 +1804,7 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 500,
+        "x": 200,
         "y": 580,
         "wires": [
             [
@@ -2169,7 +2124,7 @@
         "output_location_type": "msg",
         "output_location": "payload",
         "output_results_count": 1,
-        "x": 360,
+        "x": 600,
         "y": 240,
         "wires": [
             [
@@ -2189,8 +2144,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 590,
-        "y": 240,
+        "x": 1010,
+        "y": 260,
         "wires": [
             [
                 "heat-set"
@@ -2227,8 +2182,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 900,
-        "y": 60,
+        "x": 1420,
+        "y": 100,
         "wires": [
             [
                 "heat-dbg"
@@ -2248,8 +2203,8 @@
         "targetType": "msg",
         "statusVal": "info.target",
         "statusType": "msg",
-        "x": 1230,
-        "y": 60,
+        "x": 1750,
+        "y": 100,
         "wires": []
     },
     {
@@ -2304,8 +2259,8 @@
             }
         ],
         "queue": "none",
-        "x": 330,
-        "y": 400,
+        "x": 510,
+        "y": 380,
         "wires": [
             [
                 "heat-fc-fn"
@@ -2323,8 +2278,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 400,
-        "y": 540,
+        "x": 800,
+        "y": 580,
         "wires": [
             [
                 "heat-fc-notify-dispatch"
@@ -2451,8 +2406,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 970,
-        "y": 240,
+        "x": 1490,
+        "y": 280,
         "wires": [
             []
         ]
@@ -2477,8 +2432,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 980,
-        "y": 340,
+        "x": 1500,
+        "y": 380,
         "wires": [
             []
         ]
@@ -2503,8 +2458,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 990,
-        "y": 440,
+        "x": 1510,
+        "y": 480,
         "wires": [
             []
         ]
@@ -2520,8 +2475,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 930,
-        "y": 160,
+        "x": 1450,
+        "y": 200,
         "wires": [
             [
                 "heat-notify-dynamic"
@@ -2546,8 +2501,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1250,
-        "y": 160,
+        "x": 1770,
+        "y": 200,
         "wires": [
             []
         ]
@@ -2563,8 +2518,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 790,
-        "y": 540,
+        "x": 1090,
+        "y": 580,
         "wires": [
             [
                 "heat-fc-notify-dynamic"
@@ -2589,8 +2544,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1270,
-        "y": 540,
+        "x": 1530,
+        "y": 580,
         "wires": [
             []
         ]
