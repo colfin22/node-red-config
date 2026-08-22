@@ -18,5 +18,5 @@ fi
 rm -f /opt/node-red/secret-scan-blocked.txt
 
 git add -A
-git -c user.email=node-red@colfin22.net -c user.name=node-red-lxc commit -q -m "auto backup $(date +%F\ %H:%M)" || exit 0
+git -c user.email=node-red-lxc@localhost -c user.name=node-red-lxc commit -q -m "auto backup $(date +%F\ %H:%M)" || exit 0
 git push -q
