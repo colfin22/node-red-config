@@ -222,7 +222,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "TrueNAS backup build",
-  "func": "\nvar b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}\nvar st=(b.status||'').toLowerCase();\nvar detail;\nif(st==='updated')detail='Updated \u2014 config saved to GitHub ('+(b.size||'?')+') at '+(b.timestamp||'?')+'.';\nelse if(st==='unchanged')detail='Unchanged \u2014 no changes since last backup ('+(b.timestamp||'?')+').';\nelse detail='FAILED \u2014 '+(b.error||'Unknown error');\nreturn {cat:'Backup',sub:'TrueNAS-config',message:detail,tag:'tnconfig'};\n",
+  "func": "\nvar b=global.get('parseWebhookBody')(msg.payload);\nvar st=(b.status||'').toLowerCase();\nvar detail;\nif(st==='updated')detail='Updated \u2014 config saved to GitHub ('+(b.size||'?')+') at '+(b.timestamp||'?')+'.';\nelse if(st==='unchanged')detail='Unchanged \u2014 no changes since last backup ('+(b.timestamp||'?')+').';\nelse detail='FAILED \u2014 '+(b.error||'Unknown error');\nreturn {cat:'Backup',sub:'TrueNAS-config',message:detail,tag:'tnconfig'};\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -270,7 +270,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "MikroTik backup build",
-  "func": "\nvar b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}\nvar t=b.title||'', m=b.message||'';\nreturn {cat:'Backup',sub:'MikroTik',message:(t?t+' \u2014 ':'')+m,tag:'mikrotik'};\n",
+  "func": "\nvar b=global.get('parseWebhookBody')(msg.payload);\nvar t=b.title||'', m=b.message||'';\nreturn {cat:'Backup',sub:'MikroTik',message:(t?t+' \u2014 ':'')+m,tag:'mikrotik'};\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -318,7 +318,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "Restic failed build",
-  "func": "\nvar b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}\nvar ds=b.dataset||'unknown';\nreturn {cat:'Backup',sub:'Restic',message:'Restic backup for '+ds+' on TrueNAS failed. Check /mnt/MainPool/logs/restic_'+ds+'.log',tag:'restic_'+ds};\n",
+  "func": "\nvar b=global.get('parseWebhookBody')(msg.payload);\nvar ds=b.dataset||'unknown';\nreturn {cat:'Backup',sub:'Restic',message:'Restic backup for '+ds+' on TrueNAS failed. Check /mnt/MainPool/logs/restic_'+ds+'.log',tag:'restic_'+ds};\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -366,7 +366,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "Zabbix alert build",
-  "func": "\nvar b=msg.payload; if(typeof b==='string'){try{b=JSON.parse(b);}catch(e){b={};}}\nvar detail=(b.status||'?')+': '+(b.name||'?')+' \u2014 '+(b.host||'?')+' ['+(b.severity||'?')+'] \u2014 '+(b.message||'');\nreturn {cat:'Monitoring',sub:'Zabbix',message:detail,tag:'zabbix_'+((b.name||b.host||'evt'))};\n",
+  "func": "\nvar b=global.get('parseWebhookBody')(msg.payload);\nvar detail=(b.status||'?')+': '+(b.name||'?')+' \u2014 '+(b.host||'?')+' ['+(b.severity||'?')+'] \u2014 '+(b.message||'');\nreturn {cat:'Monitoring',sub:'Zabbix',message:detail,tag:'zabbix_'+((b.name||b.host||'evt'))};\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -625,21 +625,44 @@
  },
  {
   "id": "mnt-seed",
-  "type": "function",
+  "type": "subflow:sf-seed-watch",
   "z": "tab-ih",
   "name": "seed maint state",
-  "func": "const ents=Array.isArray(msg.payload)?msg.payload:[];\nconst e=ents.find(x=>x.entity_id==='input_boolean.maintenance_mode');\nconst on=!!e&&e.state==='on';\nconst prev=global.get('maintenance_mode');\nglobal.set('maintenance_mode',on);\nif(prev===undefined||prev!==on)node.warn('[maint] seed maintenance_mode='+(on?'on':'off'));\nreturn null;\n",
-  "outputs": 1,
-  "timeout": 0,
-  "noerr": 0,
-  "initialize": "",
-  "finalize": "",
-  "libs": [],
+  "env": [
+   {
+    "name": "entityId",
+    "type": "str",
+    "value": "input_boolean.maintenance_mode"
+   },
+   {
+    "name": "scope",
+    "type": "str",
+    "value": "global"
+   },
+   {
+    "name": "key",
+    "type": "str",
+    "value": "maintenance_mode"
+   },
+   {
+    "name": "mode",
+    "type": "str",
+    "value": "boolean"
+   },
+   {
+    "name": "fallback",
+    "type": "str",
+    "value": ""
+   },
+   {
+    "name": "logTag",
+    "type": "str",
+    "value": "[maint] maintenance_mode"
+   }
+  ],
   "x": 880,
   "y": 60,
-  "wires": [
-   []
-  ]
+  "wires": []
  },
  {
   "id": "esbn-cron",
@@ -765,15 +788,16 @@
  },
  {
   "id": "ih-notify-dispatch",
-  "type": "function",
+  "type": "subflow:sf-dispatch-notify",
   "z": "tab-ih",
   "name": "dispatch: infra_alerts",
-  "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.infra_alerts && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
-  "outputs": 1,
-  "noerr": 0,
-  "initialize": "",
-  "finalize": "",
-  "libs": [],
+  "env": [
+   {
+    "name": "flagName",
+    "type": "str",
+    "value": "infra_alerts"
+   }
+  ],
   "x": 1260,
   "y": 640,
   "wires": [

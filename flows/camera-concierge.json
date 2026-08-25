@@ -103,7 +103,7 @@
   "type": "function",
   "z": "tab-cam",
   "name": "Parse review",
-  "func": "const r=msg.payload; if(!r) return null;\nconst a=r.after||{}; if(a.severity!=='alert') return null;\nconst cam=a.camera||'';\nif((cam==='Rear_Door'||cam==='Rear_Shed') && flow.get('patio_open')) return null;\nconst objs=([...new Set(((a.data&&a.data.objects)||[]).map(o=>o.replace(/-verified$/,'')))]);\nconst det=(a.data&&a.data.detections)||[];\nconst label=objs.length?objs.join(', '):'Motion';\nconst cl=label.charAt(0).toUpperCase()+label.slice(1);\nconst names={Front_Car:'Front Car',Front_Van:'Front Van',Rear_Door:'Rear Door',Rear_Shed:'Rear Shed',Doorbell:'Doorbell'};\nconst camName=names[cam]||cam;\nconst subs=(a.data&&a.data.sub_labels)||[]; const personName=((objs.indexOf('person')!==-1)&&subs.length&&subs[0])?subs[0]:null;\nconst NB=env.get('NABU_URL');\nconst rid=a.id; const rkey='rev_'+String(rid).split('.').join('_');\nconst gif=NB+'/api/frigate/notifications/'+rid+'/review_preview.gif';\nconst snap=det.length?(NB+'/api/frigate/notifications/'+det[0]+'/snapshot.jpg?bbox=1'):null;\nconst clip=det.length?(NB+'/api/frigate/notifications/'+det[0]+'/'+cam+'/clip.mp4'):null;\nconst tm=new Date((a.start_time||Date.now()/1000)*1000).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});\nconst type=r.type;\nconst GMAP={Front_Car:'front',Front_Van:'front',Doorbell:'doorbell',Rear_Door:'rear',Rear_Shed:'rear'};\nconst GLABEL={front:'Front',doorbell:'Doorbell',rear:'Rear'};\nconst PRIO={Front_Car:1,Front_Van:2,Doorbell:1,Rear_Door:1,Rear_Shed:2};\nconst KLABEL={person:'Person',car:'Vehicle',motorcycle:'Motorcycle',bicycle:'Bicycle',package:'Package',umbrella:'Umbrella'};\nfunction ohas(l){return objs.indexOf(l)!==-1;}\nlet kind=null;\nif(ohas('person')) kind='person'; else if(ohas('car')||ohas('truck')) kind='car'; else if(ohas('motorcycle')) kind='motorcycle'; else if(ohas('bicycle')) kind='bicycle'; else if(ohas('package')) kind='package'; else if(ohas('umbrella')) kind='umbrella';\nconst kindLabel=kind?KLABEL[kind]:'';\nconst group=GMAP[cam]||null;\nconst WINDOW=120000;\nif(kind && group){\n  const gl=GLABEL[group]; const gkey='grp_'+group+'_'+kind;\n  if(type==='new'||type==='update'){\n    let grp=flow.get(gkey);\n    const newInc=(!grp||(Date.now()-grp.lastAt)>WINDOW);\n    if(newInc) grp={tag:'frig_'+group+'_'+kind+'_'+rid,cams:[],snap:null,snapCam:null,gif:null,gifCam:null,clip:null,lastAt:0,firstCam:cam};\n    const had=grp.cams.indexOf(camName)!==-1;\n    if(!had) grp.cams.push(camName);\n    if(!grp.firstCam) grp.firstCam=cam;\n    if(snap && cam===grp.firstCam){ grp.snap=snap; grp.snapCam=cam; if(clip) grp.clip=clip; }\n    grp.lastAt=Date.now(); flow.set(gkey,grp); flow.set(rkey,{gkey:gkey,tag:grp.tag});\n    let door=null;\n    if(cam==='Doorbell'&&kind==='person'&&!had) door={camName:camName,gif:gif,snap:snap,tag:grp.tag,_src:'doorbell'};\n    const titl='\\ud83d\\udcf7 '+kindLabel+' \\u2014 '+gl; const body=grp.cams.join(', ')+' at '+tm; const msgs=[]; if(cam==='Doorbell'&&kind==='person'&&det.length){const dm=flow.get('descmap')||{};dm[det[0]]={tag:grp.tag,gkey:gkey,title:titl,at:Date.now()};for(const k in dm){if(Date.now()-dm[k].at>600000)delete dm[k];}flow.set('descmap',dm);}\n    if(newInc){\n      msgs.push({_src:'push-grp',title:titl,message:body,ndata:{tag:grp.tag,channel:'Cameras'}});\n      if(grp.snap){ const nd={tag:grp.tag,channel:'Cameras',image:grp.snap}; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;} msgs.push({_src:'push-grp-snap',title:titl,message:body,ndata:nd}); }\n    } else if(!had){\n      const nd={tag:grp.tag,channel:'Cameras'}; const img=grp.gif||grp.snap; if(img) nd.image=img; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;}\n      msgs.push({_src:'push-grp',title:titl,message:grp.desc||body,ndata:nd});\n    }\n    return [msgs.length?msgs:null, door];\n  }\n  if(type==='end'){\n    const meta=flow.get(rkey); flow.set(rkey,undefined);\n    if(!meta||!meta.gkey) return null;\n    let grp=flow.get(meta.gkey);\n    if(!grp||grp.tag!==meta.tag) return null;\n    const prio=PRIO[cam]||99; const cur=grp.gifCam?(PRIO[grp.gifCam]||99):999;\n    if(cam!==grp.firstCam || grp.gifCam) return null;\n    grp.gif=gif; grp.gifCam=cam; if(clip) grp.clip=clip; flow.set(meta.gkey,grp);\n    const parts=meta.gkey.split('_'); const gl2=GLABEL[parts[1]]; const kl2=KLABEL[parts[2]]||parts[2];\n    const titlEnd='\\ud83d\\udcf7 '+(personName||kl2)+' \\u2014 '+gl2;\n    if(cam==='Doorbell'&&det.length){const dm=flow.get('descmap')||{};if(dm[det[0]]){dm[det[0]].title=titlEnd;flow.set('descmap',dm);}}\n    const nd={tag:grp.tag,image:grp.gif,channel:'Cameras'}; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;}\n    return [{_src:'push-grp-gif:'+cam,title:titlEnd,message:grp.desc||grp.cams.join(', '),ndata:nd},null];\n  }\n  return null;\n}\nif(type==='new'||type==='update'){\n  if(flow.get(rkey)) return null;\n  if(Date.now()-(flow.get('push_'+label)||0)<60000){ flow.set(rkey,'skip'); return null; }\n  flow.set('push_'+label,Date.now()); flow.set(rkey,'sent');\n  const titl=cl+' detected \\u2014 '+camName; const body=cl+' detected - '+camName+' at '+tm;\n  const msgs=[{_src:'push-instant',title:titl,message:body,ndata:{tag:'frigate_'+rid,channel:'Cameras'}}];\n  if(snap){ const nd={tag:'frigate_'+rid,channel:'Cameras',image:snap}; if(clip){nd.clickAction=clip;nd.url=clip;} msgs.push({_src:'push-snap',title:titl,message:body,ndata:nd}); }\n  return [msgs,null];\n}\nif(type==='end'){\n  const st=flow.get(rkey); flow.set(rkey,undefined);\n  if(st!=='sent') return null;\n  const nd={tag:'frigate_'+rid,image:gif,channel:'Cameras'}; if(clip){nd.clickAction=clip;nd.url=clip;}\n  return [{_src:'push-gif',title:cl+' \\u2014 '+camName,message:cl+' at '+camName+' ('+tm+')',ndata:nd},null];\n}\nreturn null;\n",
+  "func": "// 24-08-2026: incident-continuity keys (grp_*/rev_*/descmap) moved to the\n// file-backed context store so a Node-RED restart mid-incident (e.g. during\n// a deploy) doesn't silently orphan a doorbell GIF/description update.\n// push_<label> stays in-memory: a 60s ungrouped dedup window, low stakes if lost.\n// 24-08-2026: split into classify() (pure Frigate-review -> facts) and four stage\n// handlers (grouped new/update, grouped end, fallback new/update, fallback end),\n// called from a thin dispatcher at the bottom. Pure reorganisation -- verified\n// byte-for-byte equivalent against the old single-block version across a\n// multi-message, stateful scenario battery before deploying.\nconst GMAP={Front_Car:'front',Front_Van:'front',Doorbell:'doorbell',Rear_Door:'rear',Rear_Shed:'rear'};\nconst GLABEL={front:'Front',doorbell:'Doorbell',rear:'Rear'};\nconst PRIO={Front_Car:1,Front_Van:2,Doorbell:1,Rear_Door:1,Rear_Shed:2};\nconst KLABEL={person:'Person',car:'Vehicle',motorcycle:'Motorcycle',bicycle:'Bicycle',package:'Package',umbrella:'Umbrella'};\nconst WINDOW=120000;\n\nfunction classify(){\n  const r=msg.payload; if(!r) return null;\n  const a=r.after||{}; if(a.severity!=='alert') return null;\n  const cam=a.camera||'';\n  if((cam==='Rear_Door'||cam==='Rear_Shed') && flow.get('patio_open')) return null;\n  const objs=([...new Set(((a.data&&a.data.objects)||[]).map(o=>o.replace(/-verified$/,'')))]);\n  const det=(a.data&&a.data.detections)||[];\n  const label=objs.length?objs.join(', '):'Motion';\n  const cl=label.charAt(0).toUpperCase()+label.slice(1);\n  const names={Front_Car:'Front Car',Front_Van:'Front Van',Rear_Door:'Rear Door',Rear_Shed:'Rear Shed',Doorbell:'Doorbell'};\n  const camName=names[cam]||cam;\n  const subs=(a.data&&a.data.sub_labels)||[]; const personName=((objs.indexOf('person')!==-1)&&subs.length&&subs[0])?subs[0]:null;\n  const NB=env.get('NABU_URL');\n  const rid=a.id; const rkey='rev_'+String(rid).split('.').join('_');\n  const gif=NB+'/api/frigate/notifications/'+rid+'/review_preview.gif';\n  const snap=det.length?(NB+'/api/frigate/notifications/'+det[0]+'/snapshot.jpg?bbox=1'):null;\n  const clip=det.length?(NB+'/api/frigate/notifications/'+det[0]+'/'+cam+'/clip.mp4'):null;\n  const tm=new Date((a.start_time||Date.now()/1000)*1000).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});\n  const type=r.type;\n  function ohas(l){return objs.indexOf(l)!==-1;}\n  let kind=null;\n  if(ohas('person')) kind='person'; else if(ohas('car')||ohas('truck')) kind='car'; else if(ohas('motorcycle')) kind='motorcycle'; else if(ohas('bicycle')) kind='bicycle'; else if(ohas('package')) kind='package'; else if(ohas('umbrella')) kind='umbrella';\n  const kindLabel=kind?KLABEL[kind]:'';\n  const group=GMAP[cam]||null;\n  return {cam,objs,det,label,cl,camName,personName,NB,rid,rkey,gif,snap,clip,tm,type,kind,kindLabel,group};\n}\n\nfunction handleGroupedNew(c){\n  const gl=GLABEL[c.group]; const gkey='grp_'+c.group+'_'+c.kind;\n  let grp=flow.get(gkey,'file');\n  const newInc=(!grp||(Date.now()-grp.lastAt)>WINDOW);\n  if(newInc) grp={tag:'frig_'+c.group+'_'+c.kind+'_'+c.rid,cams:[],snap:null,snapCam:null,gif:null,gifCam:null,clip:null,lastAt:0,firstCam:c.cam};\n  const had=grp.cams.indexOf(c.camName)!==-1;\n  if(!had) grp.cams.push(c.camName);\n  if(!grp.firstCam) grp.firstCam=c.cam;\n  if(c.snap && c.cam===grp.firstCam){ grp.snap=c.snap; grp.snapCam=c.cam; if(c.clip) grp.clip=c.clip; }\n  grp.lastAt=Date.now(); flow.set(gkey,grp,'file'); flow.set(c.rkey,{gkey:gkey,tag:grp.tag},'file');\n  let door=null;\n  if(c.cam==='Doorbell'&&c.kind==='person'&&!had) door={camName:c.camName,gif:c.gif,snap:c.snap,tag:grp.tag,_src:'doorbell'};\n  const titl='\ud83d\udcf7 '+c.kindLabel+' \u2014 '+gl; const body=grp.cams.join(', ')+' at '+c.tm; const msgs=[]; if(c.cam==='Doorbell'&&c.kind==='person'&&c.det.length){const dm=flow.get('descmap','file')||{};dm[c.det[0]]={tag:grp.tag,gkey:gkey,title:titl,at:Date.now()};for(const k in dm){if(Date.now()-dm[k].at>600000)delete dm[k];}flow.set('descmap',dm,'file');}\n  if(newInc){\n    msgs.push({_src:'push-grp',title:titl,message:body,ndata:{tag:grp.tag,channel:'Cameras'}});\n    if(grp.snap){ const nd={tag:grp.tag,channel:'Cameras',image:grp.snap}; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;} msgs.push({_src:'push-grp-snap',title:titl,message:body,ndata:nd}); }\n  } else if(!had){\n    const nd={tag:grp.tag,channel:'Cameras'}; const img=grp.gif||grp.snap; if(img) nd.image=img; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;}\n    msgs.push({_src:'push-grp',title:titl,message:grp.desc||body,ndata:nd});\n  }\n  return [msgs.length?msgs:null, door];\n}\n\nfunction handleGroupedEnd(c){\n  const meta=flow.get(c.rkey,'file'); flow.set(c.rkey,undefined,'file');\n  if(!meta||!meta.gkey) return null;\n  let grp=flow.get(meta.gkey,'file');\n  if(!grp||grp.tag!==meta.tag) return null;\n  const prio=PRIO[c.cam]||99; const cur=grp.gifCam?(PRIO[grp.gifCam]||99):999;\n  if(c.cam!==grp.firstCam || grp.gifCam) return null;\n  grp.gif=c.gif; grp.gifCam=c.cam; if(c.clip) grp.clip=c.clip; flow.set(meta.gkey,grp,'file');\n  const parts=meta.gkey.split('_'); const gl2=GLABEL[parts[1]]; const kl2=KLABEL[parts[2]]||parts[2];\n  const titlEnd='\ud83d\udcf7 '+(c.personName||kl2)+' \u2014 '+gl2;\n  if(c.cam==='Doorbell'&&c.det.length){const dm=flow.get('descmap','file')||{};if(dm[c.det[0]]){dm[c.det[0]].title=titlEnd;flow.set('descmap',dm,'file');}}\n  const nd={tag:grp.tag,image:grp.gif,channel:'Cameras'}; if(grp.clip){nd.clickAction=grp.clip;nd.url=grp.clip;}\n  return [{_src:'push-grp-gif:'+c.cam,title:titlEnd,message:grp.desc||grp.cams.join(', '),ndata:nd},null];\n}\n\nfunction handleFallbackNew(c){\n  if(flow.get(c.rkey,'file')) return null;\n  if(Date.now()-(flow.get('push_'+c.label)||0)<60000){ flow.set(c.rkey,'skip','file'); return null; }\n  flow.set('push_'+c.label,Date.now()); flow.set(c.rkey,'sent','file');\n  const titl=c.cl+' detected \u2014 '+c.camName; const body=c.cl+' detected - '+c.camName+' at '+c.tm;\n  const msgs=[{_src:'push-instant',title:titl,message:body,ndata:{tag:'frigate_'+c.rid,channel:'Cameras'}}];\n  if(c.snap){ const nd={tag:'frigate_'+c.rid,channel:'Cameras',image:c.snap}; if(c.clip){nd.clickAction=c.clip;nd.url=c.clip;} msgs.push({_src:'push-snap',title:titl,message:body,ndata:nd}); }\n  return [msgs,null];\n}\n\nfunction handleFallbackEnd(c){\n  const st=flow.get(c.rkey,'file'); flow.set(c.rkey,undefined,'file');\n  if(st!=='sent') return null;\n  const nd={tag:'frigate_'+c.rid,image:c.gif,channel:'Cameras'}; if(c.clip){nd.clickAction=c.clip;nd.url=c.clip;}\n  return [{_src:'push-gif',title:c.cl+' \u2014 '+c.camName,message:c.cl+' at '+c.camName+' ('+c.tm+')',ndata:nd},null];\n}\n\nconst c = classify();\nif(!c) return null;\nif(c.kind && c.group){\n  if(c.type==='new'||c.type==='update') return handleGroupedNew(c);\n  if(c.type==='end') return handleGroupedEnd(c);\n  return null;\n}\nif(c.type==='new'||c.type==='update') return handleFallbackNew(c);\nif(c.type==='end') return handleFallbackEnd(c);\nreturn null;\n",
   "outputs": 2,
   "noerr": 0,
   "initialize": "",
@@ -118,34 +118,6 @@
    [
     "cam-door-delay",
     "cam-log"
-   ]
-  ]
- },
- {
-  "id": "cam-snapshot",
-  "type": "api-call-service",
-  "z": "tab-cam",
-  "name": "Doorbell snapshot",
-  "server": "ha-server",
-  "version": 5,
-  "debugenabled": false,
-  "action": "camera.snapshot",
-  "areaId": [],
-  "deviceId": [],
-  "entityId": [
-   "camera.doorbell"
-  ],
-  "data": "{\"filename\": \"/config/www/doorbell_snapshot.jpg\"}",
-  "dataType": "json",
-  "mergeContext": "",
-  "mustacheAltTags": false,
-  "outputProperties": [],
-  "queue": "none",
-  "x": 930,
-  "y": 860,
-  "wires": [
-   [
-    "cam-cast"
    ]
   ]
  },
@@ -506,7 +478,7 @@
   "type": "function",
   "z": "tab-cam",
   "name": "doorbell name/img",
-  "func": "const ents=Array.isArray(msg.entities)?msg.entities:[];\nconst S=id=>{const e=ents.find(x=>x.entity_id===id);return e&&e.state;};\nconst E=id=>ents.find(x=>x.entity_id===id);\nconst f=S('sensor.doorbell_last_recognized_face');\nconst bad=['none','unknown','clear','unavailable',''];\nconst name=(f&&bad.indexOf(String(f).toLowerCase())===-1)?f:null;\nconst who=name||'Person';\nconst snap=msg.snap||null;\nconst tag=msg.tag;\n// Only pop the Shield overlay and the kitchen display for an arrival.\n// If the front door is open now, or was open within the last 60s, someone\n// has already come through it, so skip both popups. The phone push stays.\nconst DOOR_WINDOW=60000;\nconst door=E('binary_sensor.front_door_contact');\nconst dstate=door?door.state:null;\nconst dchg=(door&&door.last_changed)?Date.parse(door.last_changed):NaN;\nconst dage=isFinite(dchg)?Date.now()-dchg:null;\nconst alreadyOpened=(dstate==='on')||(dstate==='off'&&dage!==null&&dage<DOOR_WINDOW);\nlet why='';\nif(alreadyOpened) why=' [popup suppressed: front door '+(dstate==='on'?'is open':'closed '+Math.round(dage/1000)+'s ago')+']';\nelse if(!door) why=' [no front door state, popup sent]';\nnode.warn('[cam] doorbell person: '+who+(snap?'':' (no snap)')+why);\nconst shield=alreadyOpened?null:{who:who,image:snap};\nconst cast=(alreadyOpened||!snap)?null:{url:snap};\nconst phone=name?{title:'\ud83d\udc64 '+name+' at the doorbell',message:'Doorbell',ndata:{tag:tag,channel:'Cameras',image:snap}}:null;\nreturn [shield,cast,phone];\n",
+  "func": "const ents=Array.isArray(msg.entities)?msg.entities:[];\nconst S=id=>{const e=ents.find(x=>x.entity_id===id);return e&&e.state;};\nconst E=id=>ents.find(x=>x.entity_id===id);\nconst f=S('sensor.doorbell_last_recognized_face');\nconst bad=['none','unknown','clear','unavailable',''];\nconst name=(f&&bad.indexOf(String(f).toLowerCase())===-1)?f:null;\nconst who=name||'Person';\nconst snap=msg.snap||null;\nconst tag=msg.tag;\n// Only pop the Shield overlay and the kitchen display for an arrival.\n// If the front door is open now, or was open within the last 60s, someone\n// has already come through it, so skip both popups. The phone push stays.\nconst DOOR_WINDOW=60000;\nconst door=E('binary_sensor.front_door_contact');\nconst dstate=door?door.state:null;\nconst dchg=(door&&door.last_changed)?Date.parse(door.last_changed):NaN;\nconst dage=isFinite(dchg)?Date.now()-dchg:null;\nconst alreadyOpened=(dstate==='on')||(dstate==='off'&&dage!==null&&dage<DOOR_WINDOW);\n// Computed ONCE here (live fetch) and reused for both the Shield/cast\n// decision and the phone-push gate downstream (cam-fd-gate), so the two\n// no longer independently re-derive the same door-window verdict.\nconst doorWhy = !door ? 'no front door state'\n  : dstate==='on' ? 'front door is open'\n  : 'front door closed '+Math.round(dage/1000)+'s ago';\nlet why='';\nif(alreadyOpened) why=' [popup suppressed: '+doorWhy+']';\nelse if(!door) why=' [no front door state, popup sent]';\nnode.warn('[cam] doorbell person: '+who+(snap?'':' (no snap)')+why);\nconst shield=alreadyOpened?null:{who:who,image:snap};\nconst cast=(alreadyOpened||!snap)?null:{url:snap};\nconst phone=name?{title:'\ud83d\udc64 '+name+' at the doorbell',message:'Doorbell',ndata:{tag:tag,channel:'Cameras',image:snap},_doorVerdict:{suppress:alreadyOpened,why:doorWhy}}:null;\nreturn [shield,cast,phone];\n",
   "outputs": 3,
   "timeout": 0,
   "noerr": 0,
@@ -745,21 +717,44 @@
  },
  {
   "id": "cam-hm-startup-fn",
-  "type": "function",
+  "type": "subflow:sf-seed-watch",
   "z": "tab-cam",
   "name": "seed house_mode",
-  "func": "const ents = Array.isArray(msg.payload) ? msg.payload : [];\nconst hm = ents.find(x => x.entity_id === 'input_select.house_mode');\nconst mode = hm ? hm.state : 'Home';\n// This seed re-runs every 120s to self-heal a missed state change, so warning on\n// every pass wrote ~720 lines a day of pure noise -- which buries the warnings that\n// actually mean something. Say it only when the value CHANGES (incl. the first seed).\nconst prev = flow.get('house_mode');\nflow.set('house_mode', mode);\nif (mode !== prev) node.warn('[cam-concierge] house_mode seeded: ' + mode);\nreturn null;\n",
-  "outputs": 1,
-  "timeout": 0,
-  "noerr": 0,
-  "initialize": "",
-  "finalize": "",
-  "libs": [],
+  "env": [
+   {
+    "name": "entityId",
+    "type": "str",
+    "value": "input_select.house_mode"
+   },
+   {
+    "name": "scope",
+    "type": "str",
+    "value": "flow"
+   },
+   {
+    "name": "key",
+    "type": "str",
+    "value": "house_mode"
+   },
+   {
+    "name": "mode",
+    "type": "str",
+    "value": "raw"
+   },
+   {
+    "name": "fallback",
+    "type": "str",
+    "value": "Home"
+   },
+   {
+    "name": "logTag",
+    "type": "str",
+    "value": "[cam-concierge] house_mode"
+   }
+  ],
   "x": 710,
   "y": 1020,
-  "wires": [
-   []
-  ]
+  "wires": []
  },
  {
   "id": "cam-away-boost",
@@ -858,7 +853,7 @@
   "type": "function",
   "z": "tab-cam",
   "name": "doorbell genai desc",
-  "func": "const p=msg.payload||{};\nif(p.type!=='description'||!p.id||!p.description) return null;\nconst dm=flow.get('descmap')||{};\nconst rec=dm[p.id];\nif(!rec) return null;                 // not a doorbell person event we notified\ndelete dm[p.id]; flow.set('descmap',dm); // one-shot\nconst desc=String(p.description).trim();\nif(!desc) return null;\nconst grp=flow.get(rec.gkey)||{};\ngrp.desc=desc; flow.set(rec.gkey,grp);   // persist so later same-tag pushes (gif end) keep the AI line\nconst image=grp.gif||grp.snap||null;   // keep the picture on the same-tag update\nconst ndata={tag:rec.tag,channel:'Cameras'};\nif(image) ndata.image=image;\nif(grp.clip){ndata.clickAction=grp.clip;ndata.url=grp.clip;}\nnode.warn('[cam] doorbell genai desc '+p.id+': '+desc.slice(0,80));\nreturn [{title:rec.title||'\ud83d\udcf7 Doorbell',message:desc,ndata:ndata}];\n",
+  "func": "const p=msg.payload||{};\nif(p.type!=='description'||!p.id||!p.description) return null;\nconst dm=flow.get('descmap','file')||{};\nconst rec=dm[p.id];\nif(!rec) return null;                 // not a doorbell person event we notified\ndelete dm[p.id]; flow.set('descmap',dm,'file'); // one-shot\nconst desc=String(p.description).trim();\nif(!desc) return null;\nconst grp=flow.get(rec.gkey,'file')||{};\ngrp.desc=desc; flow.set(rec.gkey,grp,'file');   // persist so later same-tag pushes (gif end) keep the AI line\nconst image=grp.gif||grp.snap||null;   // keep the picture on the same-tag update\nconst ndata={tag:rec.tag,channel:'Cameras'};\nif(image) ndata.image=image;\nif(grp.clip){ndata.clickAction=grp.clip;ndata.url=grp.clip;}\nnode.warn('[cam] doorbell genai desc '+p.id+': '+desc.slice(0,80));\nreturn [{title:rec.title||'\ud83d\udcf7 Doorbell',message:desc,ndata:ndata}];\n\n",
   "outputs": 1,
   "timeout": 0,
   "noerr": 0,
@@ -878,7 +873,7 @@
   "type": "function",
   "z": "tab-cam",
   "name": "doorbell exit gate",
-  "func": "// Doorbell exit guard for the phone pushes.\n// Every doorbell push family (grouped text/snapshot/GIF, the named person push,\n// the Frigate description) carries the same group tag, so gate on the tag and\n// LATCH the verdict for the whole incident. The GIF push arrives 44s to 159s\n// after the first one, well past the window, so deciding per message would\n// silence the openers and then let a lone GIF through a minute later.\n// Window kept in step with cam-door-fn's DOOR_WINDOW.\nconst DOOR_WINDOW = 60000;\nconst LATCH_TTL = 600000;\nconst now = Date.now();\n\nconst nd = msg.ndata || {};\nconst tag = nd.tag ? String(nd.tag) : '';\nif (tag.indexOf('frig_doorbell_') !== 0) return msg;   // doorbell only\nif (flow.get('house_mode') === 'Away') return msg;     // Away overrides\n\n// Drop expired latches so the context does not grow without bound.\nconst keys = flow.keys ? flow.keys() : [];\nfor (const k of keys) {\n  if (k.indexOf('supp_') === 0) {\n    const v = flow.get(k);\n    if (!v || (now - v.at) > LATCH_TTL) flow.set(k, undefined);\n  }\n}\n\nconst key = 'supp_' + tag;\nlet latch = flow.get(key);\nif (!latch) {\n  const fd = flow.get('front_door');\n  let verdict, why;\n  if (!fd || !fd.state) {\n    verdict = false; why = 'no front door state';\n  } else if (fd.state === 'on') {\n    verdict = true; why = 'front door is open';\n  } else {\n    const age = now - fd.at;\n    verdict = age < DOOR_WINDOW;\n    why = 'front door closed ' + Math.round(age / 1000) + 's ago';\n  }\n  latch = { verdict: verdict, why: why, at: now };\n  flow.set(key, latch);\n}\n\nif (latch.verdict) {\n  node.warn('[cam] doorbell push suppressed: ' + latch.why + ' [' + tag + ']');\n  return null;\n}\nreturn msg;\n",
+  "func": "// Doorbell exit guard for the phone pushes.\n// Every doorbell push family (grouped text/snapshot/GIF, the named person push,\n// the Frigate description) carries the same group tag, so gate on the tag and\n// LATCH the verdict for the whole incident. The GIF push arrives 44s to 159s\n// after the first one, well past the window, so deciding per message would\n// silence the openers and then let a lone GIF through a minute later.\n// Window kept in step with cam-door-fn's DOOR_WINDOW.\nconst DOOR_WINDOW = 60000;\nconst LATCH_TTL = 600000;\nconst now = Date.now();\n\nconst nd = msg.ndata || {};\nconst tag = nd.tag ? String(nd.tag) : '';\nif (tag.indexOf('frig_doorbell_') !== 0) return msg;   // doorbell only\nif (flow.get('house_mode') === 'Away') return msg;     // Away overrides\n\n// Drop expired latches so the context does not grow without bound.\nconst keys = flow.keys ? flow.keys() : [];\nfor (const k of keys) {\n  if (k.indexOf('supp_') === 0) {\n    const v = flow.get(k);\n    if (!v || (now - v.at) > LATCH_TTL) flow.set(k, undefined);\n  }\n}\n\nconst key = 'supp_' + tag;\nlet latch = flow.get(key);\nif (!latch) {\n  let verdict, why;\n  if (msg._doorVerdict) {\n    // cam-door-fn already computed this from a live fetch for the same\n    // incident -- reuse it instead of re-deriving from the cached state.\n    verdict = msg._doorVerdict.suppress; why = msg._doorVerdict.why;\n  } else {\n    const fd = flow.get('front_door');\n    if (!fd || !fd.state) {\n      verdict = false; why = 'no front door state';\n    } else if (fd.state === 'on') {\n      verdict = true; why = 'front door is open';\n    } else {\n      const age = now - fd.at;\n      verdict = age < DOOR_WINDOW;\n      why = 'front door closed ' + Math.round(age / 1000) + 's ago';\n    }\n  }\n  latch = { verdict: verdict, why: why, at: now };\n  flow.set(key, latch);\n}\n\nif (latch.verdict) {\n  node.warn('[cam] doorbell push suppressed: ' + latch.why + ' [' + tag + ']');\n  return null;\n}\nreturn msg;\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -1017,32 +1012,57 @@
  },
  {
   "id": "cam-fd-seed",
-  "type": "function",
+  "type": "subflow:sf-seed-watch",
   "z": "tab-cam",
   "name": "seed front door",
-  "func": "// Self-healing seed, re-runs every 120s to cover a missed state change.\n// Warn only when the value CHANGES, or this writes ~720 noise lines a day.\nconst ents = Array.isArray(msg.payload) ? msg.payload : [];\nconst e = ents.find(x => x.entity_id === 'binary_sensor.front_door_contact');\nif (!e) return null;\nconst at = e.last_changed ? Date.parse(e.last_changed) : Date.now();\nconst prev = flow.get('front_door');\nflow.set('front_door', { state: e.state, at: at });\nif (!prev || prev.state !== e.state) node.warn('[cam-concierge] front_door seeded: ' + e.state);\nreturn null;\n",
-  "outputs": 1,
-  "noerr": 0,
-  "initialize": "",
-  "finalize": "",
-  "libs": [],
+  "env": [
+   {
+    "name": "entityId",
+    "type": "str",
+    "value": "binary_sensor.front_door_contact"
+   },
+   {
+    "name": "scope",
+    "type": "str",
+    "value": "flow"
+   },
+   {
+    "name": "key",
+    "type": "str",
+    "value": "front_door"
+   },
+   {
+    "name": "mode",
+    "type": "str",
+    "value": "timestamped"
+   },
+   {
+    "name": "fallback",
+    "type": "str",
+    "value": ""
+   },
+   {
+    "name": "logTag",
+    "type": "str",
+    "value": "[cam-concierge] front_door"
+   }
+  ],
   "x": 690,
   "y": 1220,
-  "wires": [
-   []
-  ]
+  "wires": []
  },
  {
   "id": "cam-notify-dispatch",
-  "type": "function",
+  "type": "subflow:sf-dispatch-notify",
   "z": "tab-cam",
   "name": "dispatch: camera",
-  "func": "const PC = global.get('person_config') || {};\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.camera && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn targets.map(function(t){ return Object.assign({}, msg, { action: t }); });",
-  "outputs": 1,
-  "noerr": 0,
-  "initialize": "",
-  "finalize": "",
-  "libs": [],
+  "env": [
+   {
+    "name": "flagName",
+    "type": "str",
+    "value": "camera"
+   }
+  ],
   "x": 1310,
   "y": 540,
   "wires": [

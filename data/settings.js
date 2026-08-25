@@ -356,11 +356,19 @@ module.exports = {
      * provided here will enable file-based context that flushes to disk every 30 seconds.
      * Refer to the documentation for further options: https://nodered.org/docs/api/context/
      */
-    //contextStorage: {
-    //    default: {
-    //        module:"localfilesystem"
-    //    },
-    //},
+    // 24-08-2026: default stays pure in-memory (unchanged for every existing
+    // context.get/set call in every flow) -- a named "file" store is added
+    // alongside it so specific keys (iw-engine's down-monitor tracking,
+    // Camera Concierge's in-progress incident state) can opt in to surviving
+    // a Node-RED restart via context.get(key,'file')/context.set(key,val,'file').
+    contextStorage: {
+        default: {
+            module: "memory"
+        },
+        file: {
+            module: "localfilesystem"
+        },
+    },
 
     /** `global.keys()` returns a list of all properties set in global context.
      * This allows them to be displayed in the Context Sidebar within the editor.
@@ -549,6 +557,15 @@ module.exports = {
      */
     functionGlobalContext: {
         // os:require('os'),
+        // 24-08-2026: shared by the Infra Health webhook-alert builders (MikroTik/
+        // TrueNAS/Restic/Zabbix backup+monitoring alerts) -- they all used to hand-roll
+        // the same "parse JSON body, fall back to {} on bad input" 2 lines. NR backup
+        // alert (nrb-fn) is NOT migrated to this: it deliberately falls back to
+        // {message: <original string>} instead of {}, a genuinely different behaviour.
+        parseWebhookBody: function(payload) {
+            if (typeof payload !== 'string') return payload;
+            try { return JSON.parse(payload); } catch (e) { return {}; }
+        },
     },
 
     /** The maximum number of messages nodes will buffer internally as part of their
