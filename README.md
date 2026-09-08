@@ -228,12 +228,12 @@ eco 19 · night 19.5 · comfort 20 · hot 20.5 · frost 12
 
 ## Schedule (House Mode + time)
 - **Home** → comfort 20; **hot 20.5** between 19:00–22:00
-- **Sleeping** → night 19.5 overnight; comfort 20 from **07:00**
+- **Sleeping** → night 19.5 overnight; comfort 20 from a wake time that varies by season: **06:30 weekdays / 07:30 weekends** (Sep–May), **07:00 every day** in June–August
 - **Away** → eco 19; drops to frost 12 after 24 h empty (gated by the `Away 24h+` dashboard toggle, `input_boolean.heating_extended_away`)
 - The same 24 h-empty state also **stops the hot-water solar diverter** (no point heating water for an empty house); it goes back to normal when anyone returns, when a pre-warm boost is started, or when someone is heading home — and the flow only ever writes on those transitions, so a manually-stopped diverter is left alone
 
 ## Forecast pre-heat
-Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts the 07:00 warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to the residents the night before, **only when the low is sub-zero**.
+Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts that day's warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to the residents the night before, **only when the low is sub-zero**.
 
 ## Proximity pre-heat
 When the house is empty and someone is driving home (within 10 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival. The pre-heat **latches** once triggered — a GPS wobble flipping "towards" to "away from" for a moment can't bounce the setpoint mid-approach; it releases only when they arrive (house leaves Away) or genuinely leave the area again (beyond 12 km).
@@ -262,7 +262,7 @@ While `input_boolean.guest_mode` is on the heating never drops to the Away setba
 ### Implementation notes
 - Tab `Heating Control`; controller `heat-fn`, fed by `heat-get` — an **`ha-get-entities` version 3** node. **A version-1 node returns an empty list**, which silently broke this flow (it fell back to "Home" and never saw Away) until fixed 02-07-2026. When adding a get-entities node, clone a v3 one.
 - Triggers: `input_select.house_mode` change + a **60 s heartbeat**; output de-duped with a **30-min re-assert**.
-- Forecast sub-flow: `heat-fc-cron` (21:30) → `heat-fc-get` (`weather.get_forecasts`, hourly, `weather.forecast_home`; response via `outputProperties` valueType `results`) → `heat-fc-fn` → notify (sub-zero only). The pre-heat decision lives in `flow.preHeat` (in-memory → lost on a restart between 21:30 and morning, fails safe to the normal 07:00).
+- Forecast sub-flow: `heat-fc-cron` (21:30) → `heat-fc-get` (`weather.get_forecasts`, hourly, `weather.forecast_home`; response via `outputProperties` valueType `results`) → `heat-fc-fn` → notify (sub-zero only). The pre-heat decision lives in `flow.preHeat` (in-memory → lost on a restart between 21:30 and morning, fails safe to that day's normal wake time).
 - Boost detection is poll-lag-proof: a manual setpoint is only treated as a boost once the flow's own last write has been confirmed by the thermostat.
 - The status line is **capped at 100 characters** — that is the `input_text` limit, and Home Assistant *rejects* an over-long value, which would silently stop the ticker updating.
 
