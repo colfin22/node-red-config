@@ -135,7 +135,7 @@
   "entityId": [
    "media_player.kitchen_display_cast"
   ],
-  "data": "{\"media_content_id\": url & \"&_t=\" & $string($floor($millis()/1000)), \"media_content_type\": \"image/jpeg\"}",
+  "data": "{\"media_content_id\": \"https://ha.colfin22.net/local/doorbell_snapshot.jpg?_t=\" & $string($floor($millis()/1000)), \"media_content_type\": \"image/jpeg\"}",
   "dataType": "jsonata",
   "mergeContext": "",
   "mustacheAltTags": false,
@@ -492,7 +492,7 @@
     "cam-shield"
    ],
    [
-    "cam-cast"
+    "cam-cast-download"
    ],
    [
     "cam-fd-gate"
@@ -1093,6 +1093,32 @@
   "y": 540,
   "wires": [
    []
+  ]
+ },
+ {
+  "id": "cam-cast-download",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Download snapshot to /config/www",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "downloader.download_file",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"url\": \"http://10.0.0.252:8123\" & $substringAfter(url, \".ui.nabu.casa\"), \"filename\": \"doorbell_snapshot.jpg\", \"overwrite\": true}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1150,
+  "y": 740,
+  "wires": [
+   [
+    "cam-cast"
+   ]
   ]
  },
  {
