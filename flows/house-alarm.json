@@ -747,9 +747,7 @@
   "x": 390,
   "y": 600,
   "wires": [
-   [
-    "aa-welcome-fn"
-   ]
+   []
   ]
  },
  {
@@ -770,7 +768,8 @@
     "aa-welcome-delay"
    ]
   ],
-  "disabled": true
+  "disabled": true,
+  "d": true
  },
  {
   "id": "aa-welcome-delay",
