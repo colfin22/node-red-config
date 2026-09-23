@@ -160,6 +160,7 @@ Residents (`PERSON_n_ROLE=resident`) enable Sleeping and trigger Away. Guests (`
 - `server-state-changed` nodes always use `outputInitially: false`; startup state is seeded via an inject → `ha-get-entities` → function chain (global context is not populated reliably at 1 s after start).
 - On every state change: sets `input_select.house_mode` via `hm-set-mode`, logs to `/data/house_mode.log` with a local timestamp + reason, pushes a notification, and publishes the **same reason** to `input_text.house_mode_reason` (`hm-reason`).
 - **Why the reason is published, not just notified:** the engine always knew *why* it changed mode — `morning activity (light.sitting_room)`, `resident returned`, `all residents left (20m)`, `quiet 20m, no activity` — but that string only ever reached a push notification. Other flows (the heating controller, below) can now name the actual cause instead of guessing at it. A **manual** mode change publishes `changed by hand`, so a consumer can't attribute it to whatever the engine last decided.
+- **Self-heals a corrupted `input_select.house_mode` entity (23-09-2026).** An HA Core restart can fail to restore this helper's real prior state and fall back to its configured default instead — this happened at 02:42 one night and left the entity reading `Home` for hours while the house was actually still asleep, which fed a wrong "morning boost" into the heating controller and a stale reading into Camera Concierge. The engine's own in-memory `flow.mode` survives an HA-only restart (Node-RED itself didn't restart), so on every 60 s tick it now compares the live entity against its own remembered mode and **writes the entity back** if they've drifted, logging `[house-mode] RECONCILE: entity=X internal=Y`. A non-tick state seed also now prefers its own remembered mode over the raw entity, so a single bad snapshot can't poison it going forward either.
 
 ---
 
@@ -265,6 +266,7 @@ While `input_boolean.guest_mode` is on the heating never drops to the Away setba
 - Forecast sub-flow: `heat-fc-cron` (21:30) → `heat-fc-get` (`weather.get_forecasts`, hourly, `weather.forecast_home`; response via `outputProperties` valueType `results`) → `heat-fc-fn` → notify (sub-zero only). The pre-heat decision lives in `flow.preHeat` (in-memory → lost on a restart between 21:30 and morning, fails safe to that day's normal wake time).
 - Boost detection is poll-lag-proof: a manual setpoint is only treated as a boost once the flow's own last write has been confirmed by the thermostat.
 - The status line is **capped at 100 characters** — that is the `input_text` limit, and Home Assistant *rejects* an over-long value, which would silently stop the ticker updating.
+- **Ignores `house_mode` when its reason reads the literal `seeded` sentinel (23-09-2026).** `input_text.house_mode_reason`'s own configured `initial` value is the string `seeded` — it only ever appears when an HA Core restart's restore_state failed to bring back the real reason, which is the same moment `house_mode` itself can be wrong (see the House Mode section above). When it reads `seeded`, the controller holds the last house_mode value it trusted instead of acting on the fresh (possibly bogus) one.
 
 # Camera Concierge — how it works
 
@@ -335,7 +337,7 @@ The notification's tap action (`clickAction`/`url`) opens the **event clip** (`c
 - Phone pushes are unaffected by Sleeping — that suppression is speaker-only. When `house_mode = Away`, camera pushes are **escalated**: delivered immediately at high priority on a dedicated high-importance “Cameras Away” channel with a ⚠️ title, so a person at the house while everyone is out cuts through.
 
 ## Person-at-the-car deterrent
-When `house_mode = Sleeping`, a **person** detected in the front car or van focus zone triggers a deterrent: sitting-room and hallway lights strobe and a warning is announced on the bedroom and sitting-room speakers. A 120-second cooldown prevents repeat triggers from the same event. Tied to Sleeping mode rather than a fixed clock window so it responds to when the household actually goes to bed.
+When `house_mode = Sleeping`, a **person** detected in the front car or van focus zone triggers a deterrent: sitting-room and hallway lights strobe and a warning is announced on the bedroom and sitting-room speakers. A 120-second cooldown prevents repeat triggers from the same event. Tied to Sleeping mode rather than a fixed clock window so it responds to when the household actually goes to bed. Every candidate event (fired or not) now logs the live `house_mode` value it saw (`[car-deterrent] …`), so a mismatch between this tab's cached mode and reality shows up immediately instead of needing to be reconstructed from logs afterwards.
 
 ## Anti-spam / suppression
 - Rear silenced while the patio-door switch is on.
