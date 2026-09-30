@@ -182,7 +182,7 @@
                 "y": 60,
                 "wires": [
                     {
-                        "id": "sf-dispatch-fn"
+                        "id": "sf-dispatch-get"
                     }
                 ]
             }
@@ -369,11 +369,37 @@
         "wires": []
     },
     {
+        "id": "sf-dispatch-get",
+        "type": "ha-get-entities",
+        "z": "sf-dispatch-notify",
+        "name": "presence states",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "pcEntities",
+        "outputResultsCount": 1,
+        "output_type": "array",
+        "output_empty_results": true,
+        "output_location_type": "msg",
+        "output_location": "pcEntities",
+        "output_results_count": 1,
+        "x": 180,
+        "y": 120,
+        "wires": [
+            [
+                "sf-dispatch-fn"
+            ]
+        ]
+    },
+    {
         "id": "sf-dispatch-fn",
         "type": "function",
         "z": "sf-dispatch-notify",
         "name": "dispatch",
-        "func": "const PC = global.get('person_config') || {};\nconst flagName = env.get('flagName');\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c[flagName] && c.notify_service;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (!targets.length) return null;\nreturn [targets.map(function(t){ return Object.assign({}, msg, { action: t }); })];",
+        "func": "const PC = global.get('person_config') || {};\nconst flagName = env.get('flagName');\n// Presence for people with \"Only when home\" on. Same rule as the alarm notify\n// engine (na-fn homeP): person entity is home OR their phone ping is on.\nconst ents = Array.isArray(msg.pcEntities) ? msg.pcEntities : [];\ndelete msg.pcEntities;\nconst S = function(id){ const e = ents.find(function(x){ return x.entity_id === id; }); return e && e.state; };\nconst isHome = function(pid, c){ return S(pid) === 'home' || (!!c.ping && S(c.ping) === 'on'); };\nconst skipped = [];\nconst targets = Object.keys(PC).filter(function(pid){\n  var c = PC[pid];\n  if (!(c && c[flagName] && c.notify_service)) return false;\n  if (c.only_when_home && !isHome(pid, c)) { skipped.push(c.name || pid); return false; }\n  return true;\n}).map(function(pid){ return PC[pid].notify_service; });\nif (skipped.length) node.warn('[dispatch ' + flagName + '] only when home, not home: ' + skipped.join(', '));\nif (!targets.length) return null;\nreturn [targets.map(function(t){ return Object.assign({}, msg, { action: t }); })];",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
