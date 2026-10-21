@@ -761,7 +761,7 @@
   "type": "function",
   "z": "tab-pc",
   "name": "load + validate infra_config",
-  "func": "const SPEC = {\n  grace_secs:        { def: 90, min: 30, max: 600, step: 1 },\n  escalate_mins:     { def: 10, min: 2,  max: 60,  step: 1 },\n  repeat_core_mins:  { def: 15, min: 5,  max: 120, step: 1 },\n  repeat_other_mins: { def: 60, min: 5,  max: 240, step: 1 },\n  multi_down:        { def: 3,  min: 2,  max: 20,  step: 1 }\n};\nconst okVal = (s, v) => typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9;\nconst norm = (s, v) => Number(v);\n// grace must end before escalation; the core (fast) repeat can't be slower than the other one\nconst crossOk = c => c.grace_secs < c.escalate_mins * 60 && c.repeat_core_mins <= c.repeat_other_mins;\n// Boot: infra_config.json -> global.infra_config (read live by Infra Watchdog) + the page.\nlet cfg = {};\nif (msg.error) node.warn('infra_config.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('infra_config.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('infra_config.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nif (!crossOk(out)) { node.warn('infra_config breaks grace < escalation / core repeat <= other repeat, using defaults'); Object.keys(SPEC).forEach(k => { out[k] = SPEC[k].def; }); }\nglobal.set('infra_config', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
+  "func": "const SPEC = {\n  grace_secs:        { def: 90,      min: 30, max: 600, step: 1 },\n  escalate_mins:     { def: 10,      min: 2,  max: 60,  step: 1 },\n  repeat_core_mins:  { def: 15,      min: 5,  max: 120, step: 1 },\n  repeat_other_mins: { def: 60,      min: 5,  max: 240, step: 1 },\n  multi_down:        { def: 3,       min: 2,  max: 20,  step: 1 },\n  quiet_start:       { def: '22:00', time: true },\n  quiet_end:         { def: '07:00', time: true }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\n// grace must end before escalation; the core (fast) repeat can't be slower than the other one; quiet start != end\nconst crossOk = c => c.grace_secs < c.escalate_mins * 60 && c.repeat_core_mins <= c.repeat_other_mins && c.quiet_start !== c.quiet_end;\n// Boot: infra_config.json -> global.infra_config (read live by Infra Watchdog + Infra Health & Alerts) + the page.\nlet cfg = {};\nif (msg.error) node.warn('infra_config.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('infra_config.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('infra_config.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nif (!crossOk(out)) { node.warn('infra_config breaks a rule (grace < escalation, core <= other repeat, quiet start != end), using defaults'); Object.keys(SPEC).forEach(k => { out[k] = SPEC[k].def; }); }\nglobal.set('infra_config', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -785,9 +785,9 @@
   "name": "Infra settings",
   "order": 1,
   "width": "6",
-  "height": "6",
+  "height": "8",
   "head": "",
-  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      Grace must be shorter than escalation, and the core repeat no longer than the other. Changes apply to the next outage; one already running keeps its timers. Maintenance mode still silences everything.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'grace_secs',        label: 'A monitor must stay down this long before the first push', suffix: 's',   step: 1, min: 30, max: 600 },\n      { key: 'escalate_mins',     label: 'Escalate to push + speaker announcement after',            suffix: 'min', step: 1, min: 2,  max: 60 },\n      { key: 'repeat_core_mins',  label: 'Repeat reminder: core monitors, or a big outage',           suffix: 'min', step: 1, min: 5,  max: 120 },\n      { key: 'repeat_other_mins', label: 'Repeat reminder: other monitors',                            suffix: 'min', step: 1, min: 5,  max: 240 },\n      { key: 'multi_down',        label: 'This many down at once counts as a big outage',             suffix: '',    step: 1, min: 2,  max: 20 }\n    ] };\n  }\n};\n</script>\n",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      Grace must be shorter than escalation, and the core repeat no longer than the other. Quiet hours cover both infra flows: alerts are held and sent as one summary at the end time. Changes apply to the next outage. Maintenance mode still silences everything.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'grace_secs',        label: 'A monitor must stay down this long before the first push', suffix: 's',   step: 1, min: 30, max: 600 },\n      { key: 'escalate_mins',     label: 'Escalate to push + speaker announcement after',            suffix: 'min', step: 1, min: 2,  max: 60 },\n      { key: 'repeat_core_mins',  label: 'Repeat reminder: core monitors, or a big outage',           suffix: 'min', step: 1, min: 5,  max: 120 },\n      { key: 'repeat_other_mins', label: 'Repeat reminder: other monitors',                            suffix: 'min', step: 1, min: 5,  max: 240 },\n      { key: 'multi_down',        label: 'This many down at once counts as a big outage',             suffix: '',    step: 1, min: 2,  max: 20 },\n      { key: 'quiet_start',       label: 'Infra alerts quiet from (both infra flows)',                time: true },\n      { key: 'quiet_end',         label: 'Infra alerts quiet until (overnight summary)',               time: true }\n    ] };\n  }\n};\n</script>\n",
   "storeOutMessages": true,
   "passthru": false,
   "resendOnRefresh": true,
@@ -806,7 +806,7 @@
   "type": "function",
   "z": "tab-pc",
   "name": "validate + save setting",
-  "func": "const SPEC = {\n  grace_secs:        { def: 90, min: 30, max: 600, step: 1 },\n  escalate_mins:     { def: 10, min: 2,  max: 60,  step: 1 },\n  repeat_core_mins:  { def: 15, min: 5,  max: 120, step: 1 },\n  repeat_other_mins: { def: 60, min: 5,  max: 240, step: 1 },\n  multi_down:        { def: 3,  min: 2,  max: 20,  step: 1 }\n};\nconst okVal = (s, v) => typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9;\nconst norm = (s, v) => Number(v);\n// grace must end before escalation; the core (fast) repeat can't be slower than the other one\nconst crossOk = c => c.grace_secs < c.escalate_mins * 60 && c.repeat_core_mins <= c.repeat_other_mins;\n// One setting edited on the page -> validate -> global + disk. Out1 = file write, out2 = back to\n// the page so it always shows what is actually stored (an invalid entry snaps back).\nconst loaded = global.get('infra_config');\nif (!loaded) { node.warn('infra_config not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nif (!crossOk(next)) { rejected.push('grace must be shorter than escalation, core repeat no longer than other repeat'); Object.keys(SPEC).forEach(k => { next[k] = cur[k]; }); }\nif (rejected.length) node.warn('infra_config rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a rejected entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('infra_config', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
+  "func": "const SPEC = {\n  grace_secs:        { def: 90,      min: 30, max: 600, step: 1 },\n  escalate_mins:     { def: 10,      min: 2,  max: 60,  step: 1 },\n  repeat_core_mins:  { def: 15,      min: 5,  max: 120, step: 1 },\n  repeat_other_mins: { def: 60,      min: 5,  max: 240, step: 1 },\n  multi_down:        { def: 3,       min: 2,  max: 20,  step: 1 },\n  quiet_start:       { def: '22:00', time: true },\n  quiet_end:         { def: '07:00', time: true }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\n// grace must end before escalation; the core (fast) repeat can't be slower than the other one; quiet start != end\nconst crossOk = c => c.grace_secs < c.escalate_mins * 60 && c.repeat_core_mins <= c.repeat_other_mins && c.quiet_start !== c.quiet_end;\n// One setting edited on the page -> validate -> global + disk. Out1 = file write, out2 = back to\n// the page so it always shows what is actually stored (an invalid entry snaps back).\nconst loaded = global.get('infra_config');\nif (!loaded) { node.warn('infra_config not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nif (!crossOk(next)) { rejected.push('grace must be shorter than escalation, core repeat no longer than other, quiet start != end'); Object.keys(SPEC).forEach(k => { next[k] = cur[k]; }); }\nif (rejected.length) node.warn('infra_config rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a rejected entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('infra_config', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
   "outputs": 2,
   "noerr": 0,
   "initialize": "",
@@ -836,6 +836,135 @@
   "encoding": "none",
   "x": 1460,
   "y": 920,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "pc-hlt-boot",
+  "type": "inject",
+  "z": "tab-pc",
+  "name": "load health_config + 120s refresh",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 200,
+  "y": 1020,
+  "wires": [
+   [
+    "pc-hlt-read"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hlt-read",
+  "type": "file in",
+  "z": "tab-pc",
+  "name": "read health_config.json",
+  "filename": "/data/health_config.json",
+  "filenameType": "str",
+  "format": "utf8",
+  "chunk": false,
+  "sendError": true,
+  "encoding": "none",
+  "allProps": false,
+  "x": 440,
+  "y": 1020,
+  "wires": [
+   [
+    "pc-hlt-load"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hlt-load",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "load + validate health_config",
+  "func": "const SPEC = {\n  cpu_pct:          { def: 85,  min: 50, max: 100,  step: 1 },\n  sustain_mins:     { def: 5,   min: 1,  max: 60,   step: 1 },\n  mem_pct:          { def: 85,  min: 50, max: 100,  step: 1 },\n  disk_pct:         { def: 85,  min: 50, max: 100,  step: 1 },\n  pbs_pct:          { def: 80,  min: 50, max: 100,  step: 1 },\n  disk_temp_c:      { def: 45,  min: 30, max: 70,   step: 1 },\n  frigate_disk_pct: { def: 85,  min: 50, max: 100,  step: 1 },\n  offline_mins:     { def: 2,   min: 1,  max: 30,   step: 1 },\n  nc_free_gb:       { def: 500, min: 10, max: 5000, step: 1 }\n};\nconst okVal = (s, v) => typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9;\nconst norm = (s, v) => Number(v);\n// Boot: health_config.json -> global.health_config (read live by Infra Health & Alerts) + the page.\nlet cfg = {};\nif (msg.error) node.warn('health_config.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('health_config.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('health_config.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nglobal.set('health_config', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 700,
+  "y": 1020,
+  "wires": [
+   [
+    "pc-hlt-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hlt-ui",
+  "type": "ui-template",
+  "z": "tab-pc",
+  "group": "pc-ui-group-health",
+  "page": "",
+  "ui": "",
+  "name": "Infra Health settings",
+  "order": 1,
+  "width": "6",
+  "height": "9",
+  "head": "",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      Each rule re-checks when its sensor next updates, so a new threshold takes effect then. An alert already sent repeats only after the value drops back under the line.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'cpu_pct',          label: 'CPU high above (Proxmox nodes, Nextcloud + Docker VMs)',       suffix: '%',   step: 1, min: 50, max: 100 },\n      { key: 'sustain_mins',     label: 'Must stay high for (CPU, disk temperature, Frigate disk)',    suffix: 'min', step: 1, min: 1,  max: 60 },\n      { key: 'mem_pct',          label: 'Memory high above (Proxmox nodes, Nextcloud + Docker VMs)',    suffix: '%',   step: 1, min: 50, max: 100 },\n      { key: 'disk_pct',         label: 'Disk high above (Proxmox nodes, Nextcloud + Docker VMs)',      suffix: '%',   step: 1, min: 50, max: 100 },\n      { key: 'pbs_pct',          label: 'PBS remote storage above',                                     suffix: '%',   step: 1, min: 50, max: 100 },\n      { key: 'disk_temp_c',      label: 'TrueNAS disk temperature above',                               suffix: '\u00b0C',  step: 1, min: 30, max: 70 },\n      { key: 'frigate_disk_pct', label: 'Frigate recording disk above',                                 suffix: '%',   step: 1, min: 50, max: 100 },\n      { key: 'offline_mins',     label: 'Frigate / a camera offline for',                               suffix: 'min', step: 1, min: 1,  max: 30 },\n      { key: 'nc_free_gb',       label: 'Nextcloud storage free below',                                 suffix: 'GB',  step: 1, min: 10, max: 5000 }\n    ] };\n  }\n};\n</script>\n",
+  "storeOutMessages": true,
+  "passthru": false,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "className": "",
+  "x": 960,
+  "y": 1020,
+  "wires": [
+   [
+    "pc-hlt-save"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hlt-save",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "validate + save setting",
+  "func": "const SPEC = {\n  cpu_pct:          { def: 85,  min: 50, max: 100,  step: 1 },\n  sustain_mins:     { def: 5,   min: 1,  max: 60,   step: 1 },\n  mem_pct:          { def: 85,  min: 50, max: 100,  step: 1 },\n  disk_pct:         { def: 85,  min: 50, max: 100,  step: 1 },\n  pbs_pct:          { def: 80,  min: 50, max: 100,  step: 1 },\n  disk_temp_c:      { def: 45,  min: 30, max: 70,   step: 1 },\n  frigate_disk_pct: { def: 85,  min: 50, max: 100,  step: 1 },\n  offline_mins:     { def: 2,   min: 1,  max: 30,   step: 1 },\n  nc_free_gb:       { def: 500, min: 10, max: 5000, step: 1 }\n};\nconst okVal = (s, v) => typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9;\nconst norm = (s, v) => Number(v);\n// One setting edited on the page -> validate -> global + disk. Out1 = file write, out2 = back to\n// the page so it always shows what is actually stored (an invalid entry snaps back).\nconst loaded = global.get('health_config');\nif (!loaded) { node.warn('health_config not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nif (rejected.length) node.warn('health_config rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a rejected entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('health_config', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1200,
+  "y": 1020,
+  "wires": [
+   [
+    "pc-hlt-write"
+   ],
+   [
+    "pc-hlt-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hlt-write",
+  "type": "file",
+  "z": "tab-pc",
+  "name": "write health_config.json",
+  "filename": "/data/health_config.json",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": false,
+  "overwriteFile": "true",
+  "encoding": "none",
+  "x": 1460,
+  "y": 1020,
   "wires": [
    []
   ]
@@ -903,6 +1032,19 @@
   "disabled": "false"
  },
  {
+  "id": "pc-ui-group-health",
+  "type": "ui-group",
+  "name": "Infra Health",
+  "page": "pc-ui-page",
+  "width": "6",
+  "height": "1",
+  "order": 6,
+  "showTitle": true,
+  "className": "",
+  "visible": "true",
+  "disabled": "false"
+ },
+ {
   "id": "pc-ui-group-housemode",
   "type": "ui-group",
   "name": "House Mode",
@@ -922,7 +1064,7 @@
   "page": "pc-ui-page",
   "width": "6",
   "height": "1",
-  "order": 6,
+  "order": 7,
   "showTitle": true,
   "className": "",
   "visible": "true",

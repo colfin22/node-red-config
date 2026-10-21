@@ -171,9 +171,26 @@ running keeps the timers it started with; after a Node-RED restart the resume lo
 | Repeat reminder: core monitors, or a big outage | 15 min |
 | Repeat reminder: other monitors | 60 min |
 | This many down at once counts as a big outage | 3 |
+| Infra alerts quiet from / until — **both** infra flows (`iw-engine` and `ih-send` hold alerts inside it; a 60 s tick in each flow sends the overnight summary once in the 5 min after the end time) | 22:00 / 07:00 |
 
 The grace must be shorter than the escalation and the core repeat no longer than the other; an edit
-that breaks either is refused, and a stored set that breaks one falls back to all five defaults.
+that breaks either is refused (as is a quiet start equal to the end), and a stored set that breaks one falls back to the defaults.
+
+A seventh section, **Infra Health**, holds the Infra Health & Alerts thresholds (`data/health_config.json` →
+`global.health_config`, not in the git backup). The rule table in `ih-engine` keeps the defaults; the settings
+override them per group on every sensor update, so a new threshold takes effect at the sensor's next change.
+
+| Setting | Default | Rules |
+|---|---|---|
+| CPU high above | 85 % | Proxmox nodes, Nextcloud + Docker VMs |
+| Must stay high for | 5 min | CPU, TrueNAS disk temperature, Frigate disk |
+| Memory high above | 85 % | Proxmox nodes, Nextcloud + Docker VMs |
+| Disk high above | 85 % | Proxmox nodes, Nextcloud + Docker VMs |
+| PBS remote storage above | 80 % | PBS remote VPN datastore |
+| TrueNAS disk temperature above | 45 °C | sda–sde |
+| Frigate recording disk above | 85 % | Frigate CCTV disk |
+| Frigate / a camera offline for | 2 min | Frigate LXC + the five cameras |
+| Nextcloud storage free below | 500 GB | Nextcloud free space |
 
 ### What to search and replace
 
@@ -445,12 +462,14 @@ The escalation timings (90-second grace, 10-minute escalation, 15/60-minute repe
 - **Tier 2** — still down after the escalation window → repeat push **+ a spoken announcement** (voice only while someone is home).
 - **Tier 3** — long outages re-alert on a slow repeat so a dead service can't be silently forgotten.
 - Recovery sends an "up again" push and resets the monitor's state machine.
-- **Quiet hours (22:00–07:00)** hold non-urgent noise; anything still outstanding is delivered in an **07:00 overnight summary**.
+- **Quiet hours (22:00–07:00 by default)** hold non-urgent noise; anything still outstanding is delivered in an **overnight summary at the end of quiet hours** (07:00). The window is set on the Household page → **Infra** and is shared with Infra Health & Alerts.
 - While `maintenance_mode` is on, notifications are suppressed but the state machines keep running — anything still down when maintenance ends re-alerts on its next repeat. **When maintenance switches off, the watchdog also re-polls the uptime monitor's status page and injects a synthetic up-event for every monitor currently up** — this clears any down-state whose recovery happened during the window (the monitor's own maintenance window pauses its webhooks, so those recoveries would otherwise be missed and cause false "still down" alerts).
 
 Uptime Kuma stays the source of truth for *reachability*; the flow below handles *health*.
 
 # Infra Health & Alerts — how it works
+
+The thresholds in the rule engine (CPU / memory / disk %, how long a value must stay high, PBS storage, disk temperature, Frigate disk, camera-offline time, Nextcloud free space) are defaults; they are set on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow) → **Infra Health** section. The quiet hours are shared with the Infra Watchdog and set in the **Infra** section.
 
 One tab consolidates what used to be eleven separate HA infrastructure-alert automations. Every alert is titled **`[Category] Subsystem: detail`** (categories: Health / Backup / Monitoring / Service) and lands on a phone with a matching Android notification channel + group, plus a line in a log file.
 
@@ -460,7 +479,7 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
 - **Backup watchdog** — each morning it queries the Proxmox API on both nodes for last night's vzdump task list and alerts **only on failures** (the read-only API token comes from the gitignored `.env`).
 - **Data-freshness checks** — e.g. an hourly check that the ESB Networks smart-meter add-on has polled recently; a stale poll timestamp means the add-on is wedged even though its sensors still show plausible values.
 
-**Delivery:** shared quiet-hours gate — alerts between 22:00 and 07:00 are held and flushed at 07:00 with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
+**Delivery:** shared quiet-hours gate — alerts inside the quiet hours (default 22:00–07:00, Household page → Infra) are held and flushed at the end of the window with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
 
 ---
 
