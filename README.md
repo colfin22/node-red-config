@@ -200,7 +200,7 @@ at the forecast check, so both anchor to the same wake times. A boost already ru
 |---|---|---|
 | Wake time, weekdays / weekends (outside summer) | 06:30 / 07:30 | 04:00–11:30 (Sleeping-mode comfort ends at noon) |
 | Wake time in summer, every day | 07:00 | as above |
-| Summer from / to month | 6 / 8 (June–August) | from ≤ to |
+| Summer starts on the 1st of / ends at the end of (month dropdowns; stored as 1–12) | June / August | start month ≤ end month |
 | Evening "hot" window (Home) | 19:00 – 22:00 | start before end |
 | Boost lasts | 2 h | 0.5–6 h (the HA card button still reads "Boost 2 h") |
 | Pre-heat earlier when the forecast low is under 8 / 4 / 0 / −3 °C | 15 / 30 / 45 / 60 min | colder never gets less |
