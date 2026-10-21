@@ -3087,14 +3087,14 @@
         "id": "aa-batt-cron",
         "type": "inject",
         "z": "096ff268dc7bd2f0",
-        "name": "07:00 catch-up",
+        "name": "tick 60s -> summary gate",
         "props": [
             {
                 "p": "payload"
             }
         ],
-        "repeat": "",
-        "crontab": "00 07 * * *",
+        "repeat": "60",
+        "crontab": "",
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
@@ -3104,7 +3104,7 @@
         "y": 800,
         "wires": [
             [
-                "aa-batt-sum-get"
+                "aa-batt-sum-gate"
             ]
         ]
     },
@@ -3495,7 +3495,7 @@
         "type": "function",
         "z": "096ff268dc7bd2f0",
         "name": "night-arm retry",
-        "func": "// Night-arm retry (one shot).\n// Alarmo refuses arm_night when a door/window is open: the panel STAYS 'disarmed'\n// and names the culprits in attribute open_sensors. aa-hm-fn is a state-change\n// one-shot on house_mode, so nothing ever tried again -- the house sat unarmed\n// all night. This retries ONCE, RETRY_MIN after every blocker is closed again\n// (someone got up to shut it; give them time to settle back down).\nconst RETRY_MIN = 20;\nconst RETRY_MS  = RETRY_MIN * 60 * 1000;\n\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nif (!ents.length) return null;                       // no snapshot -> can't judge\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst FN = id => { const e = ents.find(x => x.entity_id === id);\n                   return (e && e.attributes && e.attributes.friendly_name) || id; };\n\nconst hm    = S('input_select.house_mode');\nconst alarm = S('alarm_control_panel.house');\nconst now   = Date.now();\n\n// Left Sleeping, or armed by any route -> the whole thing is off. This is also\n// where the next night's state gets cleared (incl. na-fn's spoken-once flag).\nif (hm !== 'Sleeping' || (alarm && alarm !== 'disarmed')) {\n  if (context.get('blockers') || context.get('retryUsed') || flow.get('failSpoken')) {\n    node.warn('[night-retry] stand down (house_mode=' + hm + ', alarm=' + alarm + ')');\n  }\n  context.set('blockers', null);\n  context.set('closedSince', null);\n  context.set('retryUsed', false);\n  flow.set('failSpoken', false);\n  return null;\n}\n\n// Capture a failed night arm: disarmed + Alarmo naming open sensors, while Sleeping.\nconst ev = msg.payload || {};\nconst ns = ev.new_state || {};\nif (ev.entity_id === 'alarm_control_panel.house' && ns.state === 'disarmed' &&\n    ns.attributes && ns.attributes.open_sensors) {\n  if (context.get('retryUsed')) {\n    node.warn('[night-retry] arm failed again -- retry already used, standing down');\n  } else {\n    const b = Object.keys(ns.attributes.open_sensors);\n    context.set('blockers', b);\n    context.set('closedSince', null);\n    node.warn('[night-retry] armed blocked by: ' + b.map(FN).join(', ') + ' -- waiting for all closed');\n  }\n  return null;\n}\n\nconst blockers = context.get('blockers');\nif (!blockers || !blockers.length) return null;\nif (context.get('retryUsed')) return null;\n\nconst stillOpen = blockers.filter(id => S(id) !== 'off');\nif (stillOpen.length) {                              // re-opened (or never closed) -> clock resets\n  if (context.get('closedSince')) node.warn('[night-retry] re-opened: ' + stillOpen.map(FN).join(', ') + ' -- timer reset');\n  context.set('closedSince', null);\n  return null;\n}\n\nlet since = context.get('closedSince');\nif (!since) {\n  context.set('closedSince', now);\n  node.warn('[night-retry] all closed -- arming in ' + RETRY_MIN + ' min');\n  return null;\n}\n\nif (now - since < RETRY_MS) return null;             // still settling\n\ncontext.set('retryUsed', true);                      // ONE retry, then stop\ncontext.set('closedSince', null);\nnode.warn('[night-retry] retrying arm_night now');\nreturn {};\n",
+        "func": "// Night-arm retry (one shot).\n// Alarmo refuses arm_night when a door/window is open: the panel STAYS 'disarmed'\n// and names the culprits in attribute open_sensors. aa-hm-fn is a state-change\n// one-shot on house_mode, so nothing ever tried again -- the house sat unarmed\n// all night. This retries ONCE, RETRY_MIN after every blocker is closed again\n// (someone got up to shut it; give them time to settle back down).\n// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nconst RETRY_MIN = cfgNum('night_retry_mins', 20, 1, 120, 1);   // default 20\nconst RETRY_MS  = RETRY_MIN * 60 * 1000;\n\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nif (!ents.length) return null;                       // no snapshot -> can't judge\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst FN = id => { const e = ents.find(x => x.entity_id === id);\n                   return (e && e.attributes && e.attributes.friendly_name) || id; };\n\nconst hm    = S('input_select.house_mode');\nconst alarm = S('alarm_control_panel.house');\nconst now   = Date.now();\n\n// Left Sleeping, or armed by any route -> the whole thing is off. This is also\n// where the next night's state gets cleared (incl. na-fn's spoken-once flag).\nif (hm !== 'Sleeping' || (alarm && alarm !== 'disarmed')) {\n  if (context.get('blockers') || context.get('retryUsed') || flow.get('failSpoken')) {\n    node.warn('[night-retry] stand down (house_mode=' + hm + ', alarm=' + alarm + ')');\n  }\n  context.set('blockers', null);\n  context.set('closedSince', null);\n  context.set('retryUsed', false);\n  flow.set('failSpoken', false);\n  return null;\n}\n\n// Capture a failed night arm: disarmed + Alarmo naming open sensors, while Sleeping.\nconst ev = msg.payload || {};\nconst ns = ev.new_state || {};\nif (ev.entity_id === 'alarm_control_panel.house' && ns.state === 'disarmed' &&\n    ns.attributes && ns.attributes.open_sensors) {\n  if (context.get('retryUsed')) {\n    node.warn('[night-retry] arm failed again -- retry already used, standing down');\n  } else {\n    const b = Object.keys(ns.attributes.open_sensors);\n    context.set('blockers', b);\n    context.set('closedSince', null);\n    node.warn('[night-retry] armed blocked by: ' + b.map(FN).join(', ') + ' -- waiting for all closed');\n  }\n  return null;\n}\n\nconst blockers = context.get('blockers');\nif (!blockers || !blockers.length) return null;\nif (context.get('retryUsed')) return null;\n\nconst stillOpen = blockers.filter(id => S(id) !== 'off');\nif (stillOpen.length) {                              // re-opened (or never closed) -> clock resets\n  if (context.get('closedSince')) node.warn('[night-retry] re-opened: ' + stillOpen.map(FN).join(', ') + ' -- timer reset');\n  context.set('closedSince', null);\n  return null;\n}\n\nlet since = context.get('closedSince');\nif (!since) {\n  context.set('closedSince', now);\n  node.warn('[night-retry] all closed -- arming in ' + RETRY_MIN + ' min');\n  return null;\n}\n\nif (now - since < RETRY_MS) return null;             // still settling\n\ncontext.set('retryUsed', true);                      // ONE retry, then stop\ncontext.set('closedSince', null);\nnode.warn('[night-retry] retrying arm_night now');\nreturn {};\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -3670,7 +3670,7 @@
         "type": "function",
         "z": "096ff268dc7bd2f0",
         "name": "low-battery check (residents)",
-        "func": "const PC = global.get('person_config') || {};\nconst RES = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.role === 'resident' && c.battery_sensor;\n});\nif (!RES.length) return null;\nconst ents = msg.payload || [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e ? e.state : undefined; };\nconst h = new Date().getHours();\nconst night = (h >= 22 || h < 7);\nconst hhmm = () => { const t = new Date(); return ('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2); };\nconst last = context.get('battLast') || {};\nlet out = [];\nRES.forEach(function(pid){\n  var c = PC[pid];\n  var eid = c.battery_sensor;\n  var stateEid = eid.replace(/_level$/, '_state');\n  var nv = parseFloat(S(eid));\n  if (isNaN(nv)) return;\n  var ov = last[eid];\n  last[eid] = nv;\n  if (ov === undefined) return;  // first poll after (re)start: baseline only, no crossing\n  var charging = S(stateEid) === 'charging';\n  var who = c.name + \"'s\";\n  if (nv < 15 && !(ov < 15)) {\n    if (night) {\n      var rec = flow.get('battNight') || {};\n      rec[eid] = { who: who, lowPct: nv, lowAt: hhmm(), recovered: false };\n      flow.set('battNight', rec);\n      node.warn('[low-batt] night low ' + eid + ' ' + nv + '% recorded');\n    } else {\n      node.warn('[low-batt] ' + eid + ' ' + nv + '%');\n      out.push({ title: 'Phone battery low', message: who + ' phone is at ' + nv + '% - charge it so the alarm presence keeps working.' });\n    }\n  } else if (nv >= 15 && ov < 15 && charging) {\n    if (night) {\n      var rec2 = flow.get('battNight') || {};\n      var e = rec2[eid] || { who: who, recovered: false };\n      e.recovered = true; e.recPct = nv; e.recAt = hhmm();\n      rec2[eid] = e; flow.set('battNight', rec2);\n      node.warn('[low-batt] night recovery ' + eid + ' ' + nv + '% recorded');\n    } else {\n      node.warn('[low-batt] recovery ' + eid + ' ' + nv + '%');\n      out.push({ title: 'Phone battery recovering', message: who + ' phone is back above 15% (' + nv + '%) and charging - alarm presence is covered again.' });\n    }\n  }\n});\ncontext.set('battLast', last);\nif (!out.length) return null;\nreturn [out];",
+        "func": "const PC = global.get('person_config') || {};\nconst RES = Object.keys(PC).filter(function(pid){\n  var c = PC[pid]; return c && c.role === 'resident' && c.battery_sensor;\n});\nif (!RES.length) return null;\nconst ents = msg.payload || [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e ? e.state : undefined; };\n// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nconst LOW = cfgNum('battery_low_pct', 15, 5, 50, 1);   // alert level, % (default 15)\nlet QS = cfgTime('battery_quiet_start', '22:00'), QE = cfgTime('battery_quiet_end', '07:00');\nif (QS === QE) { QS = '22:00'; QE = '07:00'; }\nconst nowM = new Date().getHours() * 60 + new Date().getMinutes();\nconst qs = hm2m(QS), qe = hm2m(QE);\nconst night = qs < qe ? (nowM >= qs && nowM < qe) : (nowM >= qs || nowM < qe);   // quiet window, wraps midnight\nconst hhmm = () => { const t = new Date(); return ('0'+t.getHours()).slice(-2)+':'+('0'+t.getMinutes()).slice(-2); };\nconst last = context.get('battLast') || {};\nlet out = [];\nRES.forEach(function(pid){\n  var c = PC[pid];\n  var eid = c.battery_sensor;\n  var stateEid = eid.replace(/_level$/, '_state');\n  var nv = parseFloat(S(eid));\n  if (isNaN(nv)) return;\n  var ov = last[eid];\n  last[eid] = nv;\n  if (ov === undefined) return;  // first poll after (re)start: baseline only, no crossing\n  var charging = S(stateEid) === 'charging';\n  var who = c.name + \"'s\";\n  if (nv < LOW && !(ov < LOW)) {\n    if (night) {\n      var rec = flow.get('battNight') || {};\n      rec[eid] = { who: who, lowPct: nv, lowAt: hhmm(), recovered: false };\n      flow.set('battNight', rec);\n      node.warn('[low-batt] night low ' + eid + ' ' + nv + '% recorded');\n    } else {\n      node.warn('[low-batt] ' + eid + ' ' + nv + '%');\n      out.push({ title: 'Phone battery low', message: who + ' phone is at ' + nv + '% - charge it so the alarm presence keeps working.' });\n    }\n  } else if (nv >= LOW && ov < LOW && charging) {\n    if (night) {\n      var rec2 = flow.get('battNight') || {};\n      var e = rec2[eid] || { who: who, recovered: false };\n      e.recovered = true; e.recPct = nv; e.recAt = hhmm();\n      rec2[eid] = e; flow.set('battNight', rec2);\n      node.warn('[low-batt] night recovery ' + eid + ' ' + nv + '% recorded');\n    } else {\n      node.warn('[low-batt] recovery ' + eid + ' ' + nv + '%');\n      out.push({ title: 'Phone battery recovering', message: who + ' phone is back above ' + LOW + '% (' + nv + '%) and charging - alarm presence is covered again.' });\n    }\n  }\n});\ncontext.set('battLast', last);\nif (!out.length) return null;\nreturn [out];",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -3780,7 +3780,7 @@
         "type": "function",
         "z": "657e6b8b07b4cdf7",
         "name": "nfc engine",
-        "func": "// NFC + shed override. server-events now emits the FULL event envelope -> data under .event.\nconst HOUSE_TAG='f195ee10-14a9-4b65-bd10-c53c9866bcdf';\nconst SHED_TAG='b9ac1256-89ad-4514-b7d4-3e65ebd1c948';\nconst HARD=2*60*60*1000;   // 2 hour hard cap\nconst CLOSED=15*60*1000;   // door closed 15 min\nconst DOOR='binary_sensor.shed_door_contact';   // on=open, off=closed\nconst PEOPLE=global.get('people')||[{notify:'notify.mobile_app_np3'},{notify:'notify.mobile_app_pixel_6a'}];\nconst ENV=msg.payload||{};\nconst D=ENV.event||ENV;          // tag/state data lives under .event (envelope); flat fallback\nconst ET=ENV.event_type;\n// outputs: 0 disarm-house | 1 disarm-shed | 2 arm-shed | 3 tts | 4 notify | 5 status-by\n// WHO scanned: tag_scanned events carry the scanning phone's user in the envelope\n// context (verified against the recorder 19-07-2026). Written to\n// input_text.alarm_status_by ONLY on tag-initiated disarms (ha-config #39) so the\n// activity card can badge them; auto re-arms stay unwritten (they ARE Node-RED).\n// Who scanned comes from PERSON_n_HA_USER_ID / PERSON_n_NAME in the environment.\nconst BY_USERS={};\nfor(var ui=1;ui<=8;ui++){\n  var uid_=env.get('PERSON_'+ui+'_HA_USER_ID'), un_=env.get('PERSON_'+ui+'_NAME');\n  if(uid_&&typeof uid_==='string'&&uid_.charAt(0)!=='$'&&un_)BY_USERS[uid_]=un_;\n}\nconst _uid=ENV.context&&ENV.context.user_id;\nconst _by=(_uid&&BY_USERS[_uid])||'hand';   // unknown scanner -> neutral hand\nfunction clrHard(){const t=context.get('hardT');if(t){clearTimeout(t);context.set('hardT',null);}}\nfunction clrClosed(){const t=context.get('closedT');if(t){clearTimeout(t);context.set('closedT',null);}}\nfunction tts(m){return {payload:{message:m}};}\nfunction notif(title,message){return PEOPLE.filter(x=>x.notify).map(x=>({action:x.notify,title:title,message:message,ndata:{notification_icon:'mdi:shield-home'}}));}\nfunction rearm(why){context.set('shedOverride',false);context.set('doorOpened',false);context.set('doorOpen',false);clrHard();clrClosed();node.warn('[nfc] shed re-arm ('+why+')');node.send([null,null,{},null,null]);}\nfunction startClosed(){clrClosed();const t=setTimeout(function(){context.set('closedT',null);rearm('door closed 15m');},CLOSED);context.set('closedT',t);node.warn('[nfc] shed door closed -> 15m re-arm timer');}\nfunction shedOpenAlert(){\n  context.set('doorOpened',true);\n  node.warn('[nfc] 2h cap reached, shed door STILL OPEN -> hold disarmed + alert');\n  node.send([null,null,null,\n    tts('The shed door has been left open. The shed alarm is not armed and will not arm until the door is closed for fifteen minutes.'),\n    notif('Shed door left open','The shed has been open for 2 hours and is still open. The shed alarm is NOT armed - it will arm 15 minutes after the door is closed.')]);\n}\nfunction hardCap(){\n  context.set('hardT',null);\n  if(context.get('doorOpen')){ shedOpenAlert(); }\n  else { rearm('2h cap'); }\n}\n// TAG scans\nif(ET==='tag_scanned' || D.tag_id){\n  const tag=D.tag_id;\n  if(tag===HOUSE_TAG){ if(global.get('alarm_house')==='disarmed'){ node.warn('[nfc] front door tag — house already disarmed, skip'); return null; } node.warn('[nfc] front door -> disarm house (by '+_by+')'); return [{},null,null,null,null,{statusBy:_by}]; }\n  if(tag===SHED_TAG){\n    context.set('shedOverride',true); context.set('doorOpened',false); context.set('doorOpen',false);\n    clrHard(); const ht=setTimeout(hardCap, HARD); context.set('hardT',ht);\n    clrClosed();\n    if(global.get('alarm_shed')==='disarmed'){ node.warn('[nfc] back door tag — shed already disarmed, override started, skip disarm call'); return null; }\n    node.warn('[nfc] back door -> disarm shed (2h cap, by '+_by+')');\n    return [null,{},null,null,null,{statusBy:_by}];   // disarm shed + record who\n  }\n  return null;\n}\n// SHED DOOR state changes (only during override window)\nif(D.entity_id===DOOR && context.get('shedOverride')){\n  const ds=(D.new_state&&D.new_state.state)||null;\n  const open=(ds==='on');\n  context.set('doorOpen',open);\n  if(open){ context.set('doorOpened',true); clrClosed(); node.warn('[nfc] shed door opened'); }\n  else if(ds==='off' && context.get('doorOpened')){ startClosed(); }\n  return null;\n}\nreturn null;\n",
+        "func": "// NFC + shed override. server-events now emits the FULL event envelope -> data under .event.\nconst HOUSE_TAG='f195ee10-14a9-4b65-bd10-c53c9866bcdf';\nconst SHED_TAG='b9ac1256-89ad-4514-b7d4-3e65ebd1c948';\n// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nconst HARD_H=cfgNum('shed_max_hours',2,0.5,12,0.5);      // hard cap, hours (default 2)\nconst CLOSED_M=cfgNum('shed_closed_mins',15,1,120,1);    // door closed, minutes (default 15)\nconst HARD=HARD_H*60*60*1000;\nconst CLOSED=CLOSED_M*60*1000;\nconst dur=m=>(m%60===0)?((m/60)+(m===60?' hour':' hours')):(m+(m===1?' minute':' minutes'));\nconst DOOR='binary_sensor.shed_door_contact';   // on=open, off=closed\nconst PEOPLE=global.get('people')||[{notify:'notify.mobile_app_np3'},{notify:'notify.mobile_app_pixel_6a'}];\nconst ENV=msg.payload||{};\nconst D=ENV.event||ENV;          // tag/state data lives under .event (envelope); flat fallback\nconst ET=ENV.event_type;\n// outputs: 0 disarm-house | 1 disarm-shed | 2 arm-shed | 3 tts | 4 notify | 5 status-by\n// WHO scanned: tag_scanned events carry the scanning phone's user in the envelope\n// context (verified against the recorder 19-07-2026). Written to\n// input_text.alarm_status_by ONLY on tag-initiated disarms (ha-config #39) so the\n// activity card can badge them; auto re-arms stay unwritten (they ARE Node-RED).\n// Who scanned comes from PERSON_n_HA_USER_ID / PERSON_n_NAME in the environment.\nconst BY_USERS={};\nfor(var ui=1;ui<=8;ui++){\n  var uid_=env.get('PERSON_'+ui+'_HA_USER_ID'), un_=env.get('PERSON_'+ui+'_NAME');\n  if(uid_&&typeof uid_==='string'&&uid_.charAt(0)!=='$'&&un_)BY_USERS[uid_]=un_;\n}\nconst _uid=ENV.context&&ENV.context.user_id;\nconst _by=(_uid&&BY_USERS[_uid])||'hand';   // unknown scanner -> neutral hand\nfunction clrHard(){const t=context.get('hardT');if(t){clearTimeout(t);context.set('hardT',null);}}\nfunction clrClosed(){const t=context.get('closedT');if(t){clearTimeout(t);context.set('closedT',null);}}\nfunction tts(m){return {payload:{message:m}};}\nfunction notif(title,message){return PEOPLE.filter(x=>x.notify).map(x=>({action:x.notify,title:title,message:message,ndata:{notification_icon:'mdi:shield-home'}}));}\nfunction rearm(why){context.set('shedOverride',false);context.set('doorOpened',false);context.set('doorOpen',false);clrHard();clrClosed();node.warn('[nfc] shed re-arm ('+why+')');node.send([null,null,{},null,null]);}\nfunction startClosed(){clrClosed();const t=setTimeout(function(){context.set('closedT',null);rearm('door closed '+CLOSED_M+'m');},CLOSED);context.set('closedT',t);node.warn('[nfc] shed door closed -> '+CLOSED_M+'m re-arm timer');}\nfunction shedOpenAlert(){\n  context.set('doorOpened',true);\n  node.warn('[nfc] '+HARD_H+'h cap reached, shed door STILL OPEN -> hold disarmed + alert');\n  node.send([null,null,null,\n    tts('The shed door has been left open. The shed alarm is not armed and will not arm until the door is closed for '+dur(CLOSED_M)+'.'),\n    notif('Shed door left open','The shed has been open for '+dur(HARD_H*60)+' and is still open. The shed alarm is NOT armed - it will arm '+dur(CLOSED_M)+' after the door is closed.')]);\n}\nfunction hardCap(){\n  context.set('hardT',null);\n  if(context.get('doorOpen')){ shedOpenAlert(); }\n  else { rearm(HARD_H+'h cap'); }\n}\n// TAG scans\nif(ET==='tag_scanned' || D.tag_id){\n  const tag=D.tag_id;\n  if(tag===HOUSE_TAG){ if(global.get('alarm_house')==='disarmed'){ node.warn('[nfc] front door tag — house already disarmed, skip'); return null; } node.warn('[nfc] front door -> disarm house (by '+_by+')'); return [{},null,null,null,null,{statusBy:_by}]; }\n  if(tag===SHED_TAG){\n    context.set('shedOverride',true); context.set('doorOpened',false); context.set('doorOpen',false);\n    clrHard(); const ht=setTimeout(hardCap, HARD); context.set('hardT',ht);\n    clrClosed();\n    if(global.get('alarm_shed')==='disarmed'){ node.warn('[nfc] back door tag — shed already disarmed, override started, skip disarm call'); return null; }\n    node.warn('[nfc] back door -> disarm shed ('+HARD_H+'h cap, by '+_by+')');\n    return [null,{},null,null,null,{statusBy:_by}];   // disarm shed + record who\n  }\n  return null;\n}\n// SHED DOOR state changes (only during override window)\nif(D.entity_id===DOOR && context.get('shedOverride')){\n  const ds=(D.new_state&&D.new_state.state)||null;\n  const open=(ds==='on');\n  context.set('doorOpen',open);\n  if(open){ context.set('doorOpened',true); clrClosed(); node.warn('[nfc] shed door opened'); }\n  else if(ds==='off' && context.get('doorOpened')){ startClosed(); }\n  return null;\n}\nreturn null;\n",
         "outputs": 6,
         "timeout": 0,
         "noerr": 0,
@@ -4004,14 +4004,14 @@
         "id": "gn-inject",
         "type": "inject",
         "z": "657e6b8b07b4cdf7",
-        "name": "22:00 nightly",
+        "name": "tick 60s -> nightly re-arm gate",
         "props": [
             {
                 "p": "payload"
             }
         ],
-        "repeat": "",
-        "crontab": "00 22 * * *",
+        "repeat": "60",
+        "crontab": "",
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
@@ -4021,7 +4021,7 @@
         "y": 360,
         "wires": [
             [
-                "gn-get"
+                "gn-gate"
             ]
         ]
     },
@@ -5610,7 +5610,7 @@
         "name": "Climate presets",
         "order": 1,
         "width": "6",
-        "height": "5",
+        "height": "6",
         "head": "",
         "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"width:110px;\"><b>{{ r.key }}</b></td>\n          <td style=\"width:140px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" type=\"number\" step=\"0.5\" min=\"5\" max=\"30\" suffix=\"°C\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: Number(e.target.value) } })\"></v-text-field>\n          </td>\n          <td style=\"padding-left:12px; opacity:.75;\">{{ r.when }}</td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      0.5° steps, 5–30° (the thermostat's limits). The morning boost is comfort + 0.5 for 15 min.\n      The Netatmo itself holds 19° underneath.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'night',   when: 'overnight, while Sleeping' },\n      { key: 'comfort', when: 'from wake time and through the day; also heading home' },\n      { key: 'hot',     when: 'evening, 19:00–22:00 (Home)' },\n      { key: 'eco',     when: 'Away' },\n      { key: 'frost',   when: 'Away for 24 h+ (with the Away 24h+ toggle on)' }\n    ] };\n  }\n};\n</script>\n",
         "storeOutMessages": true,
@@ -5663,6 +5663,186 @@
         "y": 520,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "pc-ui-group-security",
+        "type": "ui-group",
+        "name": "Security",
+        "page": "pc-ui-page",
+        "width": "6",
+        "height": "1",
+        "order": 3,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "pc-sec-boot",
+        "type": "inject",
+        "z": "tab-pc",
+        "name": "load security_config + 120s refresh",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "120",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 620,
+        "wires": [
+            [
+                "pc-sec-read"
+            ]
+        ]
+    },
+    {
+        "id": "pc-sec-read",
+        "type": "file in",
+        "z": "tab-pc",
+        "name": "read security_config.json",
+        "filename": "/data/security_config.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": true,
+        "encoding": "none",
+        "allProps": false,
+        "x": 440,
+        "y": 620,
+        "wires": [
+            [
+                "pc-sec-load"
+            ]
+        ]
+    },
+    {
+        "id": "pc-sec-load",
+        "type": "function",
+        "z": "tab-pc",
+        "name": "load + validate security_config",
+        "func": "const SPEC = {\n  shed_max_hours:      { def: 2,       min: 0.5, max: 12,  step: 0.5 },\n  shed_closed_mins:    { def: 15,      min: 1,   max: 120, step: 1 },\n  shed_nightly_time:   { def: '22:00', time: true },\n  night_retry_mins:    { def: 20,      min: 1,   max: 120, step: 1 },\n  battery_low_pct:     { def: 15,      min: 5,   max: 50,  step: 1 },\n  battery_quiet_start: { def: '22:00', time: true },\n  battery_quiet_end:   { def: '07:00', time: true }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\n// Boot: security_config.json -> global.security_config (read live by House Alarm + Alarm NFC Tags) + the page.\nlet cfg = {};\nif (msg.error) node.warn('security_config.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('security_config.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('security_config.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nif (out.battery_quiet_start === out.battery_quiet_end) {\n  node.warn('security_config quiet start = end, using defaults');\n  out.battery_quiet_start = SPEC.battery_quiet_start.def; out.battery_quiet_end = SPEC.battery_quiet_end.def;\n}\nglobal.set('security_config', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 620,
+        "wires": [
+            [
+                "pc-sec-ui"
+            ]
+        ]
+    },
+    {
+        "id": "pc-sec-ui",
+        "type": "ui-template",
+        "z": "tab-pc",
+        "group": "pc-ui-group-security",
+        "page": "",
+        "ui": "",
+        "name": "Security settings",
+        "order": 1,
+        "width": "6",
+        "height": "8",
+        "head": "",
+        "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      A shed change applies from the next tag scan. The battery morning summary is sent at the end of quiet hours.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'shed_max_hours',      label: 'Shed stays disarmed after a back-door tag scan, at most', suffix: 'h',   step: 0.5, min: 0.5, max: 12 },\n      { key: 'shed_closed_mins',    label: 'Shed re-arms once its door has been closed for',          suffix: 'min', step: 1,   min: 1,   max: 120 },\n      { key: 'shed_nightly_time',   label: 'Nightly shed re-arm (if disarmed and door shut)',          time: true },\n      { key: 'night_retry_mins',    label: 'Night-arm retry, after the open door/window is closed',     suffix: 'min', step: 1,   min: 1,   max: 120 },\n      { key: 'battery_low_pct',     label: 'Phone low-battery alert level',                            suffix: '%',   step: 1,   min: 5,   max: 50 },\n      { key: 'battery_quiet_start', label: 'Battery alerts quiet from',                                time: true },\n      { key: 'battery_quiet_end',   label: 'Battery alerts quiet until (morning summary)',             time: true }\n    ] };\n  }\n};\n</script>\n",
+        "storeOutMessages": true,
+        "passthru": false,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 960,
+        "y": 620,
+        "wires": [
+            [
+                "pc-sec-save"
+            ]
+        ]
+    },
+    {
+        "id": "pc-sec-save",
+        "type": "function",
+        "z": "tab-pc",
+        "name": "validate + save setting",
+        "func": "const SPEC = {\n  shed_max_hours:      { def: 2,       min: 0.5, max: 12,  step: 0.5 },\n  shed_closed_mins:    { def: 15,      min: 1,   max: 120, step: 1 },\n  shed_nightly_time:   { def: '22:00', time: true },\n  night_retry_mins:    { def: 20,      min: 1,   max: 120, step: 1 },\n  battery_low_pct:     { def: 15,      min: 5,   max: 50,  step: 1 },\n  battery_quiet_start: { def: '22:00', time: true },\n  battery_quiet_end:   { def: '07:00', time: true }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\n// One setting edited on the page -> validate -> global + disk. Out1 = file write, out2 = back to\n// the page so it always shows what is actually stored (an invalid entry snaps back).\nconst loaded = global.get('security_config');\nif (!loaded) { node.warn('security_config not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nif (next.battery_quiet_start === next.battery_quiet_end) {\n  rejected.push('quiet hours start = end');\n  next.battery_quiet_start = cur.battery_quiet_start; next.battery_quiet_end = cur.battery_quiet_end;\n}\nif (rejected.length) node.warn('security_config rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a rejected entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('security_config', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
+        "outputs": 2,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1200,
+        "y": 620,
+        "wires": [
+            [
+                "pc-sec-write"
+            ],
+            [
+                "pc-sec-ui"
+            ]
+        ]
+    },
+    {
+        "id": "pc-sec-write",
+        "type": "file",
+        "z": "tab-pc",
+        "name": "write security_config.json",
+        "filename": "/data/security_config.json",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": false,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 1460,
+        "y": 620,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "gn-gate",
+        "type": "function",
+        "z": "657e6b8b07b4cdf7",
+        "name": "nightly time gate (Security setting)",
+        "func": "// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nconst T_STR = cfgTime('shed_nightly_time', '22:00');\n// 60 s tick -> passes ONCE per day, in the 5 minutes after the configured time (nightly shed re-arm).\nconst T = hm2m(T_STR);\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;   // minutes since today's fire time\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();          // the day the window opened\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] nightly shed re-arm (' + T_STR + ')');\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 410,
+        "wires": [
+            [
+                "gn-get"
+            ]
+        ]
+    },
+    {
+        "id": "aa-batt-sum-gate",
+        "type": "function",
+        "z": "096ff268dc7bd2f0",
+        "name": "summary time gate (Security setting)",
+        "func": "// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nlet QS_ = cfgTime('battery_quiet_start', '22:00'), T_STR = cfgTime('battery_quiet_end', '07:00');\nif (QS_ === T_STR) T_STR = '07:00';\n// 60 s tick -> passes ONCE per day, in the 5 minutes after the configured time (battery overnight summary).\nconst T = hm2m(T_STR);\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;   // minutes since today's fire time\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();          // the day the window opened\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] battery overnight summary (' + T_STR + ')');\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 850,
+        "wires": [
+            [
+                "aa-batt-sum-get"
+            ]
         ]
     }
 ]

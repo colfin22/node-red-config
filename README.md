@@ -115,6 +115,19 @@ controller reads it on every 60 s tick, so a change reaches the thermostat withi
 invalid entry is refused and the box snaps back to the stored value; a missing file or a bad value
 falls back to the defaults built into the controller. `heating_config.json` is not in the git backup.
 
+A third section, **Security**, holds the alarm timings, saved the same way to
+`data/security_config.json` (`global.security_config`, also not in the git backup) and read live
+by the alarm flows, each falling back to its built-in default:
+
+| Setting | Default | Used by |
+|---|---|---|
+| Shed stays disarmed after a back-door tag scan, at most | 2 h | Alarm NFC Tags (applies from the next scan) |
+| Shed re-arms once its door has been closed for | 15 min | Alarm NFC Tags |
+| Nightly shed re-arm | 22:00 | Alarm NFC Tags (a 60 s tick fires once a day in the 5 min after this time) |
+| Night-arm retry, after the door/window that blocked `arm_night` is closed | 20 min | House Alarm (one retry) |
+| Phone low-battery alert level | 15 % | House Alarm battery monitoring |
+| Battery alerts quiet from / until | 22:00 / 07:00 | House Alarm: low-battery pushes inside this window are held and sent as one summary at the end time |
+
 ### What to search and replace
 
 Every id below is mine and will not exist on your system. Nothing errors when a name does not
@@ -209,6 +222,8 @@ Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, 
 4. **Touchpad** *(planned)* — a physical keypad for the one case software can't cover: a fully-dead phone on arrival.
 
 ## Shed + NFC tags (tab `Alarm NFC Tags`)
+The 2-hour cap, the 15-minute door-closed delay and the 22:00 nightly time below are the defaults; they are set on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow) → **Security** section.
+
 - Listens for the HA `tag_scanned` event.
 - **Front-door tag** → disarm the house (no-op if already disarmed).
 - **Back-door tag** → disarm the shed for up to **2 hours**. It re-arms when **either** the shed door has been **closed for 15 minutes** (after being opened) **or** the **2-hour cap** is reached *with the door closed* (watching `binary_sensor.shed_door_contact`).

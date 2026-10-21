@@ -269,7 +269,7 @@
   "name": "Climate presets",
   "order": 1,
   "width": "6",
-  "height": "5",
+  "height": "6",
   "head": "",
   "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"width:110px;\"><b>{{ r.key }}</b></td>\n          <td style=\"width:140px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" type=\"number\" step=\"0.5\" min=\"5\" max=\"30\" suffix=\"\u00b0C\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: Number(e.target.value) } })\"></v-text-field>\n          </td>\n          <td style=\"padding-left:12px; opacity:.75;\">{{ r.when }}</td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      0.5\u00b0 steps, 5\u201330\u00b0 (the thermostat's limits). The morning boost is comfort + 0.5 for 15 min.\n      The Netatmo itself holds 19\u00b0 underneath.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'night',   when: 'overnight, while Sleeping' },\n      { key: 'comfort', when: 'from wake time and through the day; also heading home' },\n      { key: 'hot',     when: 'evening, 19:00\u201322:00 (Home)' },\n      { key: 'eco',     when: 'Away' },\n      { key: 'frost',   when: 'Away for 24 h+ (with the Away 24h+ toggle on)' }\n    ] };\n  }\n};\n</script>\n",
   "storeOutMessages": true,
@@ -325,6 +325,135 @@
   ]
  },
  {
+  "id": "pc-sec-boot",
+  "type": "inject",
+  "z": "tab-pc",
+  "name": "load security_config + 120s refresh",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 200,
+  "y": 620,
+  "wires": [
+   [
+    "pc-sec-read"
+   ]
+  ]
+ },
+ {
+  "id": "pc-sec-read",
+  "type": "file in",
+  "z": "tab-pc",
+  "name": "read security_config.json",
+  "filename": "/data/security_config.json",
+  "filenameType": "str",
+  "format": "utf8",
+  "chunk": false,
+  "sendError": true,
+  "encoding": "none",
+  "allProps": false,
+  "x": 440,
+  "y": 620,
+  "wires": [
+   [
+    "pc-sec-load"
+   ]
+  ]
+ },
+ {
+  "id": "pc-sec-load",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "load + validate security_config",
+  "func": "const SPEC = {\n  shed_max_hours:      { def: 2,       min: 0.5, max: 12,  step: 0.5 },\n  shed_closed_mins:    { def: 15,      min: 1,   max: 120, step: 1 },\n  shed_nightly_time:   { def: '22:00', time: true },\n  night_retry_mins:    { def: 20,      min: 1,   max: 120, step: 1 },\n  battery_low_pct:     { def: 15,      min: 5,   max: 50,  step: 1 },\n  battery_quiet_start: { def: '22:00', time: true },\n  battery_quiet_end:   { def: '07:00', time: true }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\n// Boot: security_config.json -> global.security_config (read live by House Alarm + Alarm NFC Tags) + the page.\nlet cfg = {};\nif (msg.error) node.warn('security_config.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('security_config.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('security_config.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nif (out.battery_quiet_start === out.battery_quiet_end) {\n  node.warn('security_config quiet start = end, using defaults');\n  out.battery_quiet_start = SPEC.battery_quiet_start.def; out.battery_quiet_end = SPEC.battery_quiet_end.def;\n}\nglobal.set('security_config', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 700,
+  "y": 620,
+  "wires": [
+   [
+    "pc-sec-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-sec-ui",
+  "type": "ui-template",
+  "z": "tab-pc",
+  "group": "pc-ui-group-security",
+  "page": "",
+  "ui": "",
+  "name": "Security settings",
+  "order": 1,
+  "width": "6",
+  "height": "8",
+  "head": "",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      A shed change applies from the next tag scan. The battery morning summary is sent at the end of quiet hours.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'shed_max_hours',      label: 'Shed stays disarmed after a back-door tag scan, at most', suffix: 'h',   step: 0.5, min: 0.5, max: 12 },\n      { key: 'shed_closed_mins',    label: 'Shed re-arms once its door has been closed for',          suffix: 'min', step: 1,   min: 1,   max: 120 },\n      { key: 'shed_nightly_time',   label: 'Nightly shed re-arm (if disarmed and door shut)',          time: true },\n      { key: 'night_retry_mins',    label: 'Night-arm retry, after the open door/window is closed',     suffix: 'min', step: 1,   min: 1,   max: 120 },\n      { key: 'battery_low_pct',     label: 'Phone low-battery alert level',                            suffix: '%',   step: 1,   min: 5,   max: 50 },\n      { key: 'battery_quiet_start', label: 'Battery alerts quiet from',                                time: true },\n      { key: 'battery_quiet_end',   label: 'Battery alerts quiet until (morning summary)',             time: true }\n    ] };\n  }\n};\n</script>\n",
+  "storeOutMessages": true,
+  "passthru": false,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "className": "",
+  "x": 960,
+  "y": 620,
+  "wires": [
+   [
+    "pc-sec-save"
+   ]
+  ]
+ },
+ {
+  "id": "pc-sec-save",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "validate + save setting",
+  "func": "const SPEC = {\n  shed_max_hours:      { def: 2,       min: 0.5, max: 12,  step: 0.5 },\n  shed_closed_mins:    { def: 15,      min: 1,   max: 120, step: 1 },\n  shed_nightly_time:   { def: '22:00', time: true },\n  night_retry_mins:    { def: 20,      min: 1,   max: 120, step: 1 },\n  battery_low_pct:     { def: 15,      min: 5,   max: 50,  step: 1 },\n  battery_quiet_start: { def: '22:00', time: true },\n  battery_quiet_end:   { def: '07:00', time: true }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\n// One setting edited on the page -> validate -> global + disk. Out1 = file write, out2 = back to\n// the page so it always shows what is actually stored (an invalid entry snaps back).\nconst loaded = global.get('security_config');\nif (!loaded) { node.warn('security_config not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nif (next.battery_quiet_start === next.battery_quiet_end) {\n  rejected.push('quiet hours start = end');\n  next.battery_quiet_start = cur.battery_quiet_start; next.battery_quiet_end = cur.battery_quiet_end;\n}\nif (rejected.length) node.warn('security_config rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a rejected entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('security_config', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1200,
+  "y": 620,
+  "wires": [
+   [
+    "pc-sec-write"
+   ],
+   [
+    "pc-sec-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-sec-write",
+  "type": "file",
+  "z": "tab-pc",
+  "name": "write security_config.json",
+  "filename": "/data/security_config.json",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": false,
+  "overwriteFile": "true",
+  "encoding": "none",
+  "x": 1460,
+  "y": 620,
+  "wires": [
+   []
+  ]
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",
@@ -368,6 +497,19 @@
   "width": "6",
   "height": "1",
   "order": 2,
+  "showTitle": true,
+  "className": "",
+  "visible": "true",
+  "disabled": "false"
+ },
+ {
+  "id": "pc-ui-group-security",
+  "type": "ui-group",
+  "name": "Security",
+  "page": "pc-ui-page",
+  "width": "6",
+  "height": "1",
+  "order": 3,
   "showTitle": true,
   "className": "",
   "visible": "true",

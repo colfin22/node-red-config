@@ -38,7 +38,7 @@
   "type": "function",
   "z": "657e6b8b07b4cdf7",
   "name": "nfc engine",
-  "func": "// NFC + shed override. server-events now emits the FULL event envelope -> data under .event.\nconst HOUSE_TAG='f195ee10-14a9-4b65-bd10-c53c9866bcdf';\nconst SHED_TAG='b9ac1256-89ad-4514-b7d4-3e65ebd1c948';\nconst HARD=2*60*60*1000;   // 2 hour hard cap\nconst CLOSED=15*60*1000;   // door closed 15 min\nconst DOOR='binary_sensor.shed_door_contact';   // on=open, off=closed\nconst PEOPLE=global.get('people')||[{notify:'notify.mobile_app_np3'},{notify:'notify.mobile_app_pixel_6a'}];\nconst ENV=msg.payload||{};\nconst D=ENV.event||ENV;          // tag/state data lives under .event (envelope); flat fallback\nconst ET=ENV.event_type;\n// outputs: 0 disarm-house | 1 disarm-shed | 2 arm-shed | 3 tts | 4 notify | 5 status-by\n// WHO scanned: tag_scanned events carry the scanning phone's user in the envelope\n// context (verified against the recorder 19-07-2026). Written to\n// input_text.alarm_status_by ONLY on tag-initiated disarms (ha-config #39) so the\n// activity card can badge them; auto re-arms stay unwritten (they ARE Node-RED).\n// Who scanned comes from PERSON_n_HA_USER_ID / PERSON_n_NAME in the environment.\nconst BY_USERS={};\nfor(var ui=1;ui<=8;ui++){\n  var uid_=env.get('PERSON_'+ui+'_HA_USER_ID'), un_=env.get('PERSON_'+ui+'_NAME');\n  if(uid_&&typeof uid_==='string'&&uid_.charAt(0)!=='$'&&un_)BY_USERS[uid_]=un_;\n}\nconst _uid=ENV.context&&ENV.context.user_id;\nconst _by=(_uid&&BY_USERS[_uid])||'hand';   // unknown scanner -> neutral hand\nfunction clrHard(){const t=context.get('hardT');if(t){clearTimeout(t);context.set('hardT',null);}}\nfunction clrClosed(){const t=context.get('closedT');if(t){clearTimeout(t);context.set('closedT',null);}}\nfunction tts(m){return {payload:{message:m}};}\nfunction notif(title,message){return PEOPLE.filter(x=>x.notify).map(x=>({action:x.notify,title:title,message:message,ndata:{notification_icon:'mdi:shield-home'}}));}\nfunction rearm(why){context.set('shedOverride',false);context.set('doorOpened',false);context.set('doorOpen',false);clrHard();clrClosed();node.warn('[nfc] shed re-arm ('+why+')');node.send([null,null,{},null,null]);}\nfunction startClosed(){clrClosed();const t=setTimeout(function(){context.set('closedT',null);rearm('door closed 15m');},CLOSED);context.set('closedT',t);node.warn('[nfc] shed door closed -> 15m re-arm timer');}\nfunction shedOpenAlert(){\n  context.set('doorOpened',true);\n  node.warn('[nfc] 2h cap reached, shed door STILL OPEN -> hold disarmed + alert');\n  node.send([null,null,null,\n    tts('The shed door has been left open. The shed alarm is not armed and will not arm until the door is closed for fifteen minutes.'),\n    notif('Shed door left open','The shed has been open for 2 hours and is still open. The shed alarm is NOT armed - it will arm 15 minutes after the door is closed.')]);\n}\nfunction hardCap(){\n  context.set('hardT',null);\n  if(context.get('doorOpen')){ shedOpenAlert(); }\n  else { rearm('2h cap'); }\n}\n// TAG scans\nif(ET==='tag_scanned' || D.tag_id){\n  const tag=D.tag_id;\n  if(tag===HOUSE_TAG){ if(global.get('alarm_house')==='disarmed'){ node.warn('[nfc] front door tag \u2014 house already disarmed, skip'); return null; } node.warn('[nfc] front door -> disarm house (by '+_by+')'); return [{},null,null,null,null,{statusBy:_by}]; }\n  if(tag===SHED_TAG){\n    context.set('shedOverride',true); context.set('doorOpened',false); context.set('doorOpen',false);\n    clrHard(); const ht=setTimeout(hardCap, HARD); context.set('hardT',ht);\n    clrClosed();\n    if(global.get('alarm_shed')==='disarmed'){ node.warn('[nfc] back door tag \u2014 shed already disarmed, override started, skip disarm call'); return null; }\n    node.warn('[nfc] back door -> disarm shed (2h cap, by '+_by+')');\n    return [null,{},null,null,null,{statusBy:_by}];   // disarm shed + record who\n  }\n  return null;\n}\n// SHED DOOR state changes (only during override window)\nif(D.entity_id===DOOR && context.get('shedOverride')){\n  const ds=(D.new_state&&D.new_state.state)||null;\n  const open=(ds==='on');\n  context.set('doorOpen',open);\n  if(open){ context.set('doorOpened',true); clrClosed(); node.warn('[nfc] shed door opened'); }\n  else if(ds==='off' && context.get('doorOpened')){ startClosed(); }\n  return null;\n}\nreturn null;\n",
+  "func": "// NFC + shed override. server-events now emits the FULL event envelope -> data under .event.\nconst HOUSE_TAG='f195ee10-14a9-4b65-bd10-c53c9866bcdf';\nconst SHED_TAG='b9ac1256-89ad-4514-b7d4-3e65ebd1c948';\n// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nconst HARD_H=cfgNum('shed_max_hours',2,0.5,12,0.5);      // hard cap, hours (default 2)\nconst CLOSED_M=cfgNum('shed_closed_mins',15,1,120,1);    // door closed, minutes (default 15)\nconst HARD=HARD_H*60*60*1000;\nconst CLOSED=CLOSED_M*60*1000;\nconst dur=m=>(m%60===0)?((m/60)+(m===60?' hour':' hours')):(m+(m===1?' minute':' minutes'));\nconst DOOR='binary_sensor.shed_door_contact';   // on=open, off=closed\nconst PEOPLE=global.get('people')||[{notify:'notify.mobile_app_np3'},{notify:'notify.mobile_app_pixel_6a'}];\nconst ENV=msg.payload||{};\nconst D=ENV.event||ENV;          // tag/state data lives under .event (envelope); flat fallback\nconst ET=ENV.event_type;\n// outputs: 0 disarm-house | 1 disarm-shed | 2 arm-shed | 3 tts | 4 notify | 5 status-by\n// WHO scanned: tag_scanned events carry the scanning phone's user in the envelope\n// context (verified against the recorder 19-07-2026). Written to\n// input_text.alarm_status_by ONLY on tag-initiated disarms (ha-config #39) so the\n// activity card can badge them; auto re-arms stay unwritten (they ARE Node-RED).\n// Who scanned comes from PERSON_n_HA_USER_ID / PERSON_n_NAME in the environment.\nconst BY_USERS={};\nfor(var ui=1;ui<=8;ui++){\n  var uid_=env.get('PERSON_'+ui+'_HA_USER_ID'), un_=env.get('PERSON_'+ui+'_NAME');\n  if(uid_&&typeof uid_==='string'&&uid_.charAt(0)!=='$'&&un_)BY_USERS[uid_]=un_;\n}\nconst _uid=ENV.context&&ENV.context.user_id;\nconst _by=(_uid&&BY_USERS[_uid])||'hand';   // unknown scanner -> neutral hand\nfunction clrHard(){const t=context.get('hardT');if(t){clearTimeout(t);context.set('hardT',null);}}\nfunction clrClosed(){const t=context.get('closedT');if(t){clearTimeout(t);context.set('closedT',null);}}\nfunction tts(m){return {payload:{message:m}};}\nfunction notif(title,message){return PEOPLE.filter(x=>x.notify).map(x=>({action:x.notify,title:title,message:message,ndata:{notification_icon:'mdi:shield-home'}}));}\nfunction rearm(why){context.set('shedOverride',false);context.set('doorOpened',false);context.set('doorOpen',false);clrHard();clrClosed();node.warn('[nfc] shed re-arm ('+why+')');node.send([null,null,{},null,null]);}\nfunction startClosed(){clrClosed();const t=setTimeout(function(){context.set('closedT',null);rearm('door closed '+CLOSED_M+'m');},CLOSED);context.set('closedT',t);node.warn('[nfc] shed door closed -> '+CLOSED_M+'m re-arm timer');}\nfunction shedOpenAlert(){\n  context.set('doorOpened',true);\n  node.warn('[nfc] '+HARD_H+'h cap reached, shed door STILL OPEN -> hold disarmed + alert');\n  node.send([null,null,null,\n    tts('The shed door has been left open. The shed alarm is not armed and will not arm until the door is closed for '+dur(CLOSED_M)+'.'),\n    notif('Shed door left open','The shed has been open for '+dur(HARD_H*60)+' and is still open. The shed alarm is NOT armed - it will arm '+dur(CLOSED_M)+' after the door is closed.')]);\n}\nfunction hardCap(){\n  context.set('hardT',null);\n  if(context.get('doorOpen')){ shedOpenAlert(); }\n  else { rearm(HARD_H+'h cap'); }\n}\n// TAG scans\nif(ET==='tag_scanned' || D.tag_id){\n  const tag=D.tag_id;\n  if(tag===HOUSE_TAG){ if(global.get('alarm_house')==='disarmed'){ node.warn('[nfc] front door tag \u2014 house already disarmed, skip'); return null; } node.warn('[nfc] front door -> disarm house (by '+_by+')'); return [{},null,null,null,null,{statusBy:_by}]; }\n  if(tag===SHED_TAG){\n    context.set('shedOverride',true); context.set('doorOpened',false); context.set('doorOpen',false);\n    clrHard(); const ht=setTimeout(hardCap, HARD); context.set('hardT',ht);\n    clrClosed();\n    if(global.get('alarm_shed')==='disarmed'){ node.warn('[nfc] back door tag \u2014 shed already disarmed, override started, skip disarm call'); return null; }\n    node.warn('[nfc] back door -> disarm shed ('+HARD_H+'h cap, by '+_by+')');\n    return [null,{},null,null,null,{statusBy:_by}];   // disarm shed + record who\n  }\n  return null;\n}\n// SHED DOOR state changes (only during override window)\nif(D.entity_id===DOOR && context.get('shedOverride')){\n  const ds=(D.new_state&&D.new_state.state)||null;\n  const open=(ds==='on');\n  context.set('doorOpen',open);\n  if(open){ context.set('doorOpened',true); clrClosed(); node.warn('[nfc] shed door opened'); }\n  else if(ds==='off' && context.get('doorOpened')){ startClosed(); }\n  return null;\n}\nreturn null;\n",
   "outputs": 6,
   "timeout": 0,
   "noerr": 0,
@@ -262,14 +262,14 @@
   "id": "gn-inject",
   "type": "inject",
   "z": "657e6b8b07b4cdf7",
-  "name": "22:00 nightly",
+  "name": "tick 60s -> nightly re-arm gate",
   "props": [
    {
     "p": "payload"
    }
   ],
-  "repeat": "",
-  "crontab": "00 22 * * *",
+  "repeat": "60",
+  "crontab": "",
   "once": false,
   "onceDelay": 0.1,
   "topic": "",
@@ -279,7 +279,7 @@
   "y": 360,
   "wires": [
    [
-    "gn-get"
+    "gn-gate"
    ]
   ]
  },
@@ -344,6 +344,25 @@
   "y": 380,
   "wires": [
    []
+  ]
+ },
+ {
+  "id": "gn-gate",
+  "type": "function",
+  "z": "657e6b8b07b4cdf7",
+  "name": "nightly time gate (Security setting)",
+  "func": "// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nconst T_STR = cfgTime('shed_nightly_time', '22:00');\n// 60 s tick -> passes ONCE per day, in the 5 minutes after the configured time (nightly shed re-arm).\nconst T = hm2m(T_STR);\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;   // minutes since today's fire time\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();          // the day the window opened\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] nightly shed re-arm (' + T_STR + ')');\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 350,
+  "y": 410,
+  "wires": [
+   [
+    "gn-get"
+   ]
   ]
  },
  {
