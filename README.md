@@ -149,7 +149,7 @@ Sleeping window ends and finish at most 1 h after it starts. A wake window that 
 once let late-evening motion wake the house and disarm the night alarm. An edit that breaks a rule is
 refused, and a stored pair that breaks one falls back to the defaults.
 
-A fifth section, **Cameras**, holds four Camera Concierge timings (`data/camera_config.json` →
+A fifth section, **Cameras**, holds four Camera Concierge timings and the car-deterrent switch (`data/camera_config.json` →
 `global.camera_config`, not in the git backup), read on every detection:
 
 | Setting | Default |
@@ -157,6 +157,7 @@ A fifth section, **Cameras**, holds four Camera Concierge timings (`data/camera_
 | Same kind in the same zone within this time → one push (incident window) | 2 min |
 | Repeat-push gap for detections outside the zone groups (same label) | 60 s |
 | Front door opened within this time → doorbell popups and pushes skipped (one value shared by `cam-door-fn` and `cam-fd-gate`) | 60 s |
+| Car deterrent on/off (a switch; when off, a person at the car while Sleeping is only logged) | on |
 | Car deterrent cooldown (minimum 1 min, so it always outlasts the ~30 s strobe) | 2 min |
 
 ### What to search and replace
@@ -397,7 +398,7 @@ The notification's tap action (`clickAction`/`url`) opens the **event clip** (`c
 - Phone pushes are unaffected by Sleeping — that suppression is speaker-only. When `house_mode = Away`, camera pushes are **escalated**: delivered immediately at high priority on a dedicated high-importance “Cameras Away” channel with a ⚠️ title, so a person at the house while everyone is out cuts through.
 
 ## Person-at-the-car deterrent
-When `house_mode = Sleeping`, a **person** detected in the front car or van focus zone triggers a deterrent: sitting-room and hallway lights strobe and a warning is announced on the bedroom and sitting-room speakers. A 120-second cooldown prevents repeat triggers from the same event. Tied to Sleeping mode rather than a fixed clock window so it responds to when the household actually goes to bed. Every candidate event (fired or not) now logs the live `house_mode` value it saw (`[car-deterrent] …`), so a mismatch between this tab's cached mode and reality shows up immediately instead of needing to be reconstructed from logs afterwards.
+Unless it is switched off on the Household Config dashboard → **Cameras**, when `house_mode = Sleeping` a **person** detected in the front car or van focus zone triggers a deterrent: sitting-room and hallway lights strobe and a warning is announced on the bedroom and sitting-room speakers. A 120-second cooldown prevents repeat triggers from the same event. Tied to Sleeping mode rather than a fixed clock window so it responds to when the household actually goes to bed. Every candidate event (fired or not) now logs the live `house_mode` value it saw (`[car-deterrent] …`), so a mismatch between this tab's cached mode and reality shows up immediately instead of needing to be reconstructed from logs afterwards.
 
 ## Anti-spam / suppression
 - Rear silenced while the patio-door switch is on.
