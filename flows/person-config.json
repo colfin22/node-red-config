@@ -712,6 +712,135 @@
   ]
  },
  {
+  "id": "pc-inf-boot",
+  "type": "inject",
+  "z": "tab-pc",
+  "name": "load infra_config + 120s refresh",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 200,
+  "y": 920,
+  "wires": [
+   [
+    "pc-inf-read"
+   ]
+  ]
+ },
+ {
+  "id": "pc-inf-read",
+  "type": "file in",
+  "z": "tab-pc",
+  "name": "read infra_config.json",
+  "filename": "/data/infra_config.json",
+  "filenameType": "str",
+  "format": "utf8",
+  "chunk": false,
+  "sendError": true,
+  "encoding": "none",
+  "allProps": false,
+  "x": 440,
+  "y": 920,
+  "wires": [
+   [
+    "pc-inf-load"
+   ]
+  ]
+ },
+ {
+  "id": "pc-inf-load",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "load + validate infra_config",
+  "func": "const SPEC = {\n  grace_secs:        { def: 90, min: 30, max: 600, step: 1 },\n  escalate_mins:     { def: 10, min: 2,  max: 60,  step: 1 },\n  repeat_core_mins:  { def: 15, min: 5,  max: 120, step: 1 },\n  repeat_other_mins: { def: 60, min: 5,  max: 240, step: 1 },\n  multi_down:        { def: 3,  min: 2,  max: 20,  step: 1 }\n};\nconst okVal = (s, v) => typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9;\nconst norm = (s, v) => Number(v);\n// grace must end before escalation; the core (fast) repeat can't be slower than the other one\nconst crossOk = c => c.grace_secs < c.escalate_mins * 60 && c.repeat_core_mins <= c.repeat_other_mins;\n// Boot: infra_config.json -> global.infra_config (read live by Infra Watchdog) + the page.\nlet cfg = {};\nif (msg.error) node.warn('infra_config.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('infra_config.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('infra_config.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nif (!crossOk(out)) { node.warn('infra_config breaks grace < escalation / core repeat <= other repeat, using defaults'); Object.keys(SPEC).forEach(k => { out[k] = SPEC[k].def; }); }\nglobal.set('infra_config', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 700,
+  "y": 920,
+  "wires": [
+   [
+    "pc-inf-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-inf-ui",
+  "type": "ui-template",
+  "z": "tab-pc",
+  "group": "pc-ui-group-infra",
+  "page": "",
+  "ui": "",
+  "name": "Infra settings",
+  "order": 1,
+  "width": "6",
+  "height": "6",
+  "head": "",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      Grace must be shorter than escalation, and the core repeat no longer than the other. Changes apply to the next outage; one already running keeps its timers. Maintenance mode still silences everything.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'grace_secs',        label: 'A monitor must stay down this long before the first push', suffix: 's',   step: 1, min: 30, max: 600 },\n      { key: 'escalate_mins',     label: 'Escalate to push + speaker announcement after',            suffix: 'min', step: 1, min: 2,  max: 60 },\n      { key: 'repeat_core_mins',  label: 'Repeat reminder: core monitors, or a big outage',           suffix: 'min', step: 1, min: 5,  max: 120 },\n      { key: 'repeat_other_mins', label: 'Repeat reminder: other monitors',                            suffix: 'min', step: 1, min: 5,  max: 240 },\n      { key: 'multi_down',        label: 'This many down at once counts as a big outage',             suffix: '',    step: 1, min: 2,  max: 20 }\n    ] };\n  }\n};\n</script>\n",
+  "storeOutMessages": true,
+  "passthru": false,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "className": "",
+  "x": 960,
+  "y": 920,
+  "wires": [
+   [
+    "pc-inf-save"
+   ]
+  ]
+ },
+ {
+  "id": "pc-inf-save",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "validate + save setting",
+  "func": "const SPEC = {\n  grace_secs:        { def: 90, min: 30, max: 600, step: 1 },\n  escalate_mins:     { def: 10, min: 2,  max: 60,  step: 1 },\n  repeat_core_mins:  { def: 15, min: 5,  max: 120, step: 1 },\n  repeat_other_mins: { def: 60, min: 5,  max: 240, step: 1 },\n  multi_down:        { def: 3,  min: 2,  max: 20,  step: 1 }\n};\nconst okVal = (s, v) => typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9;\nconst norm = (s, v) => Number(v);\n// grace must end before escalation; the core (fast) repeat can't be slower than the other one\nconst crossOk = c => c.grace_secs < c.escalate_mins * 60 && c.repeat_core_mins <= c.repeat_other_mins;\n// One setting edited on the page -> validate -> global + disk. Out1 = file write, out2 = back to\n// the page so it always shows what is actually stored (an invalid entry snaps back).\nconst loaded = global.get('infra_config');\nif (!loaded) { node.warn('infra_config not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nif (!crossOk(next)) { rejected.push('grace must be shorter than escalation, core repeat no longer than other repeat'); Object.keys(SPEC).forEach(k => { next[k] = cur[k]; }); }\nif (rejected.length) node.warn('infra_config rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a rejected entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('infra_config', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1200,
+  "y": 920,
+  "wires": [
+   [
+    "pc-inf-write"
+   ],
+   [
+    "pc-inf-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-inf-write",
+  "type": "file",
+  "z": "tab-pc",
+  "name": "write infra_config.json",
+  "filename": "/data/infra_config.json",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": false,
+  "overwriteFile": "true",
+  "encoding": "none",
+  "x": 1460,
+  "y": 920,
+  "wires": [
+   []
+  ]
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",
@@ -781,6 +910,19 @@
   "width": "6",
   "height": "1",
   "order": 4,
+  "showTitle": true,
+  "className": "",
+  "visible": "true",
+  "disabled": "false"
+ },
+ {
+  "id": "pc-ui-group-infra",
+  "type": "ui-group",
+  "name": "Infra",
+  "page": "pc-ui-page",
+  "width": "6",
+  "height": "1",
+  "order": 6,
   "showTitle": true,
   "className": "",
   "visible": "true",

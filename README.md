@@ -160,6 +160,21 @@ A fifth section, **Cameras**, holds four Camera Concierge timings and the car-de
 | Car deterrent on/off (a switch; when off, a person at the car while Sleeping is only logged) | on |
 | Car deterrent cooldown (minimum 1 min, so it always outlasts the ~30 s strobe) | 2 min |
 
+A sixth section, **Infra**, holds the Infra Watchdog escalation timings (`data/infra_config.json` →
+`global.infra_config`, not in the git backup), read on every Uptime Kuma event. An outage already
+running keeps the timers it started with; after a Node-RED restart the resume logic uses the current values.
+
+| Setting | Default |
+|---|---|
+| A monitor must stay down this long before the first push | 90 s |
+| Escalate to push + speaker announcement after | 10 min |
+| Repeat reminder: core monitors, or a big outage | 15 min |
+| Repeat reminder: other monitors | 60 min |
+| This many down at once counts as a big outage | 3 |
+
+The grace must be shorter than the escalation and the core repeat no longer than the other; an edit
+that breaks either is refused, and a stored set that breaks one falls back to all five defaults.
+
 ### What to search and replace
 
 Every id below is mine and will not exist on your system. Nothing errors when a name does not
@@ -421,6 +436,8 @@ Unless it is switched off on the Household Config dashboard → **Cameras**, whe
 - Context keys derived from review ids are sanitised (dots → `_`) because Frigate review ids contain a dot (which Node-RED would otherwise treat as a nested-context path).
 
 # Infra Watchdog — how it works
+
+The escalation timings (90-second grace, 10-minute escalation, 15/60-minute repeats, 3-down big-outage threshold) are defaults; they are set on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow) → **Infra** section. `maintenance_mode` still silences everything.
 
 **Uptime Kuma** posts every monitor up/down event to a webhook in this tab (`/uk-event`). The watchdog turns those raw events into escalating alerts rather than one-ping-per-flap:
 
