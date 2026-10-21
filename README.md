@@ -149,6 +149,16 @@ Sleeping window ends and finish at most 1 h after it starts. A wake window that 
 once let late-evening motion wake the house and disarm the night alarm. An edit that breaks a rule is
 refused, and a stored pair that breaks one falls back to the defaults.
 
+A fifth section, **Cameras**, holds four Camera Concierge timings (`data/camera_config.json` →
+`global.camera_config`, not in the git backup), read on every detection:
+
+| Setting | Default |
+|---|---|
+| Same kind in the same zone within this time → one push (incident window) | 2 min |
+| Repeat-push gap for detections outside the zone groups (same label) | 60 s |
+| Front door opened within this time → doorbell popups and pushes skipped (one value shared by `cam-door-fn` and `cam-fd-gate`) | 60 s |
+| Car deterrent cooldown (minimum 1 min, so it always outlasts the ~30 s strobe) | 2 min |
+
 ### What to search and replace
 
 Every id below is mine and will not exist on your system. Nothing errors when a name does not
@@ -317,6 +327,8 @@ While `input_boolean.guest_mode` is on the heating never drops to the Away setba
 - **Ignores `house_mode` when its reason reads the literal `seeded` sentinel (23-09-2026).** `input_text.house_mode_reason`'s own configured `initial` value is the string `seeded` — it only ever appears when an HA Core restart's restore_state failed to bring back the real reason, which is the same moment `house_mode` itself can be wrong (see the House Mode section above). When it reads `seeded`, the controller holds the last house_mode value it trusted instead of acting on the fresh (possibly bogus) one.
 
 # Camera Concierge — how it works
+
+The 120-second incident window, the 60-second repeat-push gap, the 60-second front-door window and the 120-second car-deterrent cooldown below are the defaults; they are set on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow) → **Cameras** section.
 
 ![The Camera Concierge flow in the Node-RED editor](docs/camera-concierge.png)
 

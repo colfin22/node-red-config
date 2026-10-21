@@ -583,6 +583,135 @@
   ]
  },
  {
+  "id": "pc-cam-boot",
+  "type": "inject",
+  "z": "tab-pc",
+  "name": "load camera_config + 120s refresh",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 200,
+  "y": 820,
+  "wires": [
+   [
+    "pc-cam-read"
+   ]
+  ]
+ },
+ {
+  "id": "pc-cam-read",
+  "type": "file in",
+  "z": "tab-pc",
+  "name": "read camera_config.json",
+  "filename": "/data/camera_config.json",
+  "filenameType": "str",
+  "format": "utf8",
+  "chunk": false,
+  "sendError": true,
+  "encoding": "none",
+  "allProps": false,
+  "x": 440,
+  "y": 820,
+  "wires": [
+   [
+    "pc-cam-load"
+   ]
+  ]
+ },
+ {
+  "id": "pc-cam-load",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "load + validate camera_config",
+  "func": "const SPEC = {\n  incident_window_mins:  { def: 2,  min: 1,  max: 10,  step: 0.5 },\n  repeat_push_secs:      { def: 60, min: 10, max: 600, step: 1 },\n  door_open_window_secs: { def: 60, min: 10, max: 300, step: 1 },\n  car_cooldown_mins:     { def: 2,  min: 1,  max: 30,  step: 0.5 }\n};\nconst okVal = (s, v) => typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9;\nconst norm = (s, v) => Number(v);\n// Boot: camera_config.json -> global.camera_config (read live by Camera Concierge) + the page.\nlet cfg = {};\nif (msg.error) node.warn('camera_config.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('camera_config.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('camera_config.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nglobal.set('camera_config', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 700,
+  "y": 820,
+  "wires": [
+   [
+    "pc-cam-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-cam-ui",
+  "type": "ui-template",
+  "z": "tab-pc",
+  "group": "pc-ui-group-cameras",
+  "page": "",
+  "ui": "",
+  "name": "Camera settings",
+  "order": 1,
+  "width": "6",
+  "height": "5",
+  "head": "",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      Changes apply to the next detection. An incident already open keeps going until its window runs out.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'incident_window_mins',  label: 'Same kind in the same zone within this time \u2192 one push (Front / Doorbell / Rear)', suffix: 'min', step: 0.5, min: 1,  max: 10 },\n      { key: 'repeat_push_secs',      label: 'Repeat-push gap for other detections (same label)',                               suffix: 's',   step: 1,   min: 10, max: 600 },\n      { key: 'door_open_window_secs', label: 'Front door opened within this time \u2192 doorbell popups and pushes skipped',          suffix: 's',   step: 1,   min: 10, max: 300 },\n      { key: 'car_cooldown_mins',     label: 'Car deterrent cooldown',                                                           suffix: 'min', step: 0.5, min: 1,  max: 30 }\n    ] };\n  }\n};\n</script>\n",
+  "storeOutMessages": true,
+  "passthru": false,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "className": "",
+  "x": 960,
+  "y": 820,
+  "wires": [
+   [
+    "pc-cam-save"
+   ]
+  ]
+ },
+ {
+  "id": "pc-cam-save",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "validate + save setting",
+  "func": "const SPEC = {\n  incident_window_mins:  { def: 2,  min: 1,  max: 10,  step: 0.5 },\n  repeat_push_secs:      { def: 60, min: 10, max: 600, step: 1 },\n  door_open_window_secs: { def: 60, min: 10, max: 300, step: 1 },\n  car_cooldown_mins:     { def: 2,  min: 1,  max: 30,  step: 0.5 }\n};\nconst okVal = (s, v) => typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9;\nconst norm = (s, v) => Number(v);\n// One setting edited on the page -> validate -> global + disk. Out1 = file write, out2 = back to\n// the page so it always shows what is actually stored (an invalid entry snaps back).\nconst loaded = global.get('camera_config');\nif (!loaded) { node.warn('camera_config not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nif (rejected.length) node.warn('camera_config rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a rejected entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('camera_config', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1200,
+  "y": 820,
+  "wires": [
+   [
+    "pc-cam-write"
+   ],
+   [
+    "pc-cam-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-cam-write",
+  "type": "file",
+  "z": "tab-pc",
+  "name": "write camera_config.json",
+  "filename": "/data/camera_config.json",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": false,
+  "overwriteFile": "true",
+  "encoding": "none",
+  "x": 1460,
+  "y": 820,
+  "wires": [
+   []
+  ]
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",
@@ -613,6 +742,19 @@
   "width": "12",
   "height": "1",
   "order": 1,
+  "showTitle": true,
+  "className": "",
+  "visible": "true",
+  "disabled": "false"
+ },
+ {
+  "id": "pc-ui-group-cameras",
+  "type": "ui-group",
+  "name": "Cameras",
+  "page": "pc-ui-page",
+  "width": "6",
+  "height": "1",
+  "order": 5,
   "showTitle": true,
   "className": "",
   "visible": "true",
