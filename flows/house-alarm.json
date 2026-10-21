@@ -754,6 +754,7 @@
   "id": "aa-welcome-fn",
   "type": "function",
   "z": "096ff268dc7bd2f0",
+  "d": true,
   "name": "welcome (door-gated)",
   "func": "const aw = flow.get('awaitWelcome');\nconst WINDOW = 8 * 60 * 1000;\nconst opened = msg.payload && msg.payload.new_state && msg.payload.new_state.state === 'on';\nif (!opened) return null;\nif (!aw || (Date.now() - aw.since) > WINDOW) return null;\nflow.set('awaitWelcome', null);\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nconst S = id => { const e = ents.find(x => x.entity_id === id); return e && e.state; };\nconst PEOPLE = flow.get('people') || [];\nconst home = PEOPLE.filter(p => p.name && (S(p.person) === 'home' || S(p.ping) === 'on')).map(p => p.name);\nlet who = null;\nif (home.length === 1) who = home[0];\nelse if (home.length > 1) who = home.slice(0, -1).join(', ') + ' and ' + home[home.length - 1];\nconst message = who ? ('Welcome home, ' + who + '. The house has been disarmed.') : 'Welcome home. The house has been disarmed.';\nnode.warn('[house-alarm] ' + message);\nreturn { payload: { message } };",
   "outputs": 1,
@@ -767,9 +768,7 @@
    [
     "aa-welcome-delay"
    ]
-  ],
-  "disabled": true,
-  "d": true
+  ]
  },
  {
   "id": "aa-welcome-delay",

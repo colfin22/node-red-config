@@ -98,7 +98,8 @@ defaults (House Mode role `none`, every toggle off) rather than needing a flow e
 
 A toggle with no resolvable notify target (no linked `device_tracker`/`notify` entity) renders
 disabled with a reason, rather than silently doing nothing. Backing store is
-`data/person_config.json` (tracked in this repo, entity ids + booleans only, no secrets), loaded
+`data/person_config.json` (entity ids + booleans only, no secrets; not in this repo — `data/*` is
+gitignored, so it is not in the git backup), loaded
 into `global` context on deploy/tick so every consumer flow reads it live — no redeploy needed
 after a toggle change. Every consumer that reads it (House Mode, House Alarm, Camera Concierge,
 Heating Control, both infra flows, battery monitoring) builds its notify/watch list dynamically
@@ -106,6 +107,13 @@ from whoever currently has that channel/role on, so it scales to any number of p
 flow edit. `PERSON_n_NAME` and `PERSON_n_HA_USER_ID` are still read directly from the environment
 — they're only used for spoken possessive naming and "who did it" attribution (NFC/heating), not
 migrated to the dashboard.
+
+A second section, **Climate**, holds the Heating Control preset temperatures (night / comfort /
+hot / eco / frost). Each box takes 5–30°C in 0.5° steps (the thermostat's own limits) and saves on
+blur/Enter to `data/heating_config.json`, loaded into `global.heating_config`. The heating
+controller reads it on every 60 s tick, so a change reaches the thermostat within a minute. An
+invalid entry is refused and the box snaps back to the stored value; a missing file or a bad value
+falls back to the defaults built into the controller. `heating_config.json` is not in the git backup.
 
 ### What to search and replace
 
@@ -225,12 +233,14 @@ Two separate HA automations — one on `alarm_control_panel.house`, one on `.she
 Runs off House Mode + time of day, driving the **local HomeKit** thermostat (`climate.netatmo_smart_thermostat`). The Netatmo holds a flat **eco 19°C** baseline; this flow only ever *raises* above it and re-asserts the target every 30 minutes so a manual override never lapses back to the baseline.
 
 ## Temperatures
-eco 19 · night 19.5 · comfort 20 · hot 20.5 · frost 12
+Set on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow) → **Climate** section, so they can be changed without editing the flow. Defaults (used when `data/heating_config.json` is missing or a value in it is invalid):
+
+eco 19 · night 19 · comfort 19.5 · hot 20 · frost 12
 
 ## Schedule (House Mode + time)
-- **Home** → comfort 20; **hot 20.5** between 19:00–22:00
-- **Sleeping** → night 19.5 overnight; comfort 20 from a wake time that varies by season: **06:30 weekdays / 07:30 weekends** (Sep–May), **07:00 every day** in June–August
-- **Away** → eco 19; drops to frost 12 after 24 h empty (gated by the `Away 24h+` dashboard toggle, `input_boolean.heating_extended_away`)
+- **Home** → comfort; **hot** between 19:00–22:00
+- **Sleeping** → night overnight; comfort from a wake time that varies by season: **06:30 weekdays / 07:30 weekends** (Sep–May), **07:00 every day** in June–August
+- **Away** → eco; drops to frost after 24 h empty (gated by the `Away 24h+` dashboard toggle, `input_boolean.heating_extended_away`)
 - The same 24 h-empty state also **stops the hot-water solar diverter** (no point heating water for an empty house); it goes back to normal when anyone returns, when a pre-warm boost is started, or when someone is heading home — and the flow only ever writes on those transitions, so a manually-stopped diverter is left alone
 
 ## Forecast pre-heat
@@ -247,13 +257,13 @@ The controller writes a plain-English status to `input_text.heating_status` — 
 
 | Status line | What happened |
 |---|---|
-| `Home — comfort 20° · house woke up (sitting room light)` | someone turned a light on in the morning; the house switched out of Sleeping |
-| `Evening warm-up 20.5° · evening schedule (19:00)` | the clock, not you |
-| `Sleeping — overnight 19.5° · quiet for 20 min — bed` | the house settled |
+| `Home — comfort 19.5° · house woke up (sitting room light)` | someone turned a light on in the morning; the house switched out of Sleeping |
+| `Evening warm-up 20° · evening schedule (19:00)` | the clock, not you |
+| `Sleeping — overnight 19° · quiet for 20 min — bed` | the house settled |
 | `Away — setback 19° · everyone left` | the last person left |
 | `Boost 22° until 15:30 · you asked` | dashboard or thermostat dial |
-| `Morning warm-up 20° · cold morning — started early` | forecast pre-heat |
-| `Home — comfort 20° · heading home` | proximity pre-heat |
+| `Morning warm-up 19.5° · cold morning — started early` | forecast pre-heat |
+| `Home — comfort 19.5° · heading home` | proximity pre-heat |
 
 The cause is taken from `input_text.house_mode_reason` when a mode change drove it (entity ids resolved to friendly names), from the boost/pre-heat state when one of those did, and otherwise from the clock.
 

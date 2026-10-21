@@ -89,8 +89,8 @@
   "rap": true,
   "rh": 0,
   "inputs": 0,
-  "x": 150,
-  "y": 300,
+  "x": 130,
+  "y": 360,
   "wires": [
    [
     "cam-fn-review",
@@ -141,8 +141,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1320,
-  "y": 740,
+  "x": 1760,
+  "y": 760,
   "wires": [
    [
     "cam-cast-delay"
@@ -510,7 +510,7 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 1150,
+  "x": 1070,
   "y": 360,
   "wires": [
    [
@@ -1113,8 +1113,8 @@
   "mustacheAltTags": false,
   "outputProperties": [],
   "queue": "none",
-  "x": 1150,
-  "y": 740,
+  "x": 1300,
+  "y": 760,
   "wires": [
    [
     "cam-cast"
