@@ -192,6 +192,24 @@ override them per group on every sensor update, so a new threshold takes effect 
 | Frigate / a camera offline for | 2 min | Frigate LXC + the five cameras |
 | Nextcloud storage free below | 500 GB | Nextcloud free space |
 
+An eighth section, **Heating**, holds the Heating Control schedule (`data/heating_schedule.json` →
+`global.heating_schedule`, not in the git backup). `heat-fn` reads it every 60 s tick and `heat-fc-fn`
+at the forecast check, so both anchor to the same wake times. A boost already running keeps its end time.
+
+| Setting | Default | Rule |
+|---|---|---|
+| Wake time, weekdays / weekends (outside summer) | 06:30 / 07:30 | 04:00–11:30 (Sleeping-mode comfort ends at noon) |
+| Wake time in summer, every day | 07:00 | as above |
+| Summer from / to month | 6 / 8 (June–August) | from ≤ to |
+| Evening "hot" window (Home) | 19:00 – 22:00 | start before end |
+| Boost lasts | 2 h | 0.5–6 h (the HA card button still reads "Boost 2 h") |
+| Pre-heat earlier when the forecast low is under 8 / 4 / 0 / −3 °C | 15 / 30 / 45 / 60 min | colder never gets less |
+| Forecast check time | 21:30 | 18:00–23:55; a 60 s tick runs it once a day in the 5 min after this time |
+| Heading-home pre-heat starts within / stops beyond | 10 / 12 km | stop beyond start |
+| Away this long → frost (Away 24h+ toggle on; also stops the Eddi) | 24 h | 1–168 h |
+
+An edit that breaks a rule is refused; a stored group that breaks one falls back to that group's defaults.
+
 ### What to search and replace
 
 Every id below is mine and will not exist on your system. Nothing errors when a name does not
@@ -308,6 +326,8 @@ Two separate HA automations — one on `alarm_control_panel.house`, one on `.she
 ---
 
 # Heating Control — how it works
+
+The schedule timings below (wake times and summer months, the 19:00–22:00 evening window, the 2-hour boost, the pre-heat lead times and 21:30 forecast check, the 10/12 km heading-home distances and the 24-hour frost delay) are defaults; they are set on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow) → **Heating** section. The temperatures are in the **Climate** section.
 
 ![The Heating Control flow in the Node-RED editor](docs/heating-control.png)
 

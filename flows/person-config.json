@@ -271,7 +271,7 @@
   "width": "6",
   "height": "6",
   "head": "",
-  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"width:110px;\"><b>{{ r.key }}</b></td>\n          <td style=\"width:140px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" type=\"number\" step=\"0.5\" min=\"5\" max=\"30\" suffix=\"\u00b0C\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: Number(e.target.value) } })\"></v-text-field>\n          </td>\n          <td style=\"padding-left:12px; opacity:.75;\">{{ r.when }}</td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      0.5\u00b0 steps, 5\u201330\u00b0 (the thermostat's limits). The morning boost is comfort + 0.5 for 15 min.\n      The Netatmo itself holds 19\u00b0 underneath.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'night',   when: 'overnight, while Sleeping' },\n      { key: 'comfort', when: 'from wake time and through the day; also heading home' },\n      { key: 'hot',     when: 'evening, 19:00\u201322:00 (Home)' },\n      { key: 'eco',     when: 'Away' },\n      { key: 'frost',   when: 'Away for 24 h+ (with the Away 24h+ toggle on)' }\n    ] };\n  }\n};\n</script>\n",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"width:110px;\"><b>{{ r.key }}</b></td>\n          <td style=\"width:140px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" type=\"number\" step=\"0.5\" min=\"5\" max=\"30\" suffix=\"\u00b0C\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: Number(e.target.value) } })\"></v-text-field>\n          </td>\n          <td style=\"padding-left:12px; opacity:.75;\">{{ r.when }}</td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      0.5\u00b0 steps, 5\u201330\u00b0 (the thermostat's limits). The morning boost is comfort + 0.5 for 15 min.\n      The Netatmo itself holds 19\u00b0 underneath.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'night',   when: 'overnight, while Sleeping' },\n      { key: 'comfort', when: 'from wake time and through the day; also heading home' },\n      { key: 'hot',     when: 'evening window, Home (times in the Heating section)' },\n      { key: 'eco',     when: 'Away' },\n      { key: 'frost',   when: 'Away for 24 h+ (with the Away 24h+ toggle on)' }\n    ] };\n  }\n};\n</script>\n",
   "storeOutMessages": true,
   "passthru": false,
   "resendOnRefresh": true,
@@ -970,6 +970,135 @@
   ]
  },
  {
+  "id": "pc-hs-boot",
+  "type": "inject",
+  "z": "tab-pc",
+  "name": "load heating_schedule + 120s refresh",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 200,
+  "y": 1120,
+  "wires": [
+   [
+    "pc-hs-read"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hs-read",
+  "type": "file in",
+  "z": "tab-pc",
+  "name": "read heating_schedule.json",
+  "filename": "/data/heating_schedule.json",
+  "filenameType": "str",
+  "format": "utf8",
+  "chunk": false,
+  "sendError": true,
+  "encoding": "none",
+  "allProps": false,
+  "x": 440,
+  "y": 1120,
+  "wires": [
+   [
+    "pc-hs-load"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hs-load",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "load + validate heating_schedule",
+  "func": "const SPEC = {\n  wake_weekday:      { def: '06:30', time: true },\n  wake_weekend:      { def: '07:30', time: true },\n  wake_summer:       { def: '07:00', time: true },\n  summer_from_month: { def: 6,  min: 1,   max: 12,  step: 1 },\n  summer_to_month:   { def: 8,  min: 1,   max: 12,  step: 1 },\n  hot_start:         { def: '19:00', time: true },\n  hot_end:           { def: '22:00', time: true },\n  boost_hours:       { def: 2,  min: 0.5, max: 6,   step: 0.5 },\n  lead_mild:         { def: 15, min: 0,   max: 120, step: 1 },\n  lead_cool:         { def: 30, min: 0,   max: 120, step: 1 },\n  lead_cold:         { def: 45, min: 0,   max: 120, step: 1 },\n  lead_freezing:     { def: 60, min: 0,   max: 120, step: 1 },\n  forecast_time:     { def: '21:30', time: true },\n  prox_on_km:        { def: 10, min: 1,   max: 50,  step: 1 },\n  prox_off_km:       { def: 12, min: 2,   max: 60,  step: 1 },\n  frost_after_hours: { def: 24, min: 1,   max: 168, step: 1 }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\n// Groups that must hold together; a broken group falls back to its defaults (load) or is refused (save).\nconst GROUPS = {\n  wake:  { keys: ['wake_weekday', 'wake_weekend', 'wake_summer', 'summer_from_month', 'summer_to_month'],\n           ok: c => ['wake_weekday', 'wake_weekend', 'wake_summer'].every(k => hm2m(c[k]) >= 240 && hm2m(c[k]) <= 690) && c.summer_from_month <= c.summer_to_month,\n           why: 'wake times 04:00-11:30, summer from-month <= to-month' },\n  hot:   { keys: ['hot_start', 'hot_end'], ok: c => hm2m(c.hot_start) < hm2m(c.hot_end), why: 'hot window start before end' },\n  lead:  { keys: ['lead_mild', 'lead_cool', 'lead_cold', 'lead_freezing'], ok: c => c.lead_mild <= c.lead_cool && c.lead_cool <= c.lead_cold && c.lead_cold <= c.lead_freezing, why: 'colder mornings get at least as much lead' },\n  fc:    { keys: ['forecast_time'], ok: c => hm2m(c.forecast_time) >= 1080 && hm2m(c.forecast_time) <= 1435, why: 'forecast check 18:00-23:55' },\n  prox:  { keys: ['prox_on_km', 'prox_off_km'], ok: c => c.prox_off_km > c.prox_on_km, why: 'stop distance beyond start distance' }\n};\n// Boot: heating_schedule.json -> global.heating_schedule (read live by Heating Control) + the page.\nlet cfg = {};\nif (msg.error) node.warn('heating_schedule.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('heating_schedule.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('heating_schedule.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nfor (const g of Object.keys(GROUPS)) { if (!GROUPS[g].ok(out)) { node.warn('heating_schedule ' + g + ' breaks a rule (' + GROUPS[g].why + '), using its defaults'); GROUPS[g].keys.forEach(k => { out[k] = SPEC[k].def; }); } }\nglobal.set('heating_schedule', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 700,
+  "y": 1120,
+  "wires": [
+   [
+    "pc-hs-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hs-ui",
+  "type": "ui-template",
+  "z": "tab-pc",
+  "group": "pc-ui-group-heating",
+  "page": "",
+  "ui": "",
+  "name": "Heating schedule settings",
+  "order": 1,
+  "width": "6",
+  "height": "15",
+  "head": "",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      Wake times 04:00\u201311:30. Colder mornings must get at least as much pre-heat as milder ones. The temperatures are in the Climate section; the morning boost stays comfort + 0.5 for 15 min. A boost already running keeps its end time.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'wake_weekday',      label: 'Wake time, weekdays (outside summer)',                time: true },\n      { key: 'wake_weekend',      label: 'Wake time, weekends (outside summer)',                time: true },\n      { key: 'wake_summer',       label: 'Wake time in summer, every day',                      time: true },\n      { key: 'summer_from_month', label: 'Summer from month (1\u201312)',                            suffix: '', step: 1, min: 1, max: 12 },\n      { key: 'summer_to_month',   label: 'Summer to month (1\u201312)',                              suffix: '', step: 1, min: 1, max: 12 },\n      { key: 'hot_start',         label: 'Evening \"hot\" from (Home)',                           time: true },\n      { key: 'hot_end',           label: 'Evening \"hot\" until',                                 time: true },\n      { key: 'boost_hours',       label: 'Boost lasts',                                         suffix: 'h',   step: 0.5, min: 0.5, max: 6 },\n      { key: 'lead_mild',         label: 'Pre-heat earlier when the forecast low is under 8 \u00b0C', suffix: 'min', step: 1, min: 0, max: 120 },\n      { key: 'lead_cool',         label: '\u2026 under 4 \u00b0C',                                        suffix: 'min', step: 1, min: 0, max: 120 },\n      { key: 'lead_cold',         label: '\u2026 under 0 \u00b0C',                                        suffix: 'min', step: 1, min: 0, max: 120 },\n      { key: 'lead_freezing',     label: '\u2026 under \u22123 \u00b0C',                                       suffix: 'min', step: 1, min: 0, max: 120 },\n      { key: 'forecast_time',     label: 'Forecast check time (18:00\u201323:55)',                   time: true },\n      { key: 'prox_on_km',        label: 'Heading-home pre-heat starts within',                 suffix: 'km',  step: 1, min: 1, max: 50 },\n      { key: 'prox_off_km',       label: 'Heading-home pre-heat stops beyond',                  suffix: 'km',  step: 1, min: 2, max: 60 },\n      { key: 'frost_after_hours', label: 'Away this long \u2192 frost (Away 24h+ toggle on; also stops the Eddi)', suffix: 'h', step: 1, min: 1, max: 168 }\n    ] };\n  }\n};\n</script>\n",
+  "storeOutMessages": true,
+  "passthru": false,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "className": "",
+  "x": 960,
+  "y": 1120,
+  "wires": [
+   [
+    "pc-hs-save"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hs-save",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "validate + save setting",
+  "func": "const SPEC = {\n  wake_weekday:      { def: '06:30', time: true },\n  wake_weekend:      { def: '07:30', time: true },\n  wake_summer:       { def: '07:00', time: true },\n  summer_from_month: { def: 6,  min: 1,   max: 12,  step: 1 },\n  summer_to_month:   { def: 8,  min: 1,   max: 12,  step: 1 },\n  hot_start:         { def: '19:00', time: true },\n  hot_end:           { def: '22:00', time: true },\n  boost_hours:       { def: 2,  min: 0.5, max: 6,   step: 0.5 },\n  lead_mild:         { def: 15, min: 0,   max: 120, step: 1 },\n  lead_cool:         { def: 30, min: 0,   max: 120, step: 1 },\n  lead_cold:         { def: 45, min: 0,   max: 120, step: 1 },\n  lead_freezing:     { def: 60, min: 0,   max: 120, step: 1 },\n  forecast_time:     { def: '21:30', time: true },\n  prox_on_km:        { def: 10, min: 1,   max: 50,  step: 1 },\n  prox_off_km:       { def: 12, min: 2,   max: 60,  step: 1 },\n  frost_after_hours: { def: 24, min: 1,   max: 168, step: 1 }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\n// Groups that must hold together; a broken group falls back to its defaults (load) or is refused (save).\nconst GROUPS = {\n  wake:  { keys: ['wake_weekday', 'wake_weekend', 'wake_summer', 'summer_from_month', 'summer_to_month'],\n           ok: c => ['wake_weekday', 'wake_weekend', 'wake_summer'].every(k => hm2m(c[k]) >= 240 && hm2m(c[k]) <= 690) && c.summer_from_month <= c.summer_to_month,\n           why: 'wake times 04:00-11:30, summer from-month <= to-month' },\n  hot:   { keys: ['hot_start', 'hot_end'], ok: c => hm2m(c.hot_start) < hm2m(c.hot_end), why: 'hot window start before end' },\n  lead:  { keys: ['lead_mild', 'lead_cool', 'lead_cold', 'lead_freezing'], ok: c => c.lead_mild <= c.lead_cool && c.lead_cool <= c.lead_cold && c.lead_cold <= c.lead_freezing, why: 'colder mornings get at least as much lead' },\n  fc:    { keys: ['forecast_time'], ok: c => hm2m(c.forecast_time) >= 1080 && hm2m(c.forecast_time) <= 1435, why: 'forecast check 18:00-23:55' },\n  prox:  { keys: ['prox_on_km', 'prox_off_km'], ok: c => c.prox_off_km > c.prox_on_km, why: 'stop distance beyond start distance' }\n};\n// One setting edited on the page -> validate -> global + disk. Out1 = file write, out2 = back to\n// the page so it always shows what is actually stored (an invalid entry snaps back).\nconst loaded = global.get('heating_schedule');\nif (!loaded) { node.warn('heating_schedule not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nfor (const g of Object.keys(GROUPS)) { if (!GROUPS[g].ok(next)) { rejected.push(GROUPS[g].why); GROUPS[g].keys.forEach(k => { next[k] = cur[k]; }); } }\nif (rejected.length) node.warn('heating_schedule rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a rejected entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('heating_schedule', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1200,
+  "y": 1120,
+  "wires": [
+   [
+    "pc-hs-write"
+   ],
+   [
+    "pc-hs-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hs-write",
+  "type": "file",
+  "z": "tab-pc",
+  "name": "write heating_schedule.json",
+  "filename": "/data/heating_schedule.json",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": false,
+  "overwriteFile": "true",
+  "encoding": "none",
+  "x": 1460,
+  "y": 1120,
+  "wires": [
+   []
+  ]
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",
@@ -1045,6 +1174,19 @@
   "disabled": "false"
  },
  {
+  "id": "pc-ui-group-heating",
+  "type": "ui-group",
+  "name": "Heating",
+  "page": "pc-ui-page",
+  "width": "6",
+  "height": "1",
+  "order": 2,
+  "showTitle": true,
+  "className": "",
+  "visible": "true",
+  "disabled": "false"
+ },
+ {
   "id": "pc-ui-group-housemode",
   "type": "ui-group",
   "name": "House Mode",
@@ -1077,7 +1219,7 @@
   "page": "pc-ui-page",
   "width": "6",
   "height": "1",
-  "order": 2,
+  "order": 8,
   "showTitle": true,
   "className": "",
   "visible": "true",
