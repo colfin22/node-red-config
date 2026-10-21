@@ -144,7 +144,7 @@
   "name": "People table",
   "order": 1,
   "width": "12",
-  "height": "8",
+  "height": "6",
   "format": "<template>\n  <div style=\"overflow-x:auto;\">\n    <table class=\"pc-table\" style=\"width:100%; border-collapse:collapse;\">\n      <thead>\n        <tr>\n          <th style=\"text-align:left;\">Person</th>\n          <th style=\"text-align:left;\">House Mode role</th>\n          <th style=\"text-align:center;\">Security</th>\n          <th style=\"text-align:center;\">Camera / Doorbell</th>\n          <th style=\"text-align:center;\">Mode-change</th>\n          <th style=\"text-align:center;\">Heating changes</th>\n          <th style=\"text-align:center;\">Freeze warning</th>\n          <th style=\"text-align:center;\">Infra alerts</th>\n          <th style=\"text-align:center;\">Only when home</th>\n          <th style=\"text-align:left;\">Phone on Wi-Fi</th>\n          <th style=\"text-align:left;\">Battery sensor</th>\n        </tr>\n      </thead>\n      <tbody>\n        <tr v-for=\"row in (msg.payload || [])\" :key=\"row.entity_id\" style=\"border-top:1px solid #ddd;\">\n          <td>{{ row.name }}</td>\n          <td style=\"min-width:130px\" title=\"none = not tracked by House Mode at all (indoor motion is their only safety net). guest = blocks the Away transition while present, never enables Sleeping. resident = counts towards the house being empty/occupied and enables auto-Sleeping.\">\n            <v-select :items=\"['none','guest','resident']\" v-model=\"row.role\" density=\"compact\" hide-details\n              @update:model-value=\"v => { row.role = v; send({ payload: row }) }\"></v-select>\n          </td>\n          <td style=\"text-align:center;\" :title=\"'Alarm arm/disarm/trigger pushes + the door-gated welcome-home announcement.' + (row.notify_service ? '' : ' [No linked device \u2014 ' + row.entity_id + ' has no device_tracker/notify]')\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.security\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\" :title=\"'Camera Concierge pushes: doorbell, person/vehicle/package detections, parcel delivery.' + (row.notify_service ? '' : ' [No linked device \u2014 ' + row.entity_id + ' has no device_tracker/notify]')\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.camera\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\" :title=\"'Push notification whenever House Mode changes (Home / Away / Sleeping).' + (row.notify_service ? '' : ' [No linked device \u2014 ' + row.entity_id + ' has no device_tracker/notify]')\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.house_mode_change\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\" :title=\"'Push notification when the heating schedule/routine changes (boost, pre-heat, mode switch).' + (row.notify_service ? '' : ' [No linked device \u2014 ' + row.entity_id + ' has no device_tracker/notify]')\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.heating_routine\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\" :title=\"'Push notification for the freezing-pipe temperature warning.' + (row.notify_service ? '' : ' [No linked device \u2014 ' + row.entity_id + ' has no device_tracker/notify]')\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.heating_freeze\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\" :title=\"'Infra Watchdog + Infra Health & Alerts phone pushes. Also gets the spoken TTS announcement while currently home.' + (row.notify_service ? '' : ' [No linked device \u2014 ' + row.entity_id + ' has no device_tracker/notify]')\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.infra_alerts\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"text-align:center;\" :title=\"'Only send Security notifications to this person while they are physically home \u2014 stops once they leave. Typically for guests.' + (row.notify_service ? '' : ' [No linked device \u2014 ' + row.entity_id + ' has no device_tracker/notify]')\">\n            <v-switch :disabled=\"!row.notify_service\" v-model=\"row.only_when_home\" hide-details color=\"primary\" class=\"d-flex justify-center\" @change=\"send({ payload: row })\"></v-switch>\n          </td>\n          <td style=\"min-width:220px\" title=\"HA entity id of this person's phone-on-home-Wi-Fi Ping sensor (e.g. binary_sensor.xxx_phone_home). House Mode counts them home if their location OR this sensor says so. Leave empty for location only.\">\n            <v-text-field v-model=\"row.ping\" density=\"compact\" hide-details placeholder=\"binary_sensor.xxx_phone_home\"\n              @blur=\"send({ payload: row })\" @keyup.enter=\"send({ payload: row })\"></v-text-field>\n          </td>\n          <td style=\"min-width:220px\" title=\"HA entity id of this person's phone battery sensor (e.g. sensor.xxx_battery_level). Low-battery monitoring only runs for Residents with this set.\">\n            <v-text-field v-model=\"row.battery_sensor\" density=\"compact\" hide-details placeholder=\"sensor.xxx_battery_level\"\n              @blur=\"send({ payload: row })\" @keyup.enter=\"send({ payload: row })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n  </div>\n</template>\n",
   "storeOutMessages": true,
   "passthru": false,
@@ -398,7 +398,7 @@
   "name": "Security settings",
   "order": 1,
   "width": "6",
-  "height": "8",
+  "height": "7",
   "head": "",
   "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      A shed change applies from the next tag scan. The battery morning summary is sent at the end of quiet hours.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'shed_max_hours',      label: 'Shed stays disarmed after a back-door tag scan, at most', suffix: 'h',   step: 0.5, min: 0.5, max: 12 },\n      { key: 'shed_closed_mins',    label: 'Shed re-arms once its door has been closed for',          suffix: 'min', step: 1,   min: 1,   max: 120 },\n      { key: 'shed_nightly_time',   label: 'Nightly shed re-arm (if disarmed and door shut)',          time: true },\n      { key: 'night_retry_mins',    label: 'Night-arm retry, after the open door/window is closed',     suffix: 'min', step: 1,   min: 1,   max: 120 },\n      { key: 'battery_low_pct',     label: 'Phone low-battery alert level',                            suffix: '%',   step: 1,   min: 5,   max: 50 },\n      { key: 'battery_quiet_start', label: 'Battery alerts quiet from',                                time: true },\n      { key: 'battery_quiet_end',   label: 'Battery alerts quiet until (morning summary)',             time: true }\n    ] };\n  }\n};\n</script>\n",
   "storeOutMessages": true,
@@ -454,6 +454,135 @@
   ]
  },
  {
+  "id": "pc-hm-boot",
+  "type": "inject",
+  "z": "tab-pc",
+  "name": "load house_mode_config + 120s refresh",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 200,
+  "y": 720,
+  "wires": [
+   [
+    "pc-hm-read"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hm-read",
+  "type": "file in",
+  "z": "tab-pc",
+  "name": "read house_mode_config.json",
+  "filename": "/data/house_mode_config.json",
+  "filenameType": "str",
+  "format": "utf8",
+  "chunk": false,
+  "sendError": true,
+  "encoding": "none",
+  "allProps": false,
+  "x": 450,
+  "y": 720,
+  "wires": [
+   [
+    "pc-hm-load"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hm-load",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "load + validate house_mode_config",
+  "func": "const SPEC = {\n  away_mins:                 { def: 20,      min: 5,   max: 120, step: 1 },\n  away_motion_lookback_mins: { def: 15,      min: 1,   max: 60,  step: 1 },\n  sleep_quiet_mins:          { def: 20,      min: 5,   max: 120, step: 1 },\n  night_start:               { def: '22:00', time: true },\n  night_end:                 { def: '07:00', time: true },\n  wake_from:                 { def: '06:00', time: true },\n  wake_until:                { def: '23:00', time: true },\n  wake_block_hours:          { def: 2,       min: 0.5, max: 6,   step: 0.5 },\n  manual_hold_hours:         { def: 4,       min: 0.5, max: 24,  step: 0.5 },\n  maint_expire_hours:        { def: 4,       min: 0.5, max: 24,  step: 0.5 }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\n// Protect the night alarm (the 02-08 bug was a wake window running to 23:59): the Sleeping window\n// crosses midnight, the wake window is same-day, and they overlap by at most a 1-hour grace each end.\nconst WINDOW_KEYS = ['night_start', 'night_end', 'wake_from', 'wake_until'];\nconst crossOk = c => hm2m(c.night_start) > hm2m(c.night_end) && hm2m(c.wake_from) < hm2m(c.wake_until)\n  && hm2m(c.wake_until) <= hm2m(c.night_start) + 60 && hm2m(c.wake_from) >= hm2m(c.night_end) - 60;\n// Boot: house_mode_config.json -> global.house_mode_config (read live by hm-engine) + the page.\nlet cfg = {};\nif (msg.error) node.warn('house_mode_config.json unreadable, using defaults: ' + (msg.error.message || msg.error));\ntry { cfg = JSON.parse(msg.error ? '{}' : (msg.payload || '{}')) || {}; } catch (e) {\n  node.warn('house_mode_config.json parse failed, using defaults: ' + e.message);\n}\nconst out = {};\nfor (const k of Object.keys(SPEC)) {\n  const v = norm(SPEC[k], cfg[k]);\n  if (okVal(SPEC[k], v)) out[k] = v;\n  else { out[k] = SPEC[k].def; if (cfg[k] !== undefined) node.warn('house_mode_config.' + k + '=' + cfg[k] + ' invalid, using ' + SPEC[k].def); }\n}\nif (!crossOk(out)) {\n  node.warn('house_mode_config windows break the night-alarm rules, using default windows');\n  WINDOW_KEYS.forEach(k => { out[k] = SPEC[k].def; });\n}\nglobal.set('house_mode_config', out);\nnode.status({ fill: 'green', shape: 'dot', text: 'loaded' });\nmsg.payload = out;\nreturn msg;\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 710,
+  "y": 720,
+  "wires": [
+   [
+    "pc-hm-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hm-ui",
+  "type": "ui-template",
+  "z": "tab-pc",
+  "group": "pc-ui-group-housemode",
+  "page": "",
+  "ui": "",
+  "name": "House Mode settings",
+  "order": 1,
+  "width": "6",
+  "height": "10",
+  "head": "",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr v-for=\"r in rows\" :key=\"r.key\" style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">{{ r.label }}</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"r.key + '-' + (msg._t || 0)\" :type=\"r.time ? 'time' : 'number'\"\n              :step=\"r.step\" :min=\"r.min\" :max=\"r.max\" :suffix=\"r.suffix\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {})[r.key]\"\n              @blur=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"\n              @keyup.enter=\"e => send({ payload: { [r.key]: r.time ? e.target.value : Number(e.target.value) } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      The Sleeping window must cross midnight. The wake window can start at most 1 h before the\n      Sleeping window ends and finish at most 1 h after it starts (this keeps the night alarm safe),\n      so move the wake time first when narrowing the Sleeping window. Changes apply within 2 minutes.\n    </div>\n  </div>\n</template>\n<script>\nexport default {\n  data() {\n    return { rows: [\n      { key: 'away_mins',                 label: 'Everyone out for this long \u2192 Away',               suffix: 'min', step: 1,   min: 5,   max: 120 },\n      { key: 'away_motion_lookback_mins', label: 'Indoor motion within this long holds off Away',   suffix: 'min', step: 1,   min: 1,   max: 60 },\n      { key: 'sleep_quiet_mins',          label: 'Quiet for this long \u2192 Sleeping',                  suffix: 'min', step: 1,   min: 5,   max: 120 },\n      { key: 'night_start',               label: 'Sleeping can start from',                         time: true },\n      { key: 'night_end',                 label: 'Sleeping can start until',                        time: true },\n      { key: 'wake_from',                 label: 'Activity wakes the house from',                   time: true },\n      { key: 'wake_until',                label: 'Activity wakes the house until',                  time: true },\n      { key: 'wake_block_hours',          label: 'After waking, no Sleeping for',                   suffix: 'h',   step: 0.5, min: 0.5, max: 6 },\n      { key: 'manual_hold_hours',         label: 'A hand-set house mode holds for',                 suffix: 'h',   step: 0.5, min: 0.5, max: 24 },\n      { key: 'maint_expire_hours',        label: 'Maintenance mode switches itself off after',      suffix: 'h',   step: 0.5, min: 0.5, max: 24 }\n    ] };\n  }\n};\n</script>\n",
+  "storeOutMessages": true,
+  "passthru": false,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "className": "",
+  "x": 970,
+  "y": 720,
+  "wires": [
+   [
+    "pc-hm-save"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hm-save",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "validate + save setting",
+  "func": "const SPEC = {\n  away_mins:                 { def: 20,      min: 5,   max: 120, step: 1 },\n  away_motion_lookback_mins: { def: 15,      min: 1,   max: 60,  step: 1 },\n  sleep_quiet_mins:          { def: 20,      min: 5,   max: 120, step: 1 },\n  night_start:               { def: '22:00', time: true },\n  night_end:                 { def: '07:00', time: true },\n  wake_from:                 { def: '06:00', time: true },\n  wake_until:                { def: '23:00', time: true },\n  wake_block_hours:          { def: 2,       min: 0.5, max: 6,   step: 0.5 },\n  manual_hold_hours:         { def: 4,       min: 0.5, max: 24,  step: 0.5 },\n  maint_expire_hours:        { def: 4,       min: 0.5, max: 24,  step: 0.5 }\n};\nconst okVal = (s, v) => s.time\n  ? (typeof v === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v))\n  : (typeof v === 'number' && isFinite(v) && v >= s.min && v <= s.max && Math.abs(v / s.step - Math.round(v / s.step)) < 1e-9);\nconst norm = (s, v) => s.time ? (typeof v === 'string' ? v.trim() : v) : Number(v);\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\n// Protect the night alarm (the 02-08 bug was a wake window running to 23:59): the Sleeping window\n// crosses midnight, the wake window is same-day, and they overlap by at most a 1-hour grace each end.\nconst WINDOW_KEYS = ['night_start', 'night_end', 'wake_from', 'wake_until'];\nconst crossOk = c => hm2m(c.night_start) > hm2m(c.night_end) && hm2m(c.wake_from) < hm2m(c.wake_until)\n  && hm2m(c.wake_until) <= hm2m(c.night_start) + 60 && hm2m(c.wake_from) >= hm2m(c.night_end) - 60;\n// One setting edited on the page -> validate (field + window rules) -> global + disk. Out1 = file\n// write, out2 = back to the page so it always shows what is stored (a refused entry snaps back).\nconst loaded = global.get('house_mode_config');\nif (!loaded) { node.warn('house_mode_config not loaded yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst cur = Object.assign({}, loaded);\nconst p = msg.payload || {};\nconst next = Object.assign({}, cur);\nconst rejected = [];\nfor (const k of Object.keys(SPEC)) {\n  if (p[k] === undefined || p[k] === '' || p[k] === null) continue;\n  const v = norm(SPEC[k], p[k]);\n  if (okVal(SPEC[k], v)) next[k] = v; else rejected.push(k + '=' + p[k]);\n}\nif (!crossOk(next)) {\n  rejected.push('windows (Sleeping must cross midnight; wake window same-day, within 1 h of the Sleeping window)');\n  WINDOW_KEYS.forEach(k => { next[k] = cur[k]; });\n}\nif (rejected.length) node.warn('house_mode_config rejected: ' + rejected.join(', '));\nconst changed = Object.keys(SPEC).filter(k => next[k] !== cur[k]);\nconst toPage = { payload: next, _t: Date.now() };   // _t re-keys the inputs so a refused entry snaps back\nif (!changed.length) return [null, toPage];\nglobal.set('house_mode_config', next);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + changed.map(k => k + ' ' + next[k]).join(', ') });\nreturn [{ payload: JSON.stringify(next, null, 2) }, toPage];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1210,
+  "y": 720,
+  "wires": [
+   [
+    "pc-hm-write"
+   ],
+   [
+    "pc-hm-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-hm-write",
+  "type": "file",
+  "z": "tab-pc",
+  "name": "write house_mode_config.json",
+  "filename": "/data/house_mode_config.json",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": false,
+  "overwriteFile": "true",
+  "encoding": "none",
+  "x": 1470,
+  "y": 720,
+  "wires": [
+   []
+  ]
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",
@@ -496,7 +625,20 @@
   "page": "pc-ui-page",
   "width": "6",
   "height": "1",
-  "order": 2,
+  "order": 3,
+  "showTitle": true,
+  "className": "",
+  "visible": "true",
+  "disabled": "false"
+ },
+ {
+  "id": "pc-ui-group-housemode",
+  "type": "ui-group",
+  "name": "House Mode",
+  "page": "pc-ui-page",
+  "width": "6",
+  "height": "1",
+  "order": 4,
   "showTitle": true,
   "className": "",
   "visible": "true",
@@ -509,7 +651,7 @@
   "page": "pc-ui-page",
   "width": "6",
   "height": "1",
-  "order": 3,
+  "order": 2,
   "showTitle": true,
   "className": "",
   "visible": "true",

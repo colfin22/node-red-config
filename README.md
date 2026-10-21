@@ -128,6 +128,27 @@ by the alarm flows, each falling back to its built-in default:
 | Phone low-battery alert level | 15 % | House Alarm battery monitoring |
 | Battery alerts quiet from / until | 22:00 / 07:00 | House Alarm: low-battery pushes inside this window are held and sent as one summary at the end time |
 
+A fourth section, **House Mode**, holds the House Mode engine's timings (`data/house_mode_config.json`
+→ `global.house_mode_config`, not in the git backup). `hm-engine` reads them on every message, so a
+change applies within its 2-minute tick; an Away countdown already running keeps its delay.
+
+| Setting | Default |
+|---|---|
+| Everyone out for this long → Away (also the re-check delay while indoor motion holds it off) | 20 min |
+| Indoor motion within this long holds off Away | 15 min |
+| Quiet for this long → Sleeping | 20 min |
+| Sleeping can start between | 22:00 – 07:00 |
+| Activity wakes the house between | 06:00 – 23:00 |
+| After waking, no Sleeping for | 2 h |
+| A hand-set house mode holds for | 4 h |
+| Maintenance mode switches itself off after | 4 h |
+
+The two windows are checked together, to protect the night alarm: the Sleeping window must cross
+midnight, the wake window must be same-day, and the wake window may start at most 1 h before the
+Sleeping window ends and finish at most 1 h after it starts. A wake window that ran on into the night
+once let late-evening motion wake the house and disarm the night alarm. An edit that breaks a rule is
+refused, and a stored pair that breaks one falls back to the defaults.
+
 ### What to search and replace
 
 Every id below is mine and will not exist on your system. Nothing errors when a name does not
@@ -157,6 +178,8 @@ an error to tell you.
 ![The House Mode flow in the Node-RED editor](docs/house-mode.png)
 
 The **House Mode** tab (`tab-hm`) is the household state orchestrator. It computes and maintains `input_select.house_mode` — the single source of truth that other flows (alarm, heating and infrastructure alerts) consume so each doesn't have to do its own presence tracking.
+
+The timings in this section (the 20-minute Away timer, 15-minute motion look-back, 20-minute quiet period, 22:00–07:00 Sleeping window, 06:00 wake time, 2-hour re-entry block and 4-hour maintenance expiry) are the defaults; they are set on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow) → **House Mode** section.
 
 ## Three states + overlays
 
