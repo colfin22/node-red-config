@@ -1,0 +1,125 @@
+[
+ {
+  "id": "tab-dbw",
+  "type": "tab",
+  "label": "Doorbell Webhook",
+  "disabled": false,
+  "info": "Reolink doorbell button press via the camera's own webhook (no integration connection). Testing stage: pushes Colm only; move to dispatch: camera once proven."
+ },
+ {
+  "id": "dbw-in",
+  "type": "http in",
+  "z": "tab-dbw",
+  "name": "POST /doorbell",
+  "url": "/doorbell",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 140,
+  "y": 120,
+  "wires": [
+   [
+    "dbw-fn",
+    "dbw-resp"
+   ]
+  ]
+ },
+ {
+  "id": "dbw-resp",
+  "type": "http response",
+  "z": "tab-dbw",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 330,
+  "y": 180,
+  "wires": []
+ },
+ {
+  "id": "dbw-fn",
+  "type": "function",
+  "z": "tab-dbw",
+  "name": "doorbell webhook",
+  "func": "// Reolink doorbell webhook (camera Settings > webhook -> http://10.0.0.208:1880/doorbell).\n// The camera pushes on its own, so nothing holds a connection to it for button presses.\n// Every call is logged; a VISITOR (button press) pushes Colm. The camera sends no\n// \"ended\" message, and repeats within 15 s are logged but not pushed.\nconst ts = new Date().toLocaleString('en-IE', {timeZone: 'Europe/Dublin', hour12: false});\nlet body = msg.payload;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) {} }\nconst alarm = (body && body.alarm) || {};\nconst type = String(alarm.type || '').toUpperCase();\nconst ip = (msg.req && msg.req.ip) || '';\nconst raw = (typeof body === 'string' ? body : JSON.stringify(body || {})).slice(0, 600);\nconst line = function(tag){ return {payload: ts + '  [' + tag + '] from ' + ip + ' ' + raw + '\\n'}; };\n\nif (type !== 'VISITOR') return [null, line(type || 'no type')];\nconst now = Date.now();\nif (now - (context.get('last') || 0) < 15000) return [null, line('VISITOR repeat, no push')];\ncontext.set('last', now);\nreturn [{title: '\ud83d\udd14 Doorbell', message: 'Someone pressed the doorbell',\n         ndata: {tag: 'doorbell_press', ttl: 0, priority: 'high'}}, line('VISITOR push')];\n",
+  "outputs": 2,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 360,
+  "y": 120,
+  "wires": [
+   [
+    "dbw-push"
+   ],
+   [
+    "dbw-log"
+   ]
+  ]
+ },
+ {
+  "id": "dbw-push",
+  "type": "api-call-service",
+  "z": "tab-dbw",
+  "name": "push Colm (testing)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "notify.mobile_app_np3",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": $merge([msg.ndata ? msg.ndata : {}, {\"notification_icon\": \"mdi:doorbell\"}])}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 600,
+  "y": 100,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "dbw-log",
+  "type": "file",
+  "z": "tab-dbw",
+  "name": "doorbell webhook log",
+  "filename": "/data/doorbell_webhook.log",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": true,
+  "overwriteFile": "false",
+  "encoding": "none",
+  "x": 610,
+  "y": 160,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "ha-server",
+  "type": "server",
+  "name": "Home Assistant",
+  "version": 5,
+  "addon": false,
+  "rejectUnauthorizedCerts": false,
+  "ha_boolean": "y|yes|true|on|home|open",
+  "connectionDelay": true,
+  "cacheJson": true,
+  "heartbeat": true,
+  "heartbeatInterval": 30,
+  "areaSelector": "friendly",
+  "deviceSelector": "friendly",
+  "entitySelector": "friendly",
+  "statusSeparator": "at: ",
+  "statusYear": "hidden",
+  "statusMonth": "short",
+  "statusDay": "numeric",
+  "statusHourCycle": "h23",
+  "statusTimeFormat": "h:m",
+  "enableGlobalContextStore": false
+ }
+]
