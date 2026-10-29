@@ -4400,7 +4400,7 @@
         "type": "function",
         "z": "tab-ih",
         "name": "Restic failed build",
-        "func": "\nvar b=global.get('parseWebhookBody')(msg.payload);\nvar ds=b.dataset||'unknown';\nreturn {cat:'Backup',sub:'Restic',message:'Restic backup for '+ds+' on TrueNAS failed. Check /mnt/MainPool/logs/restic_'+ds+'.log',tag:'restic_'+ds};\n",
+        "func": "\nvar b=global.get('parseWebhookBody')(msg.payload);\nvar ds=b.dataset||'unknown';\nreturn {cat:'Backup',sub:'Restic',message:'Restic backup for '+ds+' on TrueNAS failed. Check /mnt/MainPool/restic/logs/restic_'+ds+'.log',tag:'restic_'+ds};\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -6713,5 +6713,53 @@
         "wires": [
             []
         ]
+    },
+    {
+        "id": "ih-b-ncdb-in",
+        "type": "http in",
+        "z": "tab-ih",
+        "name": "Nextcloud DB dump failed",
+        "url": "/ih-nextcloud-db-dump-failed",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 600,
+        "wires": [
+            [
+                "ih-b-ncdb-fn",
+                "ih-b-ncdb-resp"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-ncdb-fn",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "Nextcloud DB dump failed build",
+        "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar r=b.reason||'unknown';\nreturn {cat:'Backup',sub:'Nextcloud DB',message:'Nextcloud DB dump on VM117 failed: '+r+'. Check /var/log/nextcloud-db-dump.log',tag:'nextcloud_db_dump'};\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 600,
+        "wires": [
+            [
+                "ih-send"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-ncdb-resp",
+        "type": "http response",
+        "z": "tab-ih",
+        "name": "200",
+        "statusCode": "200",
+        "headers": {},
+        "x": 410,
+        "y": 640,
+        "wires": []
     }
 ]
