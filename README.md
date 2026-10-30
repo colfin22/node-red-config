@@ -227,7 +227,8 @@ an error to tell you.
 | Bedroom speaker | `media_player.*_bedroom_speaker_cast` | Person-at-the-car deterrent |
 | Lights | `light.hallway`, `light.sitting_room`, and the per-room lights in the House Mode activity watcher | Camera Concierge deterrent, alarm strobe, House Mode activity |
 | Motion and presence | `binary_sensor.hallway_motion_sensor_occupancy` and the other three indoor sensors | House Mode — these are what "activity" means |
-| Courier counters | `sensor.front_car_<courier>_count`, `sensor.front_van_<courier>_count` | Camera Concierge courier TTS |
+| Road zones | `Front_Road_Zone1`, `Front_Road_Zone2` (Frigate zones) | Camera Concierge courier and bin lorry TTS |
+| Bin calendar | `calendar.panda_waste` | Camera Concierge bin lorry TTS (only on a collection day) |
 | TVs | `binary_sensor.lg_tv_online`, `binary_sensor.samsung_tv_online` | House Mode quiet detection |
 | Weather warnings | `sensor.met_eireann_warning_level` | House Mode storm overlay (Irish-specific) |
 | Infrastructure sensors | the `sensor.proxmox_*`, `sensor.proxmox2_*` and `sensor.truenas_*` families | Infra Health & Alerts rule engine |
@@ -413,7 +414,7 @@ promotes an object to alert only once it enters a zone you care about.
 
 ## Signal it listens to
 - **Primary:** MQTT topic **`frigate/reviews`** (broker `10.0.0.229`). Frigate only publishes a review at **`severity: alert`** when an object enters an alert zone — so masks/zones (e.g. the driveway car-mask) are honoured upstream, and the concierge only acts on real, zone-qualified events.
-- **Secondary branches:** HA websocket for the courier count sensors + the postman sensor, and the patio-door switch state.
+- **Secondary branches:** MQTT topic **`frigate/events`** for couriers and the bin lorry on the road zones, HA websocket for the postman sensor, and the patio door switch state.
 
 ## Turning a detection into a notification
 For each `frigate/reviews` message the flow decides three things:
@@ -447,6 +448,7 @@ The notification's tap action (`clickAction`/`url`) opens the **event clip** (`c
 - **Couriers** (DPD/GLS/Amazon/UPS/FedEx/DHL/An Post on the front cameras) → spoken **"\<courier\> has landed"** on the home audio group — suppressed when `house_mode = Sleeping`.
 - **Postman** at the doorbell → spoken **"the postman has been detected"** — suppressed when `house_mode = Sleeping`.
 - The two TTS branches share a 2-minute cooldown so one An Post delivery never announces twice.
+- **Bin lorry** on the road zones on a bin day (`calendar.panda_waste` has a collection today) → spoken **"It looks like the bins are being collected"**. Two lorries come on bin day (compost, then waste and recycling), so it announces up to twice a day, at least 10 minutes apart. Suppressed when `house_mode = Sleeping`.
 - Every camera push goes out with `priority: high` and `ttl: 0`, so Android delivers it straight away even when the phone has been idle with the screen off. Phone pushes are not affected by Sleeping. That suppression only applies to the speakers.
 - When `house_mode = Away`, camera pushes move to a dedicated high importance “Cameras Away” channel with a ⚠️ title. **Person** alerts go further: they play through the Android **alarm stream**, so the phone rings even on vibrate or silent. They also carry `alert_once`, so each alert rings once and the snapshot and GIF updates that follow arrive silently. A person in a second zone is a separate alert and rings again.
 
@@ -456,7 +458,7 @@ Unless it is switched off on the Household Config dashboard → **Cameras**, whe
 ## Anti-spam / suppression
 - Rear silenced while the patio-door switch is on.
 - Doorbell silenced on an exit: while the front door is open, or for 60 seconds after it closes, the Shield overlay, the kitchen display and all three doorbell pushes are held back. `house_mode = Away` overrides it. The verdict is latched per incident so the late GIF push cannot arrive on its own.
-- Courier/postman TTS silenced when `house_mode = Sleeping` (push still goes to phones).
+- Courier, postman and bin lorry TTS silenced when `house_mode = Sleeping` (push still goes to phones).
 - Per-incident grouping (multiple cameras = one notification).
 - 120 s incident window + courier/postman cooldowns to avoid repeats.
 
@@ -472,6 +474,7 @@ Unless it is switched off on the Household Config dashboard → **Cameras**, whe
 - The doorbell exit gate **latches its verdict per incident** rather than re-checking each push. Measured over ten real incidents the GIF push landed 44 to 159 seconds after the first one, always past the 60 second window, so a per-push check would silence the openers and then let a lone GIF through. The latch expires after 10 minutes.
 - The doorbell exit gate keys off the **incident tag prefix** (`frig_doorbell_`) rather than the camera name, because all three push families carry that same tag and none of them carries the camera in a single common field. That is what lets one gate cover all three without editing any of the three source nodes.
 - Push priority and the Away alarm stream are set in `cam-fd-gate`, the last node before dispatch, because every phone push passes through it. The Away boost node only sees the grouped review pushes, so the named doorbell push and the description push would otherwise miss it. Person alerts are recognised by their tag prefix `frig_<zone>_person_`.
+- Since Frigate 0.18 a courier van arrives on `frigate/events` as label `car` with the brand in `sub_label` (sent as `[name, score]`), not as label `an_post` or `dpd`. The courier function reads the brand from `sub_label` and still accepts it as the label, so it works either way.
 - Context keys derived from review ids are sanitised (dots → `_`) because Frigate review ids contain a dot (which Node-RED would otherwise treat as a nested-context path).
 
 # Infra Watchdog — how it works
