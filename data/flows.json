@@ -57,6 +57,13 @@
         "env": []
     },
     {
+        "id": "tab-dbw",
+        "type": "tab",
+        "label": "Doorbell Webhook",
+        "disabled": false,
+        "info": "Reolink doorbell button press via the camera's own webhook (no integration connection). Testing stage: pushes Colm only; move to dispatch: camera once proven."
+    },
+    {
         "id": "sf-seed-watch",
         "type": "subflow",
         "name": "seed: entity -> context (self-heal)",
@@ -361,6 +368,84 @@
         "width": "6",
         "height": "1",
         "order": 3,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "pc-ui-group-security",
+        "type": "ui-group",
+        "name": "Security",
+        "page": "pc-ui-page",
+        "width": "6",
+        "height": "1",
+        "order": 8,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "pc-ui-group-housemode",
+        "type": "ui-group",
+        "name": "House Mode",
+        "page": "pc-ui-page",
+        "width": "6",
+        "height": "1",
+        "order": 4,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "pc-ui-group-cameras",
+        "type": "ui-group",
+        "name": "Cameras",
+        "page": "pc-ui-page",
+        "width": "6",
+        "height": "1",
+        "order": 5,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "pc-ui-group-infra",
+        "type": "ui-group",
+        "name": "Infra",
+        "page": "pc-ui-page",
+        "width": "6",
+        "height": "1",
+        "order": 7,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "pc-ui-group-health",
+        "type": "ui-group",
+        "name": "Infra Health",
+        "page": "pc-ui-page",
+        "width": "6",
+        "height": "1",
+        "order": 6,
+        "showTitle": true,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "pc-ui-group-heating",
+        "type": "ui-group",
+        "name": "Heating",
+        "page": "pc-ui-page",
+        "width": "6",
+        "height": "1",
+        "order": 2,
         "showTitle": true,
         "className": "",
         "visible": "true",
@@ -1429,8 +1514,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 330,
-        "y": 60,
+        "x": 300,
+        "y": 120,
         "wires": [
             [
                 "cam-fn-courier",
@@ -1449,8 +1534,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 770,
-        "y": 60,
+        "x": 720,
+        "y": 120,
         "wires": [
             [
                 "cam-delay-courier",
@@ -1476,8 +1561,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1670,
-        "y": 60,
+        "x": 1650,
+        "y": 120,
         "wires": [
             []
         ]
@@ -1527,8 +1612,8 @@
             }
         ],
         "entityidfiltertype": "list",
-        "x": 330,
-        "y": 120,
+        "x": 270,
+        "y": 200,
         "wires": [
             [
                 "cam-fn-postman"
@@ -1546,8 +1631,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 770,
-        "y": 120,
+        "x": 710,
+        "y": 200,
         "wires": [
             [
                 "cam-delay-postman",
@@ -1573,8 +1658,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1680,
-        "y": 120,
+        "x": 1640,
+        "y": 180,
         "wires": [
             []
         ]
@@ -1609,8 +1694,8 @@
         "createDir": true,
         "overwriteFile": "false",
         "encoding": "none",
-        "x": 1690,
-        "y": 400,
+        "x": 1630,
+        "y": 480,
         "wires": [
             []
         ]
@@ -1736,8 +1821,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1700,
-        "y": 200,
+        "x": 1640,
+        "y": 260,
         "wires": [
             []
         ]
@@ -1760,8 +1845,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1700,
-        "y": 320,
+        "x": 1620,
+        "y": 400,
         "wires": [
             []
         ]
@@ -1784,8 +1869,8 @@
         "mustacheAltTags": false,
         "outputProperties": [],
         "queue": "none",
-        "x": 1700,
-        "y": 260,
+        "x": 1620,
+        "y": 320,
         "wires": [
             []
         ]
@@ -1987,8 +2072,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 1100,
-        "y": 120,
+        "x": 1260,
+        "y": 180,
         "wires": [
             [
                 "cam-tts-postman"
@@ -2012,8 +2097,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 1120,
-        "y": 60,
+        "x": 1280,
+        "y": 120,
         "wires": [
             [
                 "cam-tts-courier"
@@ -2312,6 +2397,95 @@
             [
                 "cam-cast"
             ]
+        ]
+    },
+    {
+        "id": "cam-fn-bins",
+        "type": "function",
+        "z": "tab-cam",
+        "name": "Bin lorry (road zone, 2/day)",
+        "func": "// Bin lorry on the road (Front_Car/Front_Van road zones). Calendar check follows.\nif (flow.get('house_mode') === 'Sleeping') return null;\nconst obj = (msg.payload || {}).after;\nif (!obj || obj.label !== 'garbage_truck') return null;\nconst zones = obj.current_zones || [];\nif (!zones.includes('Front_Road_Zone1') && !zones.includes('Front_Road_Zone2')) return null;\n// Two lorries come on bin day (compost, then waste and recycling): allow 2 a day, 10 min apart.\nconst today = new Date().toLocaleDateString('en-CA');\nconst st = flow.get('bins_tts') || {};\nif (st.day === today && (st.n >= 2 || Date.now() - st.last < 600000)) return null;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 760,
+        "y": 20,
+        "wires": [
+            [
+                "cam-bins-get"
+            ]
+        ]
+    },
+    {
+        "id": "cam-bins-get",
+        "type": "ha-get-entities",
+        "z": "tab-cam",
+        "name": "states (bins calendar)",
+        "server": "ha-server",
+        "version": 3,
+        "rules": [],
+        "outputType": "array",
+        "outputEmptyResults": true,
+        "outputLocationType": "msg",
+        "outputLocation": "entities",
+        "outputResultsCount": 1,
+        "output_type": "array",
+        "output_empty_results": true,
+        "output_location_type": "msg",
+        "output_location": "entities",
+        "output_results_count": 1,
+        "x": 990,
+        "y": 20,
+        "wires": [
+            [
+                "cam-fn-bins-gate"
+            ]
+        ]
+    },
+    {
+        "id": "cam-fn-bins-gate",
+        "type": "function",
+        "z": "tab-cam",
+        "name": "Bin day? (calendar.panda_waste)",
+        "func": "// Only announce when calendar.panda_waste has a collection today.\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nconst cal = ents.find(x => x.entity_id === 'calendar.panda_waste');\nif (!cal || cal.state !== 'on') return null;\nconst today = new Date().toLocaleDateString('en-CA');\nlet st = flow.get('bins_tts') || {};\nif (st.day !== today) st = {day: today, n: 0, last: 0};\nif (st.n >= 2 || Date.now() - st.last < 600000) return null;\nst.n += 1; st.last = Date.now();\nflow.set('bins_tts', st);\ndelete msg.entities;\nmsg._src = 'bins'; msg.message = 'It looks like the bins are being collected.';\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1290,
+        "y": 20,
+        "wires": [
+            [
+                "cam-tts-bins",
+                "cam-log"
+            ]
+        ]
+    },
+    {
+        "id": "cam-tts-bins",
+        "type": "api-call-service",
+        "z": "tab-cam",
+        "name": "TTS bins",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "script.tts_announce",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "{\"message\": msg.message}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1660,
+        "y": 20,
+        "wires": [
+            []
         ]
     },
     {
@@ -2830,6 +3004,25 @@
         "y": 580,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "heat-fc-gate",
+        "type": "function",
+        "z": "5a86c1a3371ffe9e",
+        "name": "forecast time gate (Heating setting)",
+        "func": "// 60 s tick -> passes ONCE per day, in the 5 minutes after the forecast check time\n// (Household page -> Heating, default 21:30), then on to the Met Eireann forecast request.\nconst HS = global.get('heating_schedule') || {};\nlet FT = (typeof HS.forecast_time === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(HS.forecast_time)) ? HS.forecast_time : '21:30';\nlet T = Number(FT.slice(0, 2)) * 60 + Number(FT.slice(3, 5));\nif (T < 1080 || T > 1435) { FT = '21:30'; T = 1290; }\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] heating forecast check (' + FT + ')');\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 450,
+        "wires": [
+            [
+                "heat-fc-get"
+            ]
         ]
     },
     {
@@ -3750,6 +3943,25 @@
         ]
     },
     {
+        "id": "aa-batt-sum-gate",
+        "type": "function",
+        "z": "096ff268dc7bd2f0",
+        "name": "summary time gate (Security setting)",
+        "func": "// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nlet QS_ = cfgTime('battery_quiet_start', '22:00'), T_STR = cfgTime('battery_quiet_end', '07:00');\nif (QS_ === T_STR) T_STR = '07:00';\n// 60 s tick -> passes ONCE per day, in the 5 minutes after the configured time (battery overnight summary).\nconst T = hm2m(T_STR);\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;   // minutes since today's fire time\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();          // the day the window opened\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] battery overnight summary (' + T_STR + ')');\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 850,
+        "wires": [
+            [
+                "aa-batt-sum-get"
+            ]
+        ]
+    },
+    {
         "id": "nfc-ev",
         "type": "server-events",
         "z": "657e6b8b07b4cdf7",
@@ -4039,8 +4251,8 @@
         "outputLocationType": "msg",
         "outputLocation": "payload",
         "outputResultsCount": 1,
-        "x": 330,
-        "y": 360,
+        "x": 490,
+        "y": 340,
         "wires": [
             [
                 "gn-fn"
@@ -4055,8 +4267,8 @@
         "func": "// 22:00 nightly: arm the shed ONLY if it is disarmed AND the door is closed.\nconst ents=Array.isArray(msg.payload)?msg.payload:[];\nconst S=id=>{const e=ents.find(x=>x.entity_id===id);return e&&e.state;};\nconst shed=S('alarm_control_panel.shed');\nconst door=S('binary_sensor.shed_door_contact');   // on=open, off=closed\nif(shed==='disarmed' && door==='off'){\n  node.warn('[nfc] 22:00 nightly: shed disarmed + door closed -> arm');\n  return {};   // -> arm shed\n}\nreturn null;   // already armed, or door open -> do nothing\n",
         "outputs": 1,
         "noerr": 0,
-        "x": 630,
-        "y": 360,
+        "x": 730,
+        "y": 420,
         "wires": [
             [
                 "nfc-arm-shed"
@@ -4087,6 +4299,25 @@
         "y": 380,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "gn-gate",
+        "type": "function",
+        "z": "657e6b8b07b4cdf7",
+        "name": "nightly time gate (Security setting)",
+        "func": "// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nconst T_STR = cfgTime('shed_nightly_time', '22:00');\n// 60 s tick -> passes ONCE per day, in the 5 minutes after the configured time (nightly shed re-arm).\nconst T = hm2m(T_STR);\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;   // minutes since today's fire time\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();          // the day the window opened\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] nightly shed re-arm (' + T_STR + ')');\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 460,
+        "wires": [
+            [
+                "gn-get"
+            ]
         ]
     },
     {
@@ -4841,6 +5072,121 @@
         ]
     },
     {
+        "id": "ih-flush-gate",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "flush time gate (Infra quiet end)",
+        "func": "// 60 s tick -> passes ONCE per day, in the 5 minutes after the end of the shared infra quiet\n// hours (Household page -> Infra, default 07:00), carrying the inject's topic 'flush' (infra health).\nconst IC = global.get('infra_config') || {};\nconst okT = s => typeof s === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(s);\nlet QS = okT(IC.quiet_start) ? IC.quiet_start : '22:00', QE = okT(IC.quiet_end) ? IC.quiet_end : '07:00';\nif (QS === QE) { QS = '22:00'; QE = '07:00'; }\nconst T = Number(QE.slice(0, 2)) * 60 + Number(QE.slice(3, 5));\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] infra health flush (' + QE + ')');\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 690,
+        "wires": [
+            [
+                "ih-send"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-ncdb-in",
+        "type": "http in",
+        "z": "tab-ih",
+        "name": "Nextcloud DB dump failed",
+        "url": "/ih-nextcloud-db-dump-failed",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 600,
+        "wires": [
+            [
+                "ih-b-ncdb-fn",
+                "ih-b-ncdb-resp"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-ncdb-fn",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "Nextcloud DB dump failed build",
+        "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar r=b.reason||'unknown';\nreturn {cat:'Backup',sub:'Nextcloud DB',message:'Nextcloud DB dump on VM117 failed: '+r+'. Check /var/log/nextcloud-db-dump.log',tag:'nextcloud_db_dump'};\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 600,
+        "wires": [
+            [
+                "ih-send"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-ncdb-resp",
+        "type": "http response",
+        "z": "tab-ih",
+        "name": "200",
+        "statusCode": "200",
+        "headers": {},
+        "x": 410,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "ih-b-esbndl-in",
+        "type": "http in",
+        "z": "tab-ih",
+        "name": "ESBN HDF download alert",
+        "url": "/ih-esbn-download",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 780,
+        "wires": [
+            [
+                "ih-b-esbndl-fn",
+                "ih-b-esbndl-resp"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-esbndl-fn",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "ESBN download alert build",
+        "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar r=b.reason||'unknown';\nvar warn=(b.level==='warning');\nreturn {cat:'Service',sub:warn?'ESBN download warning':'ESBN download',\n  message:(warn?'ESBN HDF download warning: ':'ESBN HDF download on LXC 119 failed: ')+r+'. Check journalctl -u esbn-hdf-download',\n  tag:warn?'esbn_download_warning':'esbn_download'};\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 780,
+        "wires": [
+            [
+                "ih-send"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-esbndl-resp",
+        "type": "http response",
+        "z": "tab-ih",
+        "name": "200",
+        "statusCode": "200",
+        "headers": {},
+        "x": 410,
+        "y": 820,
+        "wires": []
+    },
+    {
         "id": "iw-reconcile-timers-inj",
         "type": "inject",
         "z": "tab-iw",
@@ -4905,7 +5251,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 550,
+        "x": 690,
         "y": 200,
         "wires": [
             [
@@ -4980,7 +5326,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "flush",
-        "x": 270,
+        "x": 200,
         "y": 120,
         "wires": [
             [
@@ -5277,6 +5623,25 @@
         ]
     },
     {
+        "id": "iw-flush-gate",
+        "type": "function",
+        "z": "tab-iw",
+        "name": "flush time gate (Infra quiet end)",
+        "func": "// 60 s tick -> passes ONCE per day, in the 5 minutes after the end of the shared infra quiet\n// hours (Household page -> Infra, default 07:00), carrying the inject's topic 'flush' (infra watchdog).\nconst IC = global.get('infra_config') || {};\nconst okT = s => typeof s === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(s);\nlet QS = okT(IC.quiet_start) ? IC.quiet_start : '22:00', QE = okT(IC.quiet_end) ? IC.quiet_end : '07:00';\nif (QS === QE) { QS = '22:00'; QE = '07:00'; }\nconst T = Number(QE.slice(0, 2)) * 60 + Number(QE.slice(3, 5));\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] infra watchdog flush (' + QE + ')');\nreturn msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 120,
+        "wires": [
+            [
+                "iw-engine"
+            ]
+        ]
+    },
+    {
         "id": "pc-boot",
         "type": "inject",
         "z": "tab-pc",
@@ -5503,8 +5868,8 @@
         "sendError": true,
         "encoding": "none",
         "allProps": false,
-        "x": 410,
-        "y": 640,
+        "x": 670,
+        "y": 540,
         "wires": [
             [
                 "pc-clim-load"
@@ -5522,8 +5887,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 750,
-        "y": 520,
+        "x": 990,
+        "y": 540,
         "wires": [
             [
                 "pc-clim-ui"
@@ -5548,8 +5913,8 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 1080,
-        "y": 520,
+        "x": 1340,
+        "y": 540,
         "wires": [
             [
                 "pc-clim-save"
@@ -5567,8 +5932,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1120,
-        "y": 780,
+        "x": 1660,
+        "y": 540,
         "wires": [
             [
                 "pc-clim-write"
@@ -5589,24 +5954,11 @@
         "createDir": false,
         "overwriteFile": "true",
         "encoding": "none",
-        "x": 1450,
-        "y": 520,
+        "x": 2050,
+        "y": 540,
         "wires": [
             []
         ]
-    },
-    {
-        "id": "pc-ui-group-security",
-        "type": "ui-group",
-        "name": "Security",
-        "page": "pc-ui-page",
-        "width": "6",
-        "height": "1",
-        "order": 8,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false"
     },
     {
         "id": "pc-sec-boot",
@@ -5645,7 +5997,7 @@
         "sendError": true,
         "encoding": "none",
         "allProps": false,
-        "x": 440,
+        "x": 670,
         "y": 620,
         "wires": [
             [
@@ -5664,7 +6016,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 990,
         "y": 620,
         "wires": [
             [
@@ -5690,7 +6042,7 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 960,
+        "x": 1330,
         "y": 620,
         "wires": [
             [
@@ -5709,7 +6061,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1200,
+        "x": 1660,
         "y": 620,
         "wires": [
             [
@@ -5731,62 +6083,11 @@
         "createDir": false,
         "overwriteFile": "true",
         "encoding": "none",
-        "x": 1460,
+        "x": 2060,
         "y": 620,
         "wires": [
             []
         ]
-    },
-    {
-        "id": "gn-gate",
-        "type": "function",
-        "z": "657e6b8b07b4cdf7",
-        "name": "nightly time gate (Security setting)",
-        "func": "// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nconst T_STR = cfgTime('shed_nightly_time', '22:00');\n// 60 s tick -> passes ONCE per day, in the 5 minutes after the configured time (nightly shed re-arm).\nconst T = hm2m(T_STR);\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;   // minutes since today's fire time\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();          // the day the window opened\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] nightly shed re-arm (' + T_STR + ')');\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 350,
-        "y": 410,
-        "wires": [
-            [
-                "gn-get"
-            ]
-        ]
-    },
-    {
-        "id": "aa-batt-sum-gate",
-        "type": "function",
-        "z": "096ff268dc7bd2f0",
-        "name": "summary time gate (Security setting)",
-        "func": "// Settings from the Household page (Security section) -> global.security_config (21-10-2026).\n// Missing/invalid -> the built-in default given at each call.\nconst SC = global.get('security_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst cfgTime = (k, d) => (typeof SC[k] === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(SC[k])) ? SC[k] : d;\nconst hm2m = s => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5));\nlet QS_ = cfgTime('battery_quiet_start', '22:00'), T_STR = cfgTime('battery_quiet_end', '07:00');\nif (QS_ === T_STR) T_STR = '07:00';\n// 60 s tick -> passes ONCE per day, in the 5 minutes after the configured time (battery overnight summary).\nconst T = hm2m(T_STR);\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;   // minutes since today's fire time\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();          // the day the window opened\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] battery overnight summary (' + T_STR + ')');\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 340,
-        "y": 850,
-        "wires": [
-            [
-                "aa-batt-sum-get"
-            ]
-        ]
-    },
-    {
-        "id": "pc-ui-group-housemode",
-        "type": "ui-group",
-        "name": "House Mode",
-        "page": "pc-ui-page",
-        "width": "6",
-        "height": "1",
-        "order": 4,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false"
     },
     {
         "id": "pc-hm-boot",
@@ -5825,7 +6126,7 @@
         "sendError": true,
         "encoding": "none",
         "allProps": false,
-        "x": 450,
+        "x": 680,
         "y": 720,
         "wires": [
             [
@@ -5844,7 +6145,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 710,
+        "x": 1000,
         "y": 720,
         "wires": [
             [
@@ -5870,7 +6171,7 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 970,
+        "x": 1340,
         "y": 720,
         "wires": [
             [
@@ -5889,7 +6190,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1210,
+        "x": 1650,
         "y": 720,
         "wires": [
             [
@@ -5911,24 +6212,11 @@
         "createDir": false,
         "overwriteFile": "true",
         "encoding": "none",
-        "x": 1470,
+        "x": 2070,
         "y": 720,
         "wires": [
             []
         ]
-    },
-    {
-        "id": "pc-ui-group-cameras",
-        "type": "ui-group",
-        "name": "Cameras",
-        "page": "pc-ui-page",
-        "width": "6",
-        "height": "1",
-        "order": 5,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false"
     },
     {
         "id": "pc-cam-boot",
@@ -5967,7 +6255,7 @@
         "sendError": true,
         "encoding": "none",
         "allProps": false,
-        "x": 440,
+        "x": 670,
         "y": 820,
         "wires": [
             [
@@ -5986,7 +6274,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 990,
         "y": 820,
         "wires": [
             [
@@ -6012,7 +6300,7 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 960,
+        "x": 1330,
         "y": 820,
         "wires": [
             [
@@ -6031,7 +6319,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1200,
+        "x": 1640,
         "y": 820,
         "wires": [
             [
@@ -6053,24 +6341,11 @@
         "createDir": false,
         "overwriteFile": "true",
         "encoding": "none",
-        "x": 1460,
+        "x": 2060,
         "y": 820,
         "wires": [
             []
         ]
-    },
-    {
-        "id": "pc-ui-group-infra",
-        "type": "ui-group",
-        "name": "Infra",
-        "page": "pc-ui-page",
-        "width": "6",
-        "height": "1",
-        "order": 7,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false"
     },
     {
         "id": "pc-inf-boot",
@@ -6109,7 +6384,7 @@
         "sendError": true,
         "encoding": "none",
         "allProps": false,
-        "x": 440,
+        "x": 670,
         "y": 920,
         "wires": [
             [
@@ -6128,7 +6403,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 990,
         "y": 920,
         "wires": [
             [
@@ -6154,7 +6429,7 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 960,
+        "x": 1330,
         "y": 920,
         "wires": [
             [
@@ -6173,7 +6448,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1200,
+        "x": 1640,
         "y": 920,
         "wires": [
             [
@@ -6195,24 +6470,11 @@
         "createDir": false,
         "overwriteFile": "true",
         "encoding": "none",
-        "x": 1460,
+        "x": 2060,
         "y": 920,
         "wires": [
             []
         ]
-    },
-    {
-        "id": "pc-ui-group-health",
-        "type": "ui-group",
-        "name": "Infra Health",
-        "page": "pc-ui-page",
-        "width": "6",
-        "height": "1",
-        "order": 6,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false"
     },
     {
         "id": "pc-hlt-boot",
@@ -6251,7 +6513,7 @@
         "sendError": true,
         "encoding": "none",
         "allProps": false,
-        "x": 440,
+        "x": 670,
         "y": 1020,
         "wires": [
             [
@@ -6270,7 +6532,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 990,
         "y": 1020,
         "wires": [
             [
@@ -6296,7 +6558,7 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 960,
+        "x": 1330,
         "y": 1020,
         "wires": [
             [
@@ -6315,7 +6577,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1200,
+        "x": 1640,
         "y": 1020,
         "wires": [
             [
@@ -6337,62 +6599,11 @@
         "createDir": false,
         "overwriteFile": "true",
         "encoding": "none",
-        "x": 1460,
+        "x": 2060,
         "y": 1020,
         "wires": [
             []
         ]
-    },
-    {
-        "id": "ih-flush-gate",
-        "type": "function",
-        "z": "tab-ih",
-        "name": "flush time gate (Infra quiet end)",
-        "func": "// 60 s tick -> passes ONCE per day, in the 5 minutes after the end of the shared infra quiet\n// hours (Household page -> Infra, default 07:00), carrying the inject's topic 'flush' (infra health).\nconst IC = global.get('infra_config') || {};\nconst okT = s => typeof s === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(s);\nlet QS = okT(IC.quiet_start) ? IC.quiet_start : '22:00', QE = okT(IC.quiet_end) ? IC.quiet_end : '07:00';\nif (QS === QE) { QS = '22:00'; QE = '07:00'; }\nconst T = Number(QE.slice(0, 2)) * 60 + Number(QE.slice(3, 5));\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] infra health flush (' + QE + ')');\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 350,
-        "y": 690,
-        "wires": [
-            [
-                "ih-send"
-            ]
-        ]
-    },
-    {
-        "id": "iw-flush-gate",
-        "type": "function",
-        "z": "tab-iw",
-        "name": "flush time gate (Infra quiet end)",
-        "func": "// 60 s tick -> passes ONCE per day, in the 5 minutes after the end of the shared infra quiet\n// hours (Household page -> Infra, default 07:00), carrying the inject's topic 'flush' (infra watchdog).\nconst IC = global.get('infra_config') || {};\nconst okT = s => typeof s === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(s);\nlet QS = okT(IC.quiet_start) ? IC.quiet_start : '22:00', QE = okT(IC.quiet_end) ? IC.quiet_end : '07:00';\nif (QS === QE) { QS = '22:00'; QE = '07:00'; }\nconst T = Number(QE.slice(0, 2)) * 60 + Number(QE.slice(3, 5));\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] infra watchdog flush (' + QE + ')');\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 470,
-        "y": 170,
-        "wires": [
-            [
-                "iw-engine"
-            ]
-        ]
-    },
-    {
-        "id": "pc-ui-group-heating",
-        "type": "ui-group",
-        "name": "Heating",
-        "page": "pc-ui-page",
-        "width": "6",
-        "height": "1",
-        "order": 2,
-        "showTitle": true,
-        "className": "",
-        "visible": "true",
-        "disabled": "false"
     },
     {
         "id": "pc-hs-boot",
@@ -6431,7 +6642,7 @@
         "sendError": true,
         "encoding": "none",
         "allProps": false,
-        "x": 440,
+        "x": 670,
         "y": 1120,
         "wires": [
             [
@@ -6450,7 +6661,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 990,
         "y": 1120,
         "wires": [
             [
@@ -6476,7 +6687,7 @@
         "resendOnRefresh": true,
         "templateScope": "local",
         "className": "",
-        "x": 960,
+        "x": 1330,
         "y": 1120,
         "wires": [
             [
@@ -6495,7 +6706,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 1200,
+        "x": 1640,
         "y": 1120,
         "wires": [
             [
@@ -6517,37 +6728,11 @@
         "createDir": false,
         "overwriteFile": "true",
         "encoding": "none",
-        "x": 1460,
+        "x": 2060,
         "y": 1120,
         "wires": [
             []
         ]
-    },
-    {
-        "id": "heat-fc-gate",
-        "type": "function",
-        "z": "5a86c1a3371ffe9e",
-        "name": "forecast time gate (Heating setting)",
-        "func": "// 60 s tick -> passes ONCE per day, in the 5 minutes after the forecast check time\n// (Household page -> Heating, default 21:30), then on to the Met Eireann forecast request.\nconst HS = global.get('heating_schedule') || {};\nlet FT = (typeof HS.forecast_time === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(HS.forecast_time)) ? HS.forecast_time : '21:30';\nlet T = Number(FT.slice(0, 2)) * 60 + Number(FT.slice(3, 5));\nif (T < 1080 || T > 1435) { FT = '21:30'; T = 1290; }\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] heating forecast check (' + FT + ')');\nreturn msg;\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 320,
-        "y": 450,
-        "wires": [
-            [
-                "heat-fc-get"
-            ]
-        ]
-    },
-    {
-        "id": "tab-dbw",
-        "type": "tab",
-        "label": "Doorbell Webhook",
-        "disabled": false,
-        "info": "Reolink doorbell button press via the camera's own webhook (no integration connection). Testing stage: pushes Colm only; move to dispatch: camera once proven."
     },
     {
         "id": "dbw-in",
@@ -6638,191 +6823,6 @@
         "encoding": "none",
         "x": 610,
         "y": 160,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "ih-b-ncdb-in",
-        "type": "http in",
-        "z": "tab-ih",
-        "name": "Nextcloud DB dump failed",
-        "url": "/ih-nextcloud-db-dump-failed",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 150,
-        "y": 600,
-        "wires": [
-            [
-                "ih-b-ncdb-fn",
-                "ih-b-ncdb-resp"
-            ]
-        ]
-    },
-    {
-        "id": "ih-b-ncdb-fn",
-        "type": "function",
-        "z": "tab-ih",
-        "name": "Nextcloud DB dump failed build",
-        "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar r=b.reason||'unknown';\nreturn {cat:'Backup',sub:'Nextcloud DB',message:'Nextcloud DB dump on VM117 failed: '+r+'. Check /var/log/nextcloud-db-dump.log',tag:'nextcloud_db_dump'};\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 410,
-        "y": 600,
-        "wires": [
-            [
-                "ih-send"
-            ]
-        ]
-    },
-    {
-        "id": "ih-b-ncdb-resp",
-        "type": "http response",
-        "z": "tab-ih",
-        "name": "200",
-        "statusCode": "200",
-        "headers": {},
-        "x": 410,
-        "y": 640,
-        "wires": []
-    },
-    {
-        "id": "ih-b-esbndl-in",
-        "type": "http in",
-        "z": "tab-ih",
-        "name": "ESBN HDF download alert",
-        "url": "/ih-esbn-download",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 150,
-        "y": 780,
-        "wires": [
-            [
-                "ih-b-esbndl-fn",
-                "ih-b-esbndl-resp"
-            ]
-        ]
-    },
-    {
-        "id": "ih-b-esbndl-fn",
-        "type": "function",
-        "z": "tab-ih",
-        "name": "ESBN download alert build",
-        "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar r=b.reason||'unknown';\nvar warn=(b.level==='warning');\nreturn {cat:'Service',sub:warn?'ESBN download warning':'ESBN download',\n  message:(warn?'ESBN HDF download warning: ':'ESBN HDF download on LXC 119 failed: ')+r+'. Check journalctl -u esbn-hdf-download',\n  tag:warn?'esbn_download_warning':'esbn_download'};\n",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 410,
-        "y": 780,
-        "wires": [
-            [
-                "ih-send"
-            ]
-        ]
-    },
-    {
-        "id": "ih-b-esbndl-resp",
-        "type": "http response",
-        "z": "tab-ih",
-        "name": "200",
-        "statusCode": "200",
-        "headers": {},
-        "x": 410,
-        "y": 820,
-        "wires": []
-    },
-    {
-        "id": "cam-fn-bins",
-        "type": "function",
-        "z": "tab-cam",
-        "name": "Bin lorry (road zone, 2/day)",
-        "func": "// Bin lorry on the road (Front_Car/Front_Van road zones). Calendar check follows.\nif (flow.get('house_mode') === 'Sleeping') return null;\nconst obj = (msg.payload || {}).after;\nif (!obj || obj.label !== 'garbage_truck') return null;\nconst zones = obj.current_zones || [];\nif (!zones.includes('Front_Road_Zone1') && !zones.includes('Front_Road_Zone2')) return null;\n// Two lorries come on bin day (compost, then waste and recycling): allow 2 a day, 10 min apart.\nconst today = new Date().toLocaleDateString('en-CA');\nconst st = flow.get('bins_tts') || {};\nif (st.day === today && (st.n >= 2 || Date.now() - st.last < 600000)) return null;\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 770,
-        "y": 1300,
-        "wires": [
-            [
-                "cam-bins-get"
-            ]
-        ]
-    },
-    {
-        "id": "cam-bins-get",
-        "type": "ha-get-entities",
-        "z": "tab-cam",
-        "name": "states (bins calendar)",
-        "server": "ha-server",
-        "version": 3,
-        "rules": [],
-        "outputType": "array",
-        "outputEmptyResults": true,
-        "outputLocationType": "msg",
-        "outputLocation": "entities",
-        "outputResultsCount": 1,
-        "output_type": "array",
-        "output_empty_results": true,
-        "output_location_type": "msg",
-        "output_location": "entities",
-        "output_results_count": 1,
-        "x": 1000,
-        "y": 1300,
-        "wires": [
-            [
-                "cam-fn-bins-gate"
-            ]
-        ]
-    },
-    {
-        "id": "cam-fn-bins-gate",
-        "type": "function",
-        "z": "tab-cam",
-        "name": "Bin day? (calendar.panda_waste)",
-        "func": "// Only announce when calendar.panda_waste has a collection today.\nconst ents = Array.isArray(msg.entities) ? msg.entities : [];\nconst cal = ents.find(x => x.entity_id === 'calendar.panda_waste');\nif (!cal || cal.state !== 'on') return null;\nconst today = new Date().toLocaleDateString('en-CA');\nlet st = flow.get('bins_tts') || {};\nif (st.day !== today) st = {day: today, n: 0, last: 0};\nif (st.n >= 2 || Date.now() - st.last < 600000) return null;\nst.n += 1; st.last = Date.now();\nflow.set('bins_tts', st);\ndelete msg.entities;\nmsg._src = 'bins'; msg.message = 'It looks like the bins are being collected.';\nreturn msg;",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1300,
-        "y": 1300,
-        "wires": [
-            [
-                "cam-tts-bins",
-                "cam-log"
-            ]
-        ]
-    },
-    {
-        "id": "cam-tts-bins",
-        "type": "api-call-service",
-        "z": "tab-cam",
-        "name": "TTS bins",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "script.tts_announce",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"message\": msg.message}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 1670,
-        "y": 1300,
         "wires": [
             []
         ]

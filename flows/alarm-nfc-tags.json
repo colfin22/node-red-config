@@ -296,8 +296,8 @@
   "outputLocationType": "msg",
   "outputLocation": "payload",
   "outputResultsCount": 1,
-  "x": 330,
-  "y": 360,
+  "x": 490,
+  "y": 340,
   "wires": [
    [
     "gn-fn"
@@ -312,8 +312,8 @@
   "func": "// 22:00 nightly: arm the shed ONLY if it is disarmed AND the door is closed.\nconst ents=Array.isArray(msg.payload)?msg.payload:[];\nconst S=id=>{const e=ents.find(x=>x.entity_id===id);return e&&e.state;};\nconst shed=S('alarm_control_panel.shed');\nconst door=S('binary_sensor.shed_door_contact');   // on=open, off=closed\nif(shed==='disarmed' && door==='off'){\n  node.warn('[nfc] 22:00 nightly: shed disarmed + door closed -> arm');\n  return {};   // -> arm shed\n}\nreturn null;   // already armed, or door open -> do nothing\n",
   "outputs": 1,
   "noerr": 0,
-  "x": 630,
-  "y": 360,
+  "x": 730,
+  "y": 420,
   "wires": [
    [
     "nfc-arm-shed"
@@ -357,8 +357,8 @@
   "initialize": "",
   "finalize": "",
   "libs": [],
-  "x": 350,
-  "y": 410,
+  "x": 360,
+  "y": 460,
   "wires": [
    [
     "gn-get"
