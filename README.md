@@ -4,7 +4,7 @@
 
 [![Node-RED](https://img.shields.io/badge/Node--RED-flows-8F0000?logo=nodered&logoColor=white)](https://nodered.org/)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-companion-41BDF5?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
-[![Flows](https://img.shields.io/badge/Flows-8-success?logo=nodered&logoColor=white)](data/flows.json)
+[![Flows](https://img.shields.io/badge/Flows-9-success?logo=nodered&logoColor=white)](data/flows.json)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Repo](https://img.shields.io/badge/Repo-Public-brightgreen)](https://github.com/colfin22/node-red-config)
 
@@ -18,7 +18,7 @@
 
 The Node-RED flows + config behind the automations in [colfin22/ha-config](https://github.com/colfin22/ha-config). Home Assistant handles the simple, single-trigger stuff; the multi-input, **stateful** logic lives here — deciding the house's mode, arming the alarm, making heating calls from presence + forecast + tariff, and turning camera detections into one smart notification. Runs in Docker alongside Home Assistant; this repo adds flow versioning and quick recovery.
 
-**Eight flows:** House Mode · House &amp; Shed Alarm · Alarm NFC Tags · Camera Concierge · Heating Control · Infra Watchdog · Infra Health &amp; Alerts · Person Config (dashboard, no screenshot yet).
+**Nine flows:** House Mode · House &amp; Shed Alarm · Alarm NFC Tags · Camera Concierge · Heating Control · Infra Watchdog · Infra Health &amp; Alerts · Person Config (dashboard, no screenshot yet) · Doorbell Webhook (in testing).
 
 ## Start here if you only want one flow
 
@@ -46,32 +46,26 @@ is read from environment variables rather than written into the flows. Copy
 does not apply. Set them in the editor instead: double-click the flow tab's name, then the
 **Environment Variables** tab. That needs Node-RED 2.1 or newer.
 
-**People** are numbered slots, and the same slot is used by every flow:
+| Variable | Used by |
+|---|---|
+| `NABU_URL` | Camera Concierge — base URL for snapshot, GIF and clip links (see its Prerequisites) |
+| `MQTT_HOST` | The MQTT broker config node (Camera Concierge) |
+| `KUMA_STATUS_URL`, `KUMA_HEARTBEAT_URL` | Infra Watchdog — Uptime Kuma status page, used to name monitors and to clear stale outages |
+| `PVE_API_TOKEN`, `PVE_API_BASE`, `PVE_NODES` | Infra Health & Alerts — the morning Proxmox backup check |
+| `PERSON_n_NAME`, `PERSON_n_HA_USER_ID` | People (below) |
 
-**Only two of these are still read from the environment** — everything else about a person now
-lives on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow)
-instead:
+**People** are set up on the [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow),
+not in the environment. Only two per-person variables are still read, in numbered slots 1 to 8
+(empty slots are skipped):
 
 | Variable | Example | Meaning |
 |---|---|---|
-| `PERSON_1_NAME` | `Alice` | Still read directly. Display name, used in spoken messages and NFC/heating attribution |
-| `PERSON_1_HA_USER_ID` | `da119…` | Still read directly. Attributes "who changed the heating" and who scanned an NFC tag |
+| `PERSON_1_NAME` | `Alice` | First name. The alarm says "Alice's bedroom window" rather than "the alice bedroom window", and the NFC tag and heating status name who did it |
+| `PERSON_1_HA_USER_ID` | `da119…` | Their Home Assistant user id. Attributes "who changed the heating" and who scanned an NFC tag |
 
-`PERSON_n_ENTITY` / `PERSON_n_PING` / `PERSON_n_NOTIFY` / `PERSON_n_ROLE` / `PERSON_n_ONLY_WHEN_HOME`
-/ `PERSON_n_BATTERY` are **no longer read anywhere** — a fresh clone of this repo with no `person.*`
-entities in its own HA and no dashboard toggles set will simply show nobody as a resident, which
-degrades loudly (nothing arms/sleeps) rather than silently. Set people up from the dashboard once
-Node-RED is running against your own HA instead.
-
-Add people by filling `PERSON_2_NAME`, `PERSON_3_NAME` and so on — up to eight slots are read, and
-empty slots are skipped.
-
-**`PERSON_n_ROLE`, `PERSON_n_NOTIFY` and `PERSON_n_ONLY_WHEN_HOME` are superseded by the Household
-Config dashboard page** (below) for House Mode role and every notification channel it covers —
-those three variables are no longer read anywhere. `PERSON_n_ENTITY`, `PERSON_n_PING`,
-`PERSON_n_NAME`, `PERSON_n_BATTERY` and `PERSON_n_HA_USER_ID` are still read directly from the
-environment (NFC scan-attribution naming, the alarm's spoken possessive names, and the battery
-watchdog don't go through the dashboard).
+`PERSON_n_ENTITY`, `PERSON_n_PING`, `PERSON_n_NOTIFY`, `PERSON_n_ROLE`, `PERSON_n_ONLY_WHEN_HOME`
+and `PERSON_n_BATTERY` are **no longer read anywhere**. A fresh install with no dashboard settings
+shows nobody as a resident, which degrades loudly (nothing arms or sleeps) rather than silently.
 
 ## Household Config dashboard — who gets what, without editing a flow
 
@@ -104,9 +98,7 @@ into `global` context on deploy/tick so every consumer flow reads it live — no
 after a toggle change. Every consumer that reads it (House Mode, House Alarm, Camera Concierge,
 Heating Control, both infra flows, battery monitoring) builds its notify/watch list dynamically
 from whoever currently has that channel/role on, so it scales to any number of people without a
-flow edit. `PERSON_n_NAME` and `PERSON_n_HA_USER_ID` are still read directly from the environment
-— they're only used for spoken possessive naming and "who did it" attribution (NFC/heating), not
-migrated to the dashboard.
+flow edit.
 
 A second section, **Climate**, holds the Heating Control preset temperatures (night / comfort /
 hot / eco / frost). Each box takes 5–30°C in 0.5° steps (the thermostat's own limits) and saves on
@@ -231,7 +223,16 @@ an error to tell you.
 | Bin calendar | `calendar.panda_waste` | Camera Concierge bin lorry TTS (only on a collection day) |
 | TVs | `binary_sensor.lg_tv_online`, `binary_sensor.samsung_tv_online` | House Mode quiet detection |
 | Weather warnings | `sensor.met_eireann_warning_level` | House Mode storm overlay (Irish-specific) |
-| Infrastructure sensors | the `sensor.proxmox_*`, `sensor.proxmox2_*` and `sensor.truenas_*` families | Infra Health & Alerts rule engine |
+| Infrastructure sensors | the `sensor.node_proxmox_*`, `sensor.node_proxmox2_*`, `sensor.truenas_*`, `sensor.nextcloud_*` and `sensor.docker_*` families, plus the five `camera.*` entities | Infra Health & Alerts rule engine (the watcher node's entity list and the rule table in `ih-engine`) |
+| NFC tag ids | `HOUSE_TAG` and `SHED_TAG` at the top of `nfc-fn` | Alarm NFC Tags. Scan your tag once and copy its id from the HA `tag_scanned` event |
+| Shed door contact | `binary_sensor.shed_door_contact` | Alarm NFC Tags |
+| Thermostat | `climate.netatmo_smart_thermostat` | Heating Control |
+| Heating dashboard helpers | `input_button.heating_boost_start` / `_cancel`, `input_number.heating_boost_temperature`, `input_boolean.heating_extended_away`, `input_text.heating_status` / `_status_by` | Heating Control |
+| Proximity sensors | `sensor.<home>_nearest_distance`, `sensor.<home>_nearest_direction_of_travel` (from HA's Proximity integration) | Heating Control heading-home pre-heat |
+| Weather | `weather.forecast_home` | Heating Control forecast pre-heat |
+| Hot-water diverter | `select.myenergi_eddi_<serial>_operating_mode` | Heating Control (stopped while the house is empty 24 h+) |
+| Doorbell face and postman sensors | `sensor.doorbell_last_recognized_face`, `sensor.frigate_postman_last_camera` | Camera Concierge |
+| Announcement and strobe scripts | `script.tts_announce`, `script.strobe_lights` | Every announcement; the car deterrent strobe |
 
 ---
 
@@ -253,20 +254,23 @@ The timings in this section (the 20-minute Away timer, 15-minute motion look-bac
 ## Away detection
 All residents out → 20-minute timer → `Away`. At the fire point the engine checks the indoor sensors (sitting-room mmWave, office, landing, hallway) for motion in the last 15 minutes — if anyone is still moving around, it holds off and retries every 20 minutes. `maintenance_mode` also blocks the transition. Anyone arriving during the countdown cancels it immediately.
 
-**Dead/low-phone safeguards** live here: if a resident's phone is off Wi-Fi and its battery sensor is unavailable (genuinely dead/off), the engine treats that person as *unconfirmed-away* and won't set Away — it pushes a notification instead. A low-but-alive phone still reports location and is trusted. A nudge fires when a phone drops below 15 % so presence keeps working. These alerts go to the residents only.
+Turning `maintenance_mode` on while the house is Away puts it straight back to Home.
 
 ## Sleeping detection (auto, 22:00–07:00)
-Requires: mode is `Home`, a resident is home, `maintenance_mode` off, and no activity for 20 minutes — where activity means any of the 25 tracked lights, either TV, any dimmer press, or any indoor sensor. A 2-hour re-entry block prevents flipping back to Sleeping straight after waking. Nothing wakes before 06:00; first activity from 06:00 returns to Home.
+Requires: mode is `Home`, a resident is home, `maintenance_mode` off, both TVs off, no indoor sensor on, the sitting-room light off, and no activity for 20 minutes — where activity means any of the 25 tracked lights, either TV, any dimmer press, or any indoor sensor. A 2-hour re-entry block prevents flipping back to Sleeping straight after waking. Activity wakes the house (back to Home) only between 06:00 and 23:00, so a late-evening trip to the kitchen can't disarm the night alarm.
+
+## Changing the mode by hand
+Picking a mode yourself holds it for 4 hours; the engine leaves it alone until then. The change is published as `changed by hand` (see below).
 
 ## People config (`hm-cfg` node)
-Residents (`PERSON_n_ROLE=resident`) enable Sleeping and trigger Away. Guests (`PERSON_n_ROLE=guest`) only contribute to `anyoneHome()` — they prevent Away when physically present but don't enable Sleeping. Anyone in the house with no tracked phone is excluded from both, and the indoor sensors are their safety net.
+Roles come from the Household Config dashboard (`global.person_config`), re-read on every tick. **Residents** enable Sleeping and trigger Away. **Guests** only count towards "anyone home" — they prevent Away when physically present but don't enable Sleeping. Presence is the person entity, OR'd with an optional second "phone on Wi-Fi" sensor set per person on the dashboard. Anyone in the house with no tracked phone is excluded from both, and the indoor sensors are their safety net.
 
 ### Implementation notes
 - All Away evaluations use a fresh live HA snapshot via `ha-get-entities` — no stale flow context.
 - `server-state-changed` nodes always use `outputInitially: false`; startup state is seeded via an inject → `ha-get-entities` → function chain (global context is not populated reliably at 1 s after start).
-- On every state change: sets `input_select.house_mode` via `hm-set-mode`, logs to `/data/house_mode.log` with a local timestamp + reason, pushes a notification, and publishes the **same reason** to `input_text.house_mode_reason` (`hm-reason`).
+- On every state change: sets `input_select.house_mode` via `hm-set-mode`, logs to `/data/house_mode.log` with a local timestamp + reason, pushes a notification to everyone with **House-mode-change** on, and publishes the **same reason** to `input_text.house_mode_reason` (`hm-reason`).
 - **Why the reason is published, not just notified:** the engine always knew *why* it changed mode — `morning activity (light.sitting_room)`, `resident returned`, `all residents left (20m)`, `quiet 20m, no activity` — but that string only ever reached a push notification. Other flows (the heating controller, below) can now name the actual cause instead of guessing at it. A **manual** mode change publishes `changed by hand`, so a consumer can't attribute it to whatever the engine last decided.
-- **Self-heals a corrupted `input_select.house_mode` entity (23-09-2026).** An HA Core restart can fail to restore this helper's real prior state and fall back to its configured default instead — this happened at 02:42 one night and left the entity reading `Home` for hours while the house was actually still asleep, which fed a wrong "morning boost" into the heating controller and a stale reading into Camera Concierge. The engine's own in-memory `flow.mode` survives an HA-only restart (Node-RED itself didn't restart), so on every 60 s tick it now compares the live entity against its own remembered mode and **writes the entity back** if they've drifted, logging `[house-mode] RECONCILE: entity=X internal=Y`. A non-tick state seed also now prefers its own remembered mode over the raw entity, so a single bad snapshot can't poison it going forward either.
+- **Self-heals a corrupted `input_select.house_mode` entity (23-09-2026).** An HA Core restart can fail to restore this helper's real prior state and fall back to its configured default instead — this happened at 02:42 one night and left the entity reading `Home` for hours while the house was actually still asleep, which fed a wrong "morning boost" into the heating controller and a stale reading into Camera Concierge. The engine's own in-memory `flow.mode` survives an HA-only restart (Node-RED itself didn't restart), so on every 2-minute tick it compares the live entity against its own remembered mode and **writes the entity back** if they've drifted, logging `[house-mode] RECONCILE: entity=X internal=Y`. A non-tick state seed also now prefers its own remembered mode over the raw entity, so a single bad snapshot can't poison it going forward either.
 
 ---
 
@@ -285,7 +289,7 @@ The alarm follows `input_select.house_mode` directly:
 - **Sleeping** → `alarm_arm_night` (house) — silent, no announcement; people are in bed
 - **Home** → `alarm_disarm` (house). When returning **from Away** the spoken welcome is not fired on arrival — it is **held until the front door opens** (then a short delay), so you are inside to hear it, then a single merged line **names whoever is back**: *"Welcome home, [name]. The house has been disarmed."* on the home audio group. It stays silent if the door never opens within a few minutes, and says nothing when Home comes from Sleeping. (Someone whose phone never leaves the house can't flip Away→Home, so is never named.)
 
-All presence tracking, timing, dead-phone safeguards, and battery nudges live in the **House Mode** tab — the alarm tab just reacts to the resulting state. On Node-RED restart, a startup inject reads the current `house_mode` and `guest_mode` via `ha-get-entities` and syncs both into flow context before the first evaluation.
+All presence tracking and timing live in the **House Mode** tab — the alarm tab just reacts to the resulting state. On Node-RED restart, a startup inject reads the current `house_mode` and `guest_mode` via `ha-get-entities` and syncs both into flow context before the first evaluation.
 
 Two robustness details: a **60-second reconcile** compares the live `house_mode` against the last mode the flow processed and re-applies any change missed during a websocket drop (a manual disarm is respected — it only reacts to *missed mode changes*, never to alarm state). And every arm/disarm call is **idempotent** — if the panel is already in the target state the call is skipped, so nothing spams the Alarmo log with "cannot go to state X from X".
 
@@ -298,7 +302,13 @@ When `input_boolean.guest_mode` is on, only **Away** arming is suspended (guests
 When guest mode is turned **off**, the flow immediately re-evaluates the current house mode and arms accordingly — if the house is already Away it arms away, if Sleeping it arms night, if Home it does nothing.
 
 ## Alarm notifications + voice (same tab)
-Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, not on the HA bus). Five events → **push to all people + a spoken announcement** on the home audio group: **armed · disarmed · triggered · no-longer-triggered · failed-to-arm.** Trigger/failure messages carry the cause (open sensors); a failure is recognised both as an instant refusal and as an exit-delay arm that aborts back to disarmed with sensors open (a cancelled exit delay with nothing open stays a plain disarm). A visitor is only pushed while at home. On a **return from Away** the spoken *disarmed* line is suppressed in favour of the door-gated welcome above (the phone push still fires); the shed's disarm announcement is unaffected.
+Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, not on the HA bus). Five events → **a push to everyone with Security on** (on the dashboard) **+ a spoken announcement** on the home audio group: **armed · disarmed · triggered · no-longer-triggered · failed-to-arm.** Trigger/failure messages carry the cause (open sensors); a failure is recognised both as an instant refusal and as an exit-delay arm that aborts back to disarmed with sensors open (a cancelled exit delay with nothing open stays a plain disarm). Anyone with **Only when home** set is only pushed while at home. On a **return from Away** the spoken *disarmed* line is suppressed in favour of the door-gated welcome above (the phone push still fires); the shed's disarm announcement is unaffected.
+
+## Night-arm retry
+Alarmo refuses `arm_night` while a door or window is open, and the house would then sit unarmed all night. If that happens, the flow waits until every blocking sensor is closed again, gives it 20 minutes for whoever shut it to settle back down, and tries once more. The "failed to arm" line is spoken only once a night.
+
+## Phone battery watch
+Every 5 minutes the flow checks the phone battery sensor of each **Resident** who has one set on the dashboard. Crossing below 15 % pushes "Phone battery low" to everyone with Security on (a dead phone breaks presence, and with it auto-disarm); climbing back above it while charging pushes a recovery. Inside the quiet hours (22:00–07:00 by default) these are held and sent as one summary at the end. The level and the hours are on the dashboard → **Security**.
 
 ## Ways to disarm the house
 1. **House Mode → Home** — automatic on resident arrival (handled by House Mode tab).
@@ -346,13 +356,19 @@ eco 19 · night 19 · comfort 19.5 · hot 20 · frost 12
 - The same 24 h-empty state also **stops the hot-water solar diverter** (no point heating water for an empty house); it goes back to normal when anyone returns, when a pre-warm boost is started, or when someone is heading home — and the flow only ever writes on those transitions, so a manually-stopped diverter is left alone
 
 ## Forecast pre-heat
-Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts that day's warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push to the residents the night before, **only when the low is sub-zero**.
+Nightly at **21:30** it reads the Met Éireann hourly forecast for tomorrow's 05:00–07:00 low and starts that day's warm-up **earlier** — the colder it is, the earlier: 4–8°C → 15 min, 0–4°C → 30 min, −3–0°C → 45 min, below −3°C → 60 min. A phone push the night before, **only when the low is sub-zero**, to everyone with **Freeze warning** on (on the dashboard).
+
+## Wake-up nudge
+Whenever the schedule moves from night to comfort (the scheduled wake time, an early wake when the house leaves Sleeping, or a forecast pre-heat start), the target sits **0.5° above comfort for the first 15 minutes** to get the house moving. The status line calls it `morning boost`.
 
 ## Proximity pre-heat
 When the house is empty and someone is driving home (within 10 km and getting closer, via the Proximity integration), it warms toward comfort so it's ready on arrival. The pre-heat **latches** once triggered — a GPS wobble flipping "towards" to "away from" for a moment can't bounce the setpoint mid-approach; it releases only when they arrive (house leaves Away) or genuinely leave the area again (beyond 12 km).
 
 ## Boost
 Boost from the **dashboard** (pick a temperature, tap Boost) or by nudging the thermostat **above** the scheduled target — either way it holds for **2 hours** before the schedule resumes, and re-boosting restarts the clock. Turning the thermostat down to or below the schedule (or tapping Cancel on the dashboard) **cancels** the boost — a turn-down is never treated as a "boost" (this also absorbs the Netatmo app's boost-delete, which reverts the device to its 19 baseline). A boost still cancels the moment everyone leaves — but you can start one from the dashboard while the house is Away to pre-warm it before arriving home; it holds the usual 2 hours, so if nobody makes it back it lapses to the Away setback.
+
+## Heating notifications
+A real change of target pushes a short line (e.g. `Home -> comfort 19.5C`, `Boost 22C, holding until 15:30`) to everyone with **Heating changes** on. Nothing is pushed between 22:00 and 07:00 (fixed, not a dashboard setting); the status line below still updates.
 
 ## "Why did the heating change?"
 The controller writes a plain-English status to `input_text.heating_status` — used both by the heating card and by a **Recent activity** logbook card — and it names **what triggered the change**, not just what the heating is doing:
@@ -375,7 +391,7 @@ While `input_boolean.guest_mode` is on the heating never drops to the Away setba
 ### Implementation notes
 - Tab `Heating Control`; controller `heat-fn`, fed by `heat-get` — an **`ha-get-entities` version 3** node. **A version-1 node returns an empty list**, which silently broke this flow (it fell back to "Home" and never saw Away) until fixed 02-07-2026. When adding a get-entities node, clone a v3 one.
 - Triggers: `input_select.house_mode` change + a **60 s heartbeat**; output de-duped with a **30-min re-assert**.
-- Forecast sub-flow: `heat-fc-cron` (21:30) → `heat-fc-get` (`weather.get_forecasts`, hourly, `weather.forecast_home`; response via `outputProperties` valueType `results`) → `heat-fc-fn` → notify (sub-zero only). The pre-heat decision lives in `flow.preHeat` (in-memory → lost on a restart between 21:30 and morning, fails safe to that day's normal wake time).
+- Forecast sub-flow: `heat-fc-cron` (a 60 s tick) → `heat-fc-gate` (passes once a day in the 5 minutes after the forecast check time, default 21:30) → `heat-fc-get` (`weather.get_forecasts`, hourly, `weather.forecast_home`; response via `outputProperties` valueType `results`) → `heat-fc-fn` → notify (sub-zero only). The pre-heat decision lives in `flow.preHeat` (in-memory → lost on a restart between 21:30 and morning, fails safe to that day's normal wake time).
 - Boost detection is poll-lag-proof: a manual setpoint is only treated as a boost once the flow's own last write has been confirmed by the thermostat.
 - The status line is **capped at 100 characters** — that is the `input_text` limit, and Home Assistant *rejects* an over-long value, which would silently stop the ticker updating.
 - **Ignores `house_mode` when its reason reads the literal `seeded` sentinel (23-09-2026).** `input_text.house_mode_reason`'s own configured `initial` value is the string `seeded` — it only ever appears when an HA Core restart's restore_state failed to bring back the real reason, which is the same moment `house_mode` itself can be wrong (see the House Mode section above). When it reads `seeded`, the controller holds the last house_mode value it trusted instead of acting on the fresh (possibly bogus) one.
@@ -413,8 +429,8 @@ config first. That is where you list which labels count as alerts, and where `re
 promotes an object to alert only once it enters a zone you care about.
 
 ## Signal it listens to
-- **Primary:** MQTT topic **`frigate/reviews`** (broker `10.0.0.229`). Frigate only publishes a review at **`severity: alert`** when an object enters an alert zone — so masks/zones (e.g. the driveway car-mask) are honoured upstream, and the concierge only acts on real, zone-qualified events.
-- **Secondary branches:** MQTT topic **`frigate/events`** for couriers and the bin lorry on the road zones, HA websocket for the postman sensor, and the patio door switch state.
+- **Primary:** MQTT topic **`frigate/reviews`** (broker from `MQTT_HOST`). Frigate only publishes a review at **`severity: alert`** when an object enters an alert zone — so masks/zones (e.g. the driveway car-mask) are honoured upstream, and the concierge only acts on real, zone-qualified events.
+- **Secondary branches:** MQTT topic **`frigate/events`** for couriers and the bin lorry on the road zones, **`frigate/tracked_object_update`** for GenAI descriptions, HA websocket for the postman sensor, and the patio door switch state.
 
 ## Turning a detection into a notification
 For each `frigate/reviews` message the flow decides three things:
@@ -443,6 +459,8 @@ The notification's tap action (`clickAction`/`url`) opens the **event clip** (`c
 ## Who gets what
 - **Phone push** (text → snapshot → GIF) → everyone with the **Camera / Doorbell** toggle on in the
   [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow).
+- **Doorbell + a recognised face** — if Frigate face recognition has named the person (`sensor.doorbell_last_recognized_face`), the doorbell push (same notification, updated in place) is titled **"👤 \<name\> at the doorbell"**.
+- **GenAI description** — if Frigate's GenAI is on and sends a description for a doorbell person alert the flow already pushed, that push is updated in place with the description as its text, keeping the picture and tap-link. With GenAI off in Frigate this branch simply never fires.
 - **Doorbell + person** also casts a snapshot to the **kitchen display** (20 s) and an overlay on the **Shield TV**. This only fires for an arrival. If the front door is open, or closed less than 60 seconds ago, both popups are skipped, because whoever is on camera has already come through it.
 - **Doorbell pushes are held back on an exit too** — all three kinds, latched for the whole incident so the late GIF cannot slip through alone. `house_mode = Away` overrides it.
 - **Couriers** (DPD/GLS/Amazon/UPS/FedEx/DHL/An Post on the front cameras) → spoken **"\<courier\> has landed"** on the home audio group — suppressed when `house_mode = Sleeping`.
@@ -488,7 +506,12 @@ The escalation timings (90-second grace, 10-minute escalation, 15/60-minute repe
 - **Tier 3** — long outages re-alert on a slow repeat so a dead service can't be silently forgotten.
 - Recovery sends an "up again" push and resets the monitor's state machine.
 - **Quiet hours (22:00–07:00 by default)** hold non-urgent noise; anything still outstanding is delivered in an **overnight summary at the end of quiet hours** (07:00). The window is set on the Household page → **Infra** and is shared with Infra Health & Alerts.
+- The spoken announcement only plays if someone with **Infra alerts** on (on the dashboard) is home.
 - While `maintenance_mode` is on, notifications are suppressed but the state machines keep running — anything still down when maintenance ends re-alerts on its next repeat. **When maintenance switches off, the watchdog also re-polls the uptime monitor's status page and injects a synthetic up-event for every monitor currently up** — this clears any down-state whose recovery happened during the window (the monitor's own maintenance window pauses its webhooks, so those recoveries would otherwise be missed and cause false "still down" alerts).
+
+- **Every 5 minutes** the same status-page check runs on its own, so a recovery whose webhook never arrived can't leave a monitor stuck as down.
+- After a Node-RED restart, monitors that were down get their escalation timers back rather than starting from scratch.
+- That check reads the monitor list from the Uptime Kuma status page (`KUMA_STATUS_URL`), so **only monitors published on the status page can be cleared this way** — put every monitor on it. A short list of core monitors (`CORE` in `iw-engine`) gets the faster 15-minute repeat — edit it to match your own monitor names.
 
 Uptime Kuma stays the source of truth for *reachability*; the flow below handles *health*.
 
@@ -500,11 +523,29 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
 
 **Inputs:**
 - **Sensor-driven rules** — a `server-state-changed` watcher over ~40 entities feeds a rule engine (disk usage, pool health, service states, rsync failures…) with per-rule thresholds, sustain times and de-duplication.
-- **Webhooks** — backup scripts (TrueNAS config, MikroTik config, restic) and Zabbix post their outcomes straight to HTTP-in endpoints here.
-- **Backup watchdog** — each morning it queries the Proxmox API on both nodes for last night's vzdump task list and alerts **only on failures** (the read-only API token comes from the gitignored `.env`).
-- **Data-freshness checks** — e.g. an hourly check that the ESB Networks smart-meter add-on has polled recently; a stale poll timestamp means the add-on is wedged even though its sensors still show plausible values.
+- **Webhooks** — scripts elsewhere post their outcome straight to an HTTP-in endpoint here:
+
+  | Endpoint | Posted by |
+  |---|---|
+  | `/ih-truenas-backup` | TrueNAS config backup (updated / unchanged / failed) |
+  | `/ih-mikrotik-backup` | MikroTik config backup |
+  | `/ih-restic-failed` | restic backup failure, per dataset |
+  | `/ih-nextcloud-db-dump-failed` | Nextcloud database dump failure |
+  | `/ih-esbn-download` | ESB Networks smart-meter download, failure or warning |
+  | `/ih-zabbix` | Zabbix problem and recovery events |
+  | `/nr-backup-alert` | this repo's own nightly backup, when its secret scan blocks a push |
+- **Backup watchdog** — at 07:30 it queries the Proxmox API on every node in `PVE_NODES` for the vzdump task list and alerts **only on failures**, or when a node has no backup finished in the last 26 hours (the read-only API token comes from the gitignored `.env`).
 
 **Delivery:** shared quiet-hours gate — alerts inside the quiet hours (default 22:00–07:00, Household page → Infra) are held and flushed at the end of the window with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
+
+# Doorbell Webhook — how it works
+
+**In testing.** A small tab for a Reolink video doorbell, which can call a webhook itself when the button is pressed, so nothing has to hold a connection open to it.
+
+- The doorbell's webhook setting points at **`POST /doorbell`** on Node-RED (no username or password). The flow always answers 200.
+- A call with `alarm.type` = `VISITOR` (Reolink's name for a button press) pushes **"🔔 Doorbell — Someone pressed the doorbell"** with `priority: high` and `ttl: 0`. Repeats within 15 seconds are logged but not pushed. The doorbell never sends an "ended" message.
+- Every call, pushed or not, is logged with its source address and raw body to `data/doorbell_webhook.log`, so you can see exactly what your doorbell sends.
+- While it is being tested the push goes to **one fixed notify service** (`dbw-push`), not through the Household Config dashboard. Change that node to your own phone.
 
 ---
 
