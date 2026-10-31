@@ -249,10 +249,10 @@ The timings in this section (the 20-minute Away timer, 15-minute motion look-bac
 - **Home** — at least one resident is in (or just arrived).
 - **Away** — all residents out, confirmed by a 20-minute quiet period (see below).
 - **Sleeping** — everyone in bed; auto-detected overnight.
-- **Overlays** (independent of the above): `storm_mode` (auto from Met Éireann warnings), `maintenance_mode` (blocks Away, silences all infra alerting while planned maintenance is under way, auto-expires after 4 hours). `guest_mode` exists as a helper but is intentionally ignored by the engine — it is consumed directly by other automations.
+- **Overlays** (independent of the above): `storm_mode` (auto from Met Éireann warnings), `maintenance_mode` (blocks Away, silences all infra alerting while planned maintenance is under way, auto-expires after 4 hours). `guest_mode` blocks Away (someone is in who has no tracked phone), the same rule the alarm and heating already follow.
 
 ## Away detection
-All residents out → 20-minute timer → `Away`. At the fire point the engine checks the indoor sensors (sitting-room mmWave, office, landing, hallway) for motion in the last 15 minutes — if anyone is still moving around, it holds off and retries every 20 minutes. `maintenance_mode` also blocks the transition. Anyone arriving during the countdown cancels it immediately.
+All residents out → 20-minute timer → `Away`. At the fire point the engine checks the indoor sensors (sitting-room mmWave, office, landing, hallway) for motion in the last 15 minutes — if anyone is still moving around, it holds off and retries every 20 minutes. `maintenance_mode` and `guest_mode` also block the transition. Anyone arriving during the countdown cancels it immediately.
 
 Turning `maintenance_mode` on while the house is Away puts it straight back to Home.
 
