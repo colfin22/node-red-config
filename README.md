@@ -78,7 +78,7 @@ defaults (House Mode role `none`, every toggle off) rather than needing a flow e
   list directly). Presence for whoever has a role is watched via a whole-house `state_changed`
   event filter, not a fixed entity list — so promoting a person on the page gets them real-time
   Home/Away/Sleeping reactions immediately, no flow edit.
-- **Security** — alarm arm/disarm/trigger pushes + the door-gated welcome naming.
+- **Security** — alarm arm/disarm/trigger/failed-to-arm pushes, phone-battery pushes and the shed-left-open alert.
 - **Only when home** — only push Security notifications to this person while they're physically
   present (the old `PERSON_n_ONLY_WHEN_HOME`, now per-person and independent of role).
 - **Camera / Doorbell** — Camera Concierge pushes.
@@ -287,7 +287,7 @@ The alarm follows `input_select.house_mode` directly:
 
 - **Away** → `alarm_arm_away` (house)
 - **Sleeping** → `alarm_arm_night` (house) — silent, no announcement; people are in bed
-- **Home** → `alarm_disarm` (house). When returning **from Away** the spoken welcome is not fired on arrival — it is **held until the front door opens** (then a short delay), so you are inside to hear it, then a single merged line **names whoever is back**: *"Welcome home, [name]. The house has been disarmed."* on the home audio group. It stays silent if the door never opens within a few minutes, and says nothing when Home comes from Sleeping. (Someone whose phone never leaves the house can't flip Away→Home, so is never named.)
+- **Home** → `alarm_disarm` (house). The disarm is announced straight away (*"House alarm disarmed."*); nothing is said when Home comes from Sleeping. A door-gated *"Welcome home, [name]"* line still exists in the flow (`aa-welcome-fn`) but is disabled and unwired.
 
 All presence tracking and timing live in the **House Mode** tab — the alarm tab just reacts to the resulting state. On Node-RED restart, a startup inject reads the current `house_mode` and `guest_mode` via `ha-get-entities` and syncs both into flow context before the first evaluation.
 
@@ -302,7 +302,7 @@ When `input_boolean.guest_mode` is on, only **Away** arming is suspended (guests
 When guest mode is turned **off**, the flow immediately re-evaluates the current house mode and arms accordingly — if the house is already Away it arms away, if Sleeping it arms night, if Home it does nothing.
 
 ## Alarm notifications + voice (same tab)
-Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, not on the HA bus). Five events → **a push to everyone with Security on** (on the dashboard) **+ a spoken announcement** on the home audio group: **armed · disarmed · triggered · no-longer-triggered · failed-to-arm.** Trigger/failure messages carry the cause (open sensors); a failure is recognised both as an instant refusal and as an exit-delay arm that aborts back to disarmed with sensors open (a cancelled exit delay with nothing open stays a plain disarm). Anyone with **Only when home** set is only pushed while at home. On a **return from Away** the spoken *disarmed* line is suppressed in favour of the door-gated welcome above (the phone push still fires); the shed's disarm announcement is unaffected.
+Derived from the state of `.house` + `.shed` (Alarmo's own events are internal, not on the HA bus). Five events → **a push to everyone with Security on** (on the dashboard) **+ a spoken announcement** on the home audio group: **armed · disarmed · triggered · no-longer-triggered · failed-to-arm.** Trigger/failure messages carry the cause (open sensors); a failure is recognised both as an instant refusal and as an exit-delay arm that aborts back to disarmed with sensors open (a cancelled exit delay with nothing open stays a plain disarm). Anyone with **Only when home** set is only pushed while at home. Arming for the night and disarming from night are pushed but not spoken, because people are in bed. Pushes go through the shared dispatch subflow with the Security flag, the same as every other tab.
 
 ## Night-arm retry
 Alarmo refuses `arm_night` while a door or window is open, and the house would then sit unarmed all night. If that happens, the flow waits until every blocking sensor is closed again, gives it 20 minutes for whoever shut it to settle back down, and tries once more. The "failed to arm" line is spoken only once a night.
@@ -331,7 +331,7 @@ Two separate HA automations — one on `alarm_control_panel.house`, one on `.she
 ### Implementation notes
 - `server-state-changed` triggers use an **explicit entity list** — the `substring`/`regex` filter throws `a?.some is not a function` on this palette version.
 - All `api-call-service` nodes use the `action` property — the old separate `domain`/`service` fields are deprecated in v1.0 of the palette. **Static calls:** set `action: 'domain.service'`. **Dynamic calls** (action from message): set `action: '{{payload.action}}'` (mustache). Do not use `actionType`/`dataType` — the palette ignores them; the only way `isDynamicValue()` returns true is mustache or a Node-RED env var.
-- Notify dispatch uses the `action` form (`{action:'notify.x', data:…}`); the `people config` node publishes to **`global` context** so both alarm tabs share one source of truth.
+- Notify dispatch uses the `action` form (`{action:'notify.x', data:…}`); both alarm tabs push through the shared `sf-dispatch-notify` subflow (flag `security`), which reads `global.person_config` at send time, so the dashboard is the one source of truth.
 - TTS for alarm state changes is centralised in the notification engine (one announce per event, any source); the NFC shed-open alert announces from the NFC tab as it is not an alarm state change.
 
 ---
@@ -461,7 +461,7 @@ The notification's tap action (`clickAction`/`url`) opens the **event clip** (`c
   [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow).
 - **Doorbell + a recognised face** — if Frigate face recognition has named the person (`sensor.doorbell_last_recognized_face`), the doorbell push (same notification, updated in place) is titled **"👤 \<name\> at the doorbell"**.
 - **GenAI description** — if Frigate's GenAI is on and sends a description for a doorbell person alert the flow already pushed, that push is updated in place with the description as its text, keeping the picture and tap-link. With GenAI off in Frigate this branch simply never fires.
-- **Doorbell + person** also casts a snapshot to the **kitchen display** (20 s) and an overlay on the **Shield TV**. This only fires for an arrival. If the front door is open, or closed less than 60 seconds ago, both popups are skipped, because whoever is on camera has already come through it.
+- **Doorbell + person** also casts a snapshot to the **kitchen display** (20 s) and an overlay on the **Shield TV**. This only fires for an arrival. If the front door is open, or closed less than 60 seconds ago, both popups are skipped, because whoever is on camera has already come through it. When the display turns off, the snapshot in `/config/www` is overwritten with a placeholder (`doorbell_blank.jpg`), because HA serves `/local/` without authentication. Put any small image there under that name first.
 - **Doorbell pushes are held back on an exit too** — all three kinds, latched for the whole incident so the late GIF cannot slip through alone. `house_mode = Away` overrides it.
 - **Couriers** (DPD/GLS/Amazon/UPS/FedEx/DHL/An Post on the front cameras) → spoken **"\<courier\> has landed"** on the home audio group — suppressed when `house_mode = Sleeping`.
 - **Postman** at the doorbell → spoken **"the postman has been detected"** — suppressed when `house_mode = Sleeping`.
@@ -534,7 +534,10 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
   | `/ih-esbn-download` | ESB Networks smart-meter download, failure or warning |
   | `/ih-zabbix` | Zabbix problem and recovery events |
   | `/nr-backup-alert` | this repo's own nightly backup, when its secret scan blocks a push |
-- **Backup watchdog** — at 07:30 it queries the Proxmox API on every node in `PVE_NODES` for the vzdump task list and alerts **only on failures**, or when a node has no backup finished in the last 26 hours (the read-only API token comes from the gitignored `.env`).
+
+  Every call to these endpoints and to `/uk-event` is also logged with its source address to `data/webhook_sources.log` — temporary, to build an allow-list.
+- **Backup watchdog** — at 07:30 it queries the Proxmox API on every node in `PVE_NODES` for the vzdump task list and alerts **only on failures**, when a node has no backup finished in the last 26 hours, or when the Proxmox API can't be read for a node (the read-only API token comes from the gitignored `.env`).
+- **Node-RED's own errors** — every tab has a catch node linked to one function here, which pushes `[Node-RED] <node name>` with the error text, at most once per failing node every 30 minutes. A failed Home Assistant call (an unknown notify service during an HA restart, say) no longer shows up only in the container log.
 
 **Delivery:** shared quiet-hours gate — alerts inside the quiet hours (default 22:00–07:00, Household page → Infra) are held and flushed at the end of the window with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
 
