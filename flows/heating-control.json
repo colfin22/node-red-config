@@ -4,7 +4,7 @@
   "type": "tab",
   "label": "Heating Control",
   "disabled": false,
-  "info": "DRAFT 18-06-2026 - DISABLED. Schedule + presence -> climate.netatmo_smart_thermostat via HomeKit. Set Netatmo native schedule to flat night baseline before enabling. Away->night 19.5, 24h-empty->away 12 (input_boolean.heating_extended_away toggle, defaults ON). 30-min heartbeat re-assert. See project_heating_nodered memory."
+  "info": "Heating controller (live). House Mode + the Household page schedule (Heating and Climate sections) -> climate.netatmo_smart_thermostat via HomeKit set_temperature; the Netatmo holds a flat eco baseline and this flow only raises it. Boost from the dial or input_button.heating_boost_start/cancel. Nightly Met Eireann forecast check (default 21:30) sets an early pre-heat. Proximity pre-heat on the way home; extended away via input_boolean.heating_extended_away. Eddi diverter stopped while boosting or heading home. 30-min re-assert. Status -> input_text.heating_status / heating_status_by."
  },
  {
   "id": "heat-tick",
@@ -460,7 +460,7 @@
   "id": "heat-notify-dynamic",
   "type": "api-call-service",
   "z": "5a86c1a3371ffe9e",
-  "name": "notify (per person_config)",
+  "name": "notify: heating routine",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -504,7 +504,7 @@
   "id": "heat-fc-notify-dynamic",
   "type": "api-call-service",
   "z": "5a86c1a3371ffe9e",
-  "name": "notify (per person_config)",
+  "name": "notify: freezing pre-heat",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -542,6 +542,34 @@
     "heat-fc-get"
    ]
   ]
+ },
+ {
+  "id": "nr-catch-5a86c1a3371ffe9e",
+  "type": "catch",
+  "z": "5a86c1a3371ffe9e",
+  "name": "catch all errors",
+  "scope": null,
+  "uncaught": false,
+  "x": 120,
+  "y": 40,
+  "wires": [
+   [
+    "nr-err-out-5a86c1a3371ffe9e"
+   ]
+  ]
+ },
+ {
+  "id": "nr-err-out-5a86c1a3371ffe9e",
+  "type": "link out",
+  "z": "5a86c1a3371ffe9e",
+  "name": "to error funnel",
+  "mode": "link",
+  "links": [
+   "nr-err-in"
+  ],
+  "x": 255,
+  "y": 40,
+  "wires": []
  },
  {
   "id": "ha-server",

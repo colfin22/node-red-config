@@ -100,6 +100,34 @@
   ]
  },
  {
+  "id": "nr-catch-tab-dbw",
+  "type": "catch",
+  "z": "tab-dbw",
+  "name": "catch all errors",
+  "scope": null,
+  "uncaught": false,
+  "x": 120,
+  "y": 40,
+  "wires": [
+   [
+    "nr-err-out-tab-dbw"
+   ]
+  ]
+ },
+ {
+  "id": "nr-err-out-tab-dbw",
+  "type": "link out",
+  "z": "tab-dbw",
+  "name": "to error funnel",
+  "mode": "link",
+  "links": [
+   "nr-err-in"
+  ],
+  "x": 255,
+  "y": 40,
+  "wires": []
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",

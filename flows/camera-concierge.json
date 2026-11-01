@@ -4,7 +4,7 @@
   "type": "tab",
   "label": "Camera Concierge",
   "disabled": false,
-  "info": ""
+  "info": "Camera Concierge. Frigate MQTT (frigate/reviews, frigate/events, frigate/tracked_object_update) -> grouped phone pushes (Front / Doorbell / Rear; text, then snapshot, then GIF on the same tag), doorbell exit guard (cam-fd-gate), Shield overlay + kitchen display cast (snapshot overwritten with a placeholder after the display turns off), GenAI doorbell description, courier / postman / bin lorry TTS, overnight car deterrent (strobe + TTS while Sleeping). Settings: Household page -> Cameras. Log: /data/camera_concierge.log."
  },
  {
   "id": "cam-patio",
@@ -197,7 +197,9 @@
   "x": 1450,
   "y": 1000,
   "wires": [
-   []
+   [
+    "cam-cast-wipe"
+   ]
   ]
  },
  {
@@ -1076,7 +1078,7 @@
   "id": "cam-notify-dynamic",
   "type": "api-call-service",
   "z": "tab-cam",
-  "name": "notify (per person_config)",
+  "name": "notify: camera",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -1210,6 +1212,58 @@
   "wires": [
    []
   ]
+ },
+ {
+  "id": "cam-cast-wipe",
+  "type": "api-call-service",
+  "z": "tab-cam",
+  "name": "Wipe public snapshot (placeholder)",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "downloader.download_file",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"url\": \"http://10.0.0.252:8123/local/doorbell_blank.jpg\", \"filename\": \"doorbell_snapshot.jpg\", \"overwrite\": true}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1650,
+  "y": 1000,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "nr-catch-tab-cam",
+  "type": "catch",
+  "z": "tab-cam",
+  "name": "catch all errors",
+  "scope": null,
+  "uncaught": false,
+  "x": 120,
+  "y": 40,
+  "wires": [
+   [
+    "nr-err-out-tab-cam"
+   ]
+  ]
+ },
+ {
+  "id": "nr-err-out-tab-cam",
+  "type": "link out",
+  "z": "tab-cam",
+  "name": "to error funnel",
+  "mode": "link",
+  "links": [
+   "nr-err-in"
+  ],
+  "x": 255,
+  "y": 40,
+  "wires": []
  },
  {
   "id": "ha-server",

@@ -202,7 +202,8 @@
   "wires": [
    [
     "ih-b-tn-fn",
-    "ih-b-tn-resp"
+    "ih-b-tn-resp",
+    "ih-src-fn"
    ]
   ]
  },
@@ -250,7 +251,8 @@
   "wires": [
    [
     "ih-b-mt-fn",
-    "ih-b-mt-resp"
+    "ih-b-mt-resp",
+    "ih-src-fn"
    ]
   ]
  },
@@ -298,7 +300,8 @@
   "wires": [
    [
     "ih-b-restic-fn",
-    "ih-b-restic-resp"
+    "ih-b-restic-resp",
+    "ih-src-fn"
    ]
   ]
  },
@@ -346,7 +349,8 @@
   "wires": [
    [
     "ih-b-zbx-fn",
-    "ih-b-zbx-resp"
+    "ih-b-zbx-resp",
+    "ih-src-fn"
    ]
   ]
  },
@@ -410,7 +414,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "Build PVE task requests",
-  "func": "const tok = env.get(\"PVE_API_TOKEN\"); // full PVEAPIToken=... string, from gitignored .env\nconst base = env.get(\"PVE_API_BASE\");   // e.g. https://<host>:8006/api2/json/nodes/\nconst q = \"/tasks?typefilter=vzdump&limit=8&source=archive\";\nconst mk = (n) => ({ url: base + n + q, headers: { Authorization: tok }, node: n, topic: \"pve\" });\nconst nodes = String(env.get(\"PVE_NODES\")||\"\").split(\",\").map(s=>s.trim()).filter(Boolean);\nnode.send([ nodes.map(mk) ]);\nreturn null;\n",
+  "func": "const tok = env.get(\"PVE_API_TOKEN\"); // full PVEAPIToken=... string, from gitignored .env\nconst base = env.get(\"PVE_API_BASE\");   // e.g. https://<host>:8006/api2/json/nodes/\nconst q = \"/tasks?typefilter=vzdump&limit=8&source=archive\";\nconst mk = (n) => ({ url: base + n + q, headers: { Authorization: tok }, node: n, topic: \"pve\" });\nconst nodes = String(env.get(\"PVE_NODES\")||\"\").split(\",\").map(s=>s.trim()).filter(Boolean);\n// 01-11-2026: msg.parts lets bk-join complete on however many nodes PVE_NODES lists;\n// requestTimeout so a hung API can't stall the check.\nconst pid = 'bk_' + Date.now();\nnode.send([ nodes.map((n, i) => Object.assign(mk(n), { requestTimeout: 30000, parts: { id: pid, index: i, count: nodes.length, type: 'array', len: 1 } })) ]);\nreturn null;\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -453,7 +457,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "wrap {node,tasks}",
-  "func": "msg.payload = { node: msg.node, tasks: (msg.payload && msg.payload.data) || [] };\nreturn msg;\n",
+  "func": "// 01-11-2026: flag an API failure so bk-sum doesn't report it as 'no backup completed'.\nconst ok = msg.statusCode === 200 && msg.payload && Array.isArray(msg.payload.data);\nconst err = ok ? null : ('HTTP ' + (msg.statusCode || '-') + ' ' + (typeof msg.payload === 'string' ? msg.payload : '')).trim().slice(0, 80);\nmsg.payload = { node: msg.node, tasks: ok ? msg.payload.data : [], err: err };\nreturn msg;\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -472,7 +476,7 @@
   "type": "join",
   "z": "tab-ih",
   "name": "collect both nodes",
-  "mode": "custom",
+  "mode": "auto",
   "build": "array",
   "property": "payload",
   "propertyType": "msg",
@@ -500,7 +504,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "Evaluate (alert only on fail)",
-  "func": "const now = Date.now()/1000;\nconst WINDOW = 26*3600;\nconst labels = {proxmox:'node1 (proxmox)', proxmox2:'node2 (proxmox2)'};\nconst fmt = (e) => new Date(e*1000).toLocaleString('en-IE',{timeZone:'Europe/Dublin',weekday:'short',hour:'2-digit',minute:'2-digit'});\nlet problems = [];\nfor (const r of msg.payload) {\n  const lbl = labels[r.node] || r.node;\n  const done = (r.tasks||[]).filter(t => t.endtime);\n  const recent = done.filter(t => (now - t.endtime) < WINDOW);\n  if (recent.length === 0) { problems.push('\\u2022 ' + lbl + ': no backup completed in last 26h'); continue; }\n  const failed = recent.filter(t => t.status !== 'OK');\n  for (const f of failed) problems.push('\\u2022 ' + lbl + ': backup ended \\u201c' + f.status + '\\u201d at ' + fmt(f.endtime));\n}\nconst stamp = new Date().toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});\nif (problems.length === 0) { node.status({fill:'green',shape:'dot',text:'all OK '+stamp}); return null; }\nnode.status({fill:'red',shape:'dot',text:problems.length+' issue(s) '+stamp});\nmsg.cat = 'Backup';\nmsg.sub = 'Proxmox';\nmsg.message = problems.join('\\n');\nmsg.tag = 'proxmox_backup';\nreturn msg;\n",
+  "func": "const now = Date.now()/1000;\nconst WINDOW = 26*3600;\nconst labels = {proxmox:'node1 (proxmox)', proxmox2:'node2 (proxmox2)'};\nconst fmt = (e) => new Date(e*1000).toLocaleString('en-IE',{timeZone:'Europe/Dublin',weekday:'short',hour:'2-digit',minute:'2-digit'});\nlet problems = [];\nfor (const r of msg.payload) {\n  const lbl = labels[r.node] || r.node;\n  if (r.err) { problems.push('\\u2022 ' + lbl + ': could not read backup tasks from the Proxmox API (' + r.err + ')'); continue; }\n  const done = (r.tasks||[]).filter(t => t.endtime);\n  const recent = done.filter(t => (now - t.endtime) < WINDOW);\n  if (recent.length === 0) { problems.push('\\u2022 ' + lbl + ': no backup completed in last 26h'); continue; }\n  const failed = recent.filter(t => t.status !== 'OK');\n  for (const f of failed) problems.push('\\u2022 ' + lbl + ': backup ended \\u201c' + f.status + '\\u201d at ' + fmt(f.endtime));\n}\nconst stamp = new Date().toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});\nif (problems.length === 0) { node.status({fill:'green',shape:'dot',text:'all OK '+stamp}); return null; }\nnode.status({fill:'red',shape:'dot',text:problems.length+' issue(s) '+stamp});\nmsg.cat = 'Backup';\nmsg.sub = 'Proxmox';\nmsg.message = problems.join('\\n');\nmsg.tag = 'proxmox_backup';\nreturn msg;\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -678,7 +682,8 @@
   "wires": [
    [
     "nrb-fn",
-    "nrb-resp"
+    "nrb-resp",
+    "ih-src-fn"
    ]
   ]
  },
@@ -737,7 +742,7 @@
   "id": "ih-notify-dynamic",
   "type": "api-call-service",
   "z": "tab-ih",
-  "name": "notify (per person_config)",
+  "name": "notify: infra health",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -790,7 +795,8 @@
   "wires": [
    [
     "ih-b-ncdb-fn",
-    "ih-b-ncdb-resp"
+    "ih-b-ncdb-resp",
+    "ih-src-fn"
    ]
   ]
  },
@@ -838,7 +844,8 @@
   "wires": [
    [
     "ih-b-esbndl-fn",
-    "ih-b-esbndl-resp"
+    "ih-b-esbndl-resp",
+    "ih-src-fn"
    ]
   ]
  },
@@ -871,6 +878,101 @@
   "x": 410,
   "y": 820,
   "wires": []
+ },
+ {
+  "id": "ih-src-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "webhook source IP",
+  "func": "// Temporary (01-11-2026, audit H2 step 1): record which host calls each webhook,\n// so a source-IP allow-list can be built from measured callers, not guesses.\nconst r = msg.req || {};\nconst ts = new Date().toLocaleString('en-IE', {timeZone: 'Europe/Dublin', hour12: false});\nconst ip = String(r.ip || '?').replace(/^::ffff:/, '');\nconst ua = String((r.headers && r.headers['user-agent']) || '').slice(0, 60);\nreturn {payload: ts + '  ' + (r.originalUrl || r.url || '?') + '  ' + ip + '  ' + ua + '\\n'};",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1500,
+  "y": 1000,
+  "wires": [
+   [
+    "ih-src-logfile"
+   ]
+  ]
+ },
+ {
+  "id": "ih-src-logfile",
+  "type": "file",
+  "z": "tab-ih",
+  "name": "webhook sources log",
+  "filename": "/data/webhook_sources.log",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": true,
+  "overwriteFile": "false",
+  "encoding": "none",
+  "x": 1720,
+  "y": 1000,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "nr-err-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Node-RED error funnel (30 min/node)",
+  "func": "// 01-11-2026 (audit H4): every tab's catch node lands here. One push per failing\n// node per 30 min, routed through ih-send (quiet hours, maintenance, infra_alerts dispatch).\nconst e = msg.error || {}; const s = e.source || {};\nconst id = s.id || '?'; const nm = s.name || s.type || id;\nconst last = context.get('last') || {}; const now = Date.now();\nfor (const k in last) if (now - last[k] > 86400000) delete last[k];   // keep the map small\nif (now - (last[id] || 0) < 30 * 60000) { context.set('last', last); return null; }\nlast[id] = now; context.set('last', last);\nreturn { cat: 'Node-RED', sub: nm, message: String(e.message || 'error').slice(0, 300) + ' [' + id + ']', tag: 'nr_err_' + id };",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1500,
+  "y": 1080,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "nr-catch-tab-ih",
+  "type": "catch",
+  "z": "tab-ih",
+  "name": "catch all errors",
+  "scope": null,
+  "uncaught": false,
+  "x": 1300,
+  "y": 1080,
+  "wires": [
+   [
+    "nr-err-fn"
+   ]
+  ]
+ },
+ {
+  "id": "nr-err-in",
+  "type": "link in",
+  "z": "tab-ih",
+  "name": "errors from other tabs",
+  "links": [
+   "nr-err-out-tab-hm",
+   "nr-err-out-tab-cam",
+   "nr-err-out-5a86c1a3371ffe9e",
+   "nr-err-out-096ff268dc7bd2f0",
+   "nr-err-out-657e6b8b07b4cdf7",
+   "nr-err-out-tab-iw",
+   "nr-err-out-tab-pc",
+   "nr-err-out-tab-dbw"
+  ],
+  "x": 1335,
+  "y": 1120,
+  "wires": [
+   [
+    "nr-err-fn"
+   ]
+  ]
  },
  {
   "id": "ha-server",

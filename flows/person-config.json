@@ -1101,6 +1101,34 @@
   ]
  },
  {
+  "id": "nr-catch-tab-pc",
+  "type": "catch",
+  "z": "tab-pc",
+  "name": "catch all errors",
+  "scope": null,
+  "uncaught": false,
+  "x": 120,
+  "y": 40,
+  "wires": [
+   [
+    "nr-err-out-tab-pc"
+   ]
+  ]
+ },
+ {
+  "id": "nr-err-out-tab-pc",
+  "type": "link out",
+  "z": "tab-pc",
+  "name": "to error funnel",
+  "mode": "link",
+  "links": [
+   "nr-err-in"
+  ],
+  "x": 255,
+  "y": 40,
+  "wires": []
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",

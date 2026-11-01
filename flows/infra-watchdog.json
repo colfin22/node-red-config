@@ -4,7 +4,7 @@
   "type": "tab",
   "label": "Infra Watchdog",
   "disabled": false,
-  "info": ""
+  "info": "Infra Watchdog. Uptime Kuma webhook POST /uk-event -> escalation engine (grace, phone, then phone + TTS, then repeats; core monitors repeat faster). Quiet hours and the morning summary are shared with Infra Health (Household page -> Infra). Maintenance mode suppresses. Reconcile from the Kuma status page on maintenance off and every 5 min. Down state is file-backed and timers resume after a restart. Log: /data/infra_watchdog.log."
  },
  {
   "id": "iw-reconcile-timers-inj",
@@ -45,7 +45,8 @@
   "wires": [
    [
     "iw-engine",
-    "iw-resp"
+    "iw-resp",
+    "iw-src-fn"
    ]
   ]
  },
@@ -240,7 +241,7 @@
   "type": "function",
   "z": "tab-iw",
   "name": "id->name map",
-  "func": "var map={};\n((msg.payload&&msg.payload.publicGroupList)||[]).forEach(function(g){(g.monitorList||[]).forEach(function(m){map[m.id]=m.name;});});\nmsg.idmap=map;\ndelete msg.payload;delete msg.headers;\nreturn msg;",
+  "func": "// 01-11-2026: Kuma unreachable -> say so instead of silently reconciling nothing.\nif(msg.statusCode!==200||!msg.payload||!msg.payload.publicGroupList){node.warn('[iw] Kuma status page unreachable (HTTP '+(msg.statusCode||'-')+') - '+(msg.reconSrc||'')+' reconcile skipped');return null;}\nvar map={};\n((msg.payload&&msg.payload.publicGroupList)||[]).forEach(function(g){(g.monitorList||[]).forEach(function(m){map[m.id]=m.name;});});\nmsg.idmap=map;\ndelete msg.payload;delete msg.headers;\nreturn msg;",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -422,7 +423,7 @@
   "id": "iw-notify-dynamic",
   "type": "api-call-service",
   "z": "tab-iw",
-  "name": "notify (per person_config)",
+  "name": "notify: infra watchdog",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -460,6 +461,71 @@
     "iw-engine"
    ]
   ]
+ },
+ {
+  "id": "iw-src-fn",
+  "type": "function",
+  "z": "tab-iw",
+  "name": "webhook source IP",
+  "func": "// Temporary (01-11-2026, audit H2 step 1): record which host calls each webhook,\n// so a source-IP allow-list can be built from measured callers, not guesses.\nconst r = msg.req || {};\nconst ts = new Date().toLocaleString('en-IE', {timeZone: 'Europe/Dublin', hour12: false});\nconst ip = String(r.ip || '?').replace(/^::ffff:/, '');\nconst ua = String((r.headers && r.headers['user-agent']) || '').slice(0, 60);\nreturn {payload: ts + '  ' + (r.originalUrl || r.url || '?') + '  ' + ip + '  ' + ua + '\\n'};",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 400,
+  "y": 120,
+  "wires": [
+   [
+    "iw-src-logfile"
+   ]
+  ]
+ },
+ {
+  "id": "iw-src-logfile",
+  "type": "file",
+  "z": "tab-iw",
+  "name": "webhook sources log",
+  "filename": "/data/webhook_sources.log",
+  "filenameType": "str",
+  "appendNewline": false,
+  "createDir": true,
+  "overwriteFile": "false",
+  "encoding": "none",
+  "x": 620,
+  "y": 120,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "nr-catch-tab-iw",
+  "type": "catch",
+  "z": "tab-iw",
+  "name": "catch all errors",
+  "scope": null,
+  "uncaught": false,
+  "x": 120,
+  "y": 40,
+  "wires": [
+   [
+    "nr-err-out-tab-iw"
+   ]
+  ]
+ },
+ {
+  "id": "nr-err-out-tab-iw",
+  "type": "link out",
+  "z": "tab-iw",
+  "name": "to error funnel",
+  "mode": "link",
+  "links": [
+   "nr-err-in"
+  ],
+  "x": 255,
+  "y": 40,
+  "wires": []
  },
  {
   "id": "ha-server",

@@ -437,7 +437,7 @@
     "vt": "str"
    }
   ],
-  "repeat": "120",
+  "repeat": "",
   "crontab": "",
   "once": true,
   "onceDelay": "5",
@@ -497,7 +497,7 @@
   "y": 800,
   "wires": [
    [
-    "hm-get"
+    "hm-cfg"
    ]
   ]
  },
@@ -629,7 +629,7 @@
   "type": "function",
   "z": "tab-hm",
   "name": "people config",
-  "func": "// Single source of truth: the Person Config dashboard page (tab-pc) writes\n// global.person_config keyed by person.* entity id. This reads it fresh on\n// every deploy/tick, so a role change on the dashboard takes effect live\n// with no redeploy needed here.\nconst PC = global.get('person_config') || {};\nvar residents=[], guests=[];\nObject.keys(PC).forEach(function(pid){\n  var c = PC[pid];\n  if (!c || !c.role || c.role==='none') return;\n  var rec = {person: pid, ping: c.ping || ''};\n  (c.role==='guest' ? guests : residents).push(rec);\n});\nif (!residents.length) {\n  node.warn('people config: no residents resolved from person_config, keeping previous values');\n  return null;\n}\nflow.set('residents', residents);\nflow.set('guests', guests);\nreturn msg;",
+  "func": "// Single source of truth: the Person Config dashboard page (tab-pc) writes\n// global.person_config keyed by person.* entity id. This reads it fresh on\n// every deploy/tick, so a role change on the dashboard takes effect live\n// with no redeploy needed here.\nconst PC = global.get('person_config') || {};\nvar residents=[], guests=[];\nObject.keys(PC).forEach(function(pid){\n  var c = PC[pid];\n  if (!c || !c.role || c.role==='none') return;\n  var rec = {person: pid, ping: c.ping || ''};\n  (c.role==='guest' ? guests : residents).push(rec);\n});\nif (!residents.length) {\n  node.warn('people config: no residents resolved from person_config, keeping previous values');\n  return msg;   // still tick hm-engine with the previous residents\n}\nflow.set('residents', residents);\nflow.set('guests', guests);\nreturn msg;",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -714,7 +714,7 @@
   "id": "hm-notify-dynamic",
   "type": "api-call-service",
   "z": "tab-hm",
-  "name": "notify (per person_config)",
+  "name": "notify: house mode change",
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
@@ -780,6 +780,34 @@
     "hm-engine"
    ]
   ]
+ },
+ {
+  "id": "nr-catch-tab-hm",
+  "type": "catch",
+  "z": "tab-hm",
+  "name": "catch all errors",
+  "scope": null,
+  "uncaught": false,
+  "x": 120,
+  "y": 40,
+  "wires": [
+   [
+    "nr-err-out-tab-hm"
+   ]
+  ]
+ },
+ {
+  "id": "nr-err-out-tab-hm",
+  "type": "link out",
+  "z": "tab-hm",
+  "name": "to error funnel",
+  "mode": "link",
+  "links": [
+   "nr-err-in"
+  ],
+  "x": 255,
+  "y": 40,
+  "wires": []
  },
  {
   "id": "ha-server",
