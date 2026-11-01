@@ -18,7 +18,7 @@
 
 The Node-RED flows + config behind the automations in [colfin22/ha-config](https://github.com/colfin22/ha-config). Home Assistant handles the simple, single-trigger stuff; the multi-input, **stateful** logic lives here — deciding the house's mode, arming the alarm, making heating calls from presence + forecast + tariff, and turning camera detections into one smart notification. Runs in Docker alongside Home Assistant; this repo adds flow versioning and quick recovery.
 
-**Nine flows:** House Mode · House &amp; Shed Alarm · Alarm NFC Tags · Camera Concierge · Heating Control · Infra Watchdog · Infra Health &amp; Alerts · Person Config (dashboard, no screenshot yet) · Doorbell Webhook (in testing).
+**Ten flows:** House Mode · House &amp; Shed Alarm · Alarm NFC Tags · Camera Concierge · Heating Control · Infra Watchdog · Infra Health &amp; Alerts · Paperless · Person Config (dashboard, no screenshot yet) · Doorbell Webhook (in testing).
 
 ## Start here if you only want one flow
 
@@ -535,11 +535,31 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
   | `/ih-zabbix` | Zabbix problem and recovery events |
   | `/nr-backup-alert` | this repo's own nightly backup, when its secret scan blocks a push |
 
-  Every call to these endpoints and to `/uk-event` is also logged with its source address to `data/webhook_sources.log` — temporary, to build an allow-list.
+  Every call to these endpoints, to `/uk-event` and to the Paperless tab's `/ih-paperless-doc` is also logged with its source address to `data/webhook_sources.log` — temporary, to build an allow-list.
 - **Backup watchdog** — at 07:30 it queries the Proxmox API on every node in `PVE_NODES` for the vzdump task list and alerts **only on failures**, when a node has no backup finished in the last 26 hours, or when the Proxmox API can't be read for a node (the read-only API token comes from the gitignored `.env`).
 - **Node-RED's own errors** — every tab has a catch node linked to one function here, which pushes `[Node-RED] <node name>` with the error text, at most once per failing node every 30 minutes. A failed Home Assistant call (an unknown notify service during an HA restart, say) no longer shows up only in the container log.
 
-**Delivery:** shared quiet-hours gate — alerts inside the quiet hours (default 22:00–07:00, Household page → Infra) are held and flushed at the end of the window with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way.
+**Delivery:** shared quiet-hours gate — alerts inside the quiet hours (default 22:00–07:00, Household page → Infra) are held and flushed at the end of the window with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way. An alert that carries a `url` gets it as the notification's tap action (the Paperless tab uses this; held alerts keep it through the flush). The Paperless tab hands its alerts to this same delivery over a link node.
+
+# Paperless — how it works
+
+A small tab that turns a [Paperless-ngx](https://docs.paperless-ngx.com/) workflow webhook into a phone push for **documents that arrive by email** — `[Paperless] <correspondent>` with the document title, tapping it opens the document. Delivery is the Infra Health & Alerts one (above): quiet-hours hold and flush, maintenance mode drops it, infra-alert phone only.
+
+**In Paperless — two workflows:**
+
+1. **Tag emailed documents** — trigger *Consumption Started*, source *Mail Fetch*, filename `*` → assign a tag `email`. Only consumption-started triggers can filter on the source; *Document Added* triggers ignore it, which is why the tag is needed.
+2. **Notify** — trigger *Document Added*, has tag `email` → action *Webhook*: POST to `http://<node-red>:1880/ih-paperless-doc`, **Use parameters** + **Send as JSON**, parameters:
+
+   | Parameter | Value |
+   |---|---|
+   | `title` | `{{ doc_title }}` |
+   | `correspondent` | `{{ correspondent }}` |
+   | `id` | `{{ doc_id }}` |
+   | `url` | `https://<your-paperless>/documents/{{ doc_id }}/details` |
+
+   Give it a higher order than your title and filing workflows, so it sends the final title.
+
+**In Node-RED:** the function builds the alert (empty correspondent → `No correspondent`, one notification tag per document) and only uses `url` as the tap action if it is a plain `http(s)` link. The link comes from Paperless rather than being built in the flow: `{{ doc_url }}` only works when Paperless has `PAPERLESS_URL` set, and this way no hostname lives in the flow.
 
 # Doorbell Webhook — how it works
 
