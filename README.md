@@ -409,8 +409,9 @@ Four things have to be in place before this flow does anything. Most "nothing ha
 come down to one of them.
 
 - **The Frigate integration from HACS**, installed in Home Assistant. It is what serves the
-  `/api/frigate/notifications/…` paths that every snapshot, GIF and tap-link in this flow is
-  built from. Without it the links have nothing on the other end. Note this is *not* the Frigate
+  `/api/frigate/notifications/…` paths that every snapshot, GIF and clip link in this flow is
+  built from, and the `camera.*` entities the tap opens. Without it the links have nothing on
+  the other end. Note this is *not* the Frigate
   Proxy add-on, which only puts Frigate in the HA sidebar and plays no part here.
 - **An MQTT broker** that both Frigate and Node-RED can reach, with Frigate publishing to it.
   The flow subscribes to `frigate/reviews`.
@@ -451,16 +452,18 @@ All stages share the same notification **tag**, so they update in place rather t
 If more cameras in the same zone+kind see it, the notification **updates its camera list** instead of firing new ones.
 
 ## Which camera's view you get
-Within a zone the snapshot, GIF and tap-link all come from the camera that **detected first** — the one that opened the 120-second incident (shed-first → shed's view, door-first → door's view). The notification text still lists every camera that saw it.
+Within a zone the snapshot, GIF, live view and clip all come from the camera that **detected first** — the one that opened the 120-second incident (shed-first → shed's view, door-first → door's view). The notification text still lists every camera that saw it.
 
 ## Tapping the alert
-The notification's tap action (`clickAction`/`url`) opens the **event clip** (`clip.mp4`) of that first-detecting camera — straight to the footage.
+Tapping the notification opens that camera's **live view** in the HA app: its More Info panel, via `clickAction`/`url` = `/?more-info-entity-id=camera.<name>`, where `<name>` is the Frigate camera name in lower case (how the Frigate integration names its camera entities). Every push carries it, including the first text-only one and the named doorbell push.
+
+A **Clip** action button opens the **event clip** (`clip.mp4`) of that first-detecting camera. It is there whenever the alert has a Frigate event behind it, but the clip only loads once the event has finished.
 
 ## Who gets what
 - **Phone push** (text → snapshot → GIF) → everyone with the **Camera / Doorbell** toggle on in the
   [Household Config dashboard](#household-config-dashboard--who-gets-what-without-editing-a-flow).
 - **Doorbell + a recognised face** — if Frigate face recognition has named the person (`sensor.doorbell_last_recognized_face`), the doorbell push (same notification, updated in place) is titled **"👤 \<name\> at the doorbell"**.
-- **GenAI description** — if Frigate's GenAI is on and sends a description for a doorbell person alert the flow already pushed, that push is updated in place with the description as its text, keeping the picture and tap-link. With GenAI off in Frigate this branch simply never fires.
+- **GenAI description** — if Frigate's GenAI is on and sends a description for a doorbell person alert the flow already pushed, that push is updated in place with the description as its text, keeping the picture, the live-view tap and the Clip button. With GenAI off in Frigate this branch simply never fires.
 - **Doorbell + person** also casts a snapshot to the **kitchen display** (20 s) and an overlay on the **Shield TV**. This only fires for an arrival. If the front door is open, or closed less than 60 seconds ago, both popups are skipped, because whoever is on camera has already come through it. When the display turns off, the snapshot in `/config/www` is overwritten with a placeholder (`doorbell_blank.jpg`), because HA serves `/local/` without authentication. Put any small image there under that name first.
 - **Doorbell pushes are held back on an exit too** — all three kinds, latched for the whole incident so the late GIF cannot slip through alone. `house_mode = Away` overrides it.
 - **Couriers** (DPD/GLS/Amazon/UPS/FedEx/DHL/An Post on the front cameras) → spoken **"\<courier\> has landed"** on the home audio group — suppressed when `house_mode = Sleeping`.
