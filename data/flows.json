@@ -42,6 +42,14 @@
         "info": "Consolidated infra health + backup/Zabbix alerts (migrated from HA 28-06-2026). Group A: ih-watch->ih-engine. Group B: 4 http-in. All -> ih-send (type-prefix + quiet-hours 22-07 + 07:00 flush)."
     },
     {
+        "id": "tab-pl",
+        "type": "tab",
+        "label": "Paperless",
+        "disabled": false,
+        "info": "Paperless-ngx emailed-document notifications.\nA Paperless workflow (Document Added, filtered on an 'email' tag that a consumption-started workflow adds to mail-fetched documents) POSTs {title, correspondent, id, url} to /ih-paperless-doc.\nThe alert goes over a link to the Infra Health tab's ih-send: quiet-hours hold + flush, maintenance-mode drop, infra-alert phone only.",
+        "env": []
+    },
+    {
         "id": "tab-iw",
         "type": "tab",
         "label": "Infra Watchdog",
@@ -1285,6 +1293,34 @@
         ]
     },
     {
+        "id": "nr-catch-tab-hm",
+        "type": "catch",
+        "z": "tab-hm",
+        "name": "catch all errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 40,
+        "wires": [
+            [
+                "nr-err-out-tab-hm"
+            ]
+        ]
+    },
+    {
+        "id": "nr-err-out-tab-hm",
+        "type": "link out",
+        "z": "tab-hm",
+        "name": "to error funnel",
+        "mode": "link",
+        "links": [
+            "nr-err-in"
+        ],
+        "x": 255,
+        "y": 40,
+        "wires": []
+    },
+    {
         "id": "cam-patio",
         "type": "server-state-changed",
         "z": "tab-cam",
@@ -1413,7 +1449,7 @@
         "entityId": [
             "media_player.kitchen_display_cast"
         ],
-        "data": "{\"media_content_id\": \"https://ha.colfin22.net/local/doorbell_snapshot.jpg?_t=\" & $string($floor($millis()/1000)), \"media_content_type\": \"image/jpeg\"}",
+        "data": "{\"media_content_id\": $replace($string(ha_config.external_url), /\\/+$/, \"\") & \"/local/doorbell_snapshot.jpg?_t=\" & $string($floor($millis()/1000)), \"media_content_type\": \"image/jpeg\"}",
         "dataType": "jsonata",
         "mergeContext": "",
         "mustacheAltTags": false,
@@ -2398,7 +2434,7 @@
         "y": 760,
         "wires": [
             [
-                "cam-cast"
+                "cam-cast-haurl"
             ]
         ]
     },
@@ -2490,6 +2526,58 @@
         "wires": [
             []
         ]
+    },
+    {
+        "id": "cam-cast-wipe",
+        "type": "api-call-service",
+        "z": "tab-cam",
+        "name": "Wipe public snapshot (placeholder)",
+        "server": "ha-server",
+        "version": 5,
+        "debugenabled": false,
+        "action": "downloader.download_file",
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "data": "{\"url\": \"http://10.0.0.252:8123/local/doorbell_blank.jpg\", \"filename\": \"doorbell_snapshot.jpg\", \"overwrite\": true}",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "x": 1650,
+        "y": 1000,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "nr-catch-tab-cam",
+        "type": "catch",
+        "z": "tab-cam",
+        "name": "catch all errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 40,
+        "wires": [
+            [
+                "nr-err-out-tab-cam"
+            ]
+        ]
+    },
+    {
+        "id": "nr-err-out-tab-cam",
+        "type": "link out",
+        "z": "tab-cam",
+        "name": "to error funnel",
+        "mode": "link",
+        "links": [
+            "nr-err-in"
+        ],
+        "x": 255,
+        "y": 40,
+        "wires": []
     },
     {
         "id": "heat-tick",
@@ -3027,6 +3115,34 @@
                 "heat-fc-get"
             ]
         ]
+    },
+    {
+        "id": "nr-catch-5a86c1a3371ffe9e",
+        "type": "catch",
+        "z": "5a86c1a3371ffe9e",
+        "name": "catch all errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 40,
+        "wires": [
+            [
+                "nr-err-out-5a86c1a3371ffe9e"
+            ]
+        ]
+    },
+    {
+        "id": "nr-err-out-5a86c1a3371ffe9e",
+        "type": "link out",
+        "z": "5a86c1a3371ffe9e",
+        "name": "to error funnel",
+        "mode": "link",
+        "links": [
+            "nr-err-in"
+        ],
+        "x": 255,
+        "y": 40,
+        "wires": []
     },
     {
         "id": "aa-cfg-inj",
@@ -3965,6 +4081,54 @@
         ]
     },
     {
+        "id": "nr-catch-096ff268dc7bd2f0",
+        "type": "catch",
+        "z": "096ff268dc7bd2f0",
+        "name": "catch all errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 40,
+        "wires": [
+            [
+                "nr-err-out-096ff268dc7bd2f0"
+            ]
+        ]
+    },
+    {
+        "id": "nr-err-out-096ff268dc7bd2f0",
+        "type": "link out",
+        "z": "096ff268dc7bd2f0",
+        "name": "to error funnel",
+        "mode": "link",
+        "links": [
+            "nr-err-in"
+        ],
+        "x": 255,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "na-dispatch",
+        "type": "subflow:sf-dispatch-notify",
+        "z": "096ff268dc7bd2f0",
+        "name": "dispatch: security notify list",
+        "env": [
+            {
+                "name": "flagName",
+                "type": "str",
+                "value": "security"
+            }
+        ],
+        "x": 950,
+        "y": 580,
+        "wires": [
+            [
+                "na-notify"
+            ]
+        ]
+    },
+    {
         "id": "nfc-ev",
         "type": "server-events",
         "z": "657e6b8b07b4cdf7",
@@ -4307,6 +4471,54 @@
         ]
     },
     {
+        "id": "nr-catch-657e6b8b07b4cdf7",
+        "type": "catch",
+        "z": "657e6b8b07b4cdf7",
+        "name": "catch all errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 40,
+        "wires": [
+            [
+                "nr-err-out-657e6b8b07b4cdf7"
+            ]
+        ]
+    },
+    {
+        "id": "nr-err-out-657e6b8b07b4cdf7",
+        "type": "link out",
+        "z": "657e6b8b07b4cdf7",
+        "name": "to error funnel",
+        "mode": "link",
+        "links": [
+            "nr-err-in"
+        ],
+        "x": 255,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "nfc-dispatch",
+        "type": "subflow:sf-dispatch-notify",
+        "z": "657e6b8b07b4cdf7",
+        "name": "dispatch: security notify list",
+        "env": [
+            {
+                "name": "flagName",
+                "type": "str",
+                "value": "security"
+            }
+        ],
+        "x": 820,
+        "y": 380,
+        "wires": [
+            [
+                "nfc-notify"
+            ]
+        ]
+    },
+    {
         "id": "ih-watch",
         "type": "server-state-changed",
         "z": "tab-ih",
@@ -4339,8 +4551,8 @@
                 "binary_sensor.qemu_ubuntu_nextcloud_117_status",
                 "sensor.qemu_ubuntu_nextcloud_117_cpu_used",
                 "sensor.qemu_ubuntu_nextcloud_117_memory_free",
-                "sensor.nextcloud_colfin22_net_free_space",
-                "sensor.nextcloud_colfin22_net_updates_available",
+                "sensor.nextcloud_free_space",
+                "sensor.nextcloud_updates_available",
                 "binary_sensor.nextcloud_online",
                 "binary_sensor.docker_online",
                 "sensor.nextcloud_cpu",
@@ -4410,7 +4622,7 @@
         "type": "function",
         "z": "tab-ih",
         "name": "Rule engine",
-        "func": "\nconst H='Health';\nconst NAMES={'camera.doorbell':'Doorbell','camera.front_van':'Front Van','camera.front_car':'Front Car','camera.rear_door':'Rear Door','camera.rear_shed':'Rear Shed'};\nfunction r1(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n*10)/10;}\nfunction r0(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n);}\nfunction r2(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n*100)/100;}\n// Thresholds from the Household page (Infra Health section) -> global.health_config (21-10-2026).\n// Missing/invalid -> today's defaults.\nconst SC = global.get('health_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst SUS_M = cfgNum('sustain_mins', 5, 1, 60, 1), OFF_M = cfgNum('offline_mins', 2, 1, 30, 1);\nconst FIVE=SUS_M*60*1000, TWO=OFF_M*60*1000;   // defaults 5 min / 2 min\nconst OFF_TXT=OFF_M+(OFF_M===1?' minute':' minutes');\nconst RULES={\n 'binary_sensor.node_proxmox_status':{cat:H,sub:'Proxmox',op:'eq',val:'off',m:function(s){return 'Node 1 (proxmox) is offline';}},\n 'binary_sensor.node_proxmox2_status':{cat:H,sub:'Proxmox',op:'eq',val:'off',m:function(s){return 'Node 2 (proxmox2) is offline';}},\n 'sensor.node_proxmox_cpu_used':{cat:H,sub:'Proxmox',op:'gt',val:85,for:FIVE,m:function(s){return 'Node 1 CPU high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_cpu_used':{cat:H,sub:'Proxmox',op:'gt',val:85,for:FIVE,m:function(s){return 'Node 2 CPU high: '+r1(s)+'%';}},\n 'sensor.node_proxmox_memory_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 1 memory high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_memory_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 2 memory high: '+r1(s)+'%';}},\n 'sensor.node_proxmox_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 1 disk high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 2 disk high: '+r1(s)+'%';}},\n 'sensor.storage_proxmox_pbs_remote_vpn_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:80,m:function(s){return 'PBS remote VPN storage at '+r1(s)+'% — consider pruning backups';}},\n 'binary_sensor.truenas_system_mainpool_healthy':{cat:H,sub:'TrueNAS',op:'eq',val:'off',m:function(s){return 'MainPool is unhealthy — check pool status immediately';}},\n 'binary_sensor.truenas_system_boot_pool_healthy':{cat:H,sub:'TrueNAS',op:'eq',val:'off',m:function(s){return 'Boot pool is unhealthy — check boot pool status';}},\n 'sensor.truenas_snapshot_tasks_mainpool':{cat:H,sub:'TrueNAS',op:'in',val:['ERROR','FAILED','ABORTED'],m:function(s){return 'Snapshot task failed — status: '+s;}},\n 'sensor.truenas_disks_sda':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'sensor.truenas_disks_sdb':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'sensor.truenas_disks_sdc':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'sensor.truenas_disks_sdd':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'sensor.truenas_disks_sde':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'binary_sensor.truenas_rsync_failures':{cat:H,sub:'TrueNAS',op:'eq',val:'on',m:function(s){return 'Rsync task failure — '+(flow.get('rsync_paths')||'check failed paths');}},\n 'binary_sensor.qemu_ubuntu_nextcloud_117_status':{cat:H,sub:'Nextcloud',op:'eq',val:'off',m:function(s){return 'Nextcloud VM is offline';}},\n 'sensor.qemu_ubuntu_nextcloud_117_cpu_used':{cat:H,sub:'Nextcloud',op:'gt',val:85,for:FIVE,m:function(s){return 'Nextcloud VM CPU high: '+r1(s)+'%';}},\n 'sensor.qemu_ubuntu_nextcloud_117_memory_free':{cat:H,sub:'Nextcloud',op:'lt',val:0.25,m:function(s){return 'Nextcloud VM memory low: '+r2(s)+' GB free';}},\n 'sensor.nextcloud_colfin22_net_free_space':{cat:H,sub:'Nextcloud',op:'lt',val:500,m:function(s){return 'Nextcloud storage low: '+(Math.round(parseFloat(s)/1024*10)/10)+' TB free';}},\n 'sensor.nextcloud_colfin22_net_updates_available':{cat:H,sub:'Nextcloud',op:'gt',val:0,m:function(s){return s+' Nextcloud app update(s) available';}},\n 'binary_sensor.nextcloud_online':{cat:H,sub:'Ubuntu-VM',op:'eq',val:'off',m:function(s){return 'Nextcloud VM is offline';}},\n 'binary_sensor.docker_online':{cat:H,sub:'Ubuntu-VM',op:'eq',val:'off',m:function(s){return 'Docker VM is offline';}},\n 'sensor.nextcloud_cpu':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,for:FIVE,m:function(s){return 'Nextcloud VM CPU high: '+r1(s)+'%';}},\n 'sensor.docker_cpu':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,for:FIVE,m:function(s){return 'Docker VM CPU high: '+r1(s)+'%';}},\n 'sensor.nextcloud_memory':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Nextcloud VM memory high: '+r1(s)+'%';}},\n 'sensor.docker_memory':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Docker VM memory high: '+r1(s)+'%';}},\n 'sensor.nextcloud_disk':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Nextcloud VM disk high: '+r1(s)+'%';}},\n 'sensor.docker_disk':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Docker VM disk high: '+r1(s)+'%';}},\n 'sensor.nextcloud_package_count':{cat:H,sub:'Ubuntu-VM',op:'gt',val:0,m:function(s){return 'Nextcloud VM has '+s+' pending package update(s)';}},\n 'sensor.docker_package_count':{cat:H,sub:'Ubuntu-VM',op:'gt',val:0,m:function(s){return 'Docker VM has '+s+' pending package update(s)';}},\n 'sensor.frigate_cctv_disk_usage':{cat:H,sub:'Frigate',op:'gt',val:85,for:FIVE,m:function(s){return 'Frigate CCTV disk is at '+s+'%. Check recording retention before storage fills up.';}},\n 'binary_sensor.lxc_docker_frigate_107_status':{cat:H,sub:'Frigate',op:'eq',val:'off',for:TWO,m:function(s){return 'Frigate has been offline for '+OFF_TXT+'. Check the LXC container on Proxmox.';}},\n 'camera.doorbell':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.doorbell']+' has been unavailable for '+OFF_TXT+'.';}},\n 'camera.front_van':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.front_van']+' has been unavailable for '+OFF_TXT+'.';}},\n 'camera.front_car':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.front_car']+' has been unavailable for '+OFF_TXT+'.';}},\n 'camera.rear_door':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.rear_door']+' has been unavailable for '+OFF_TXT+'.';}},\n 'camera.rear_shed':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.rear_shed']+' has been unavailable for '+OFF_TXT+'.';}},\n};\n\n// Thresholds from the Household page (Infra Health); the table above keeps the defaults.\n(function(){\n  var set=function(ids,v){ids.forEach(function(e){if(RULES[e])RULES[e].val=v;});};\n  set(['sensor.node_proxmox_cpu_used','sensor.node_proxmox2_cpu_used','sensor.qemu_ubuntu_nextcloud_117_cpu_used','sensor.nextcloud_cpu','sensor.docker_cpu'], cfgNum('cpu_pct',85,50,100,1));\n  set(['sensor.node_proxmox_memory_used_percentage','sensor.node_proxmox2_memory_used_percentage','sensor.nextcloud_memory','sensor.docker_memory'], cfgNum('mem_pct',85,50,100,1));\n  set(['sensor.node_proxmox_disk_used_percentage','sensor.node_proxmox2_disk_used_percentage','sensor.nextcloud_disk','sensor.docker_disk'], cfgNum('disk_pct',85,50,100,1));\n  set(['sensor.storage_proxmox_pbs_remote_vpn_disk_used_percentage'], cfgNum('pbs_pct',80,50,100,1));\n  set(['sensor.truenas_disks_sda','sensor.truenas_disks_sdb','sensor.truenas_disks_sdc','sensor.truenas_disks_sdd','sensor.truenas_disks_sde'], cfgNum('disk_temp_c',45,30,70,1));\n  set(['sensor.frigate_cctv_disk_usage'], cfgNum('frigate_disk_pct',85,50,100,1));\n  set(['sensor.nextcloud_colfin22_net_free_space'], cfgNum('nc_free_gb',500,10,5000,1));\n})();\n\nvar ent=msg.topic, state=msg.payload;\nif(ent==='sensor.truenas_rsync_failed_paths'){flow.set('rsync_paths',state);return null;}\nvar rule=RULES[ent];\nif(!rule)return null;\nvar fired=context.get('fired')||{};\nvar timers=context.get('timers')||{};\nfunction test(){\n  if(rule.op==='eq')return state===rule.val;\n  if(rule.op==='in')return rule.val.indexOf(state)>=0;\n  var n=parseFloat(state); if(isNaN(n))return false;\n  if(rule.op==='gt')return n>rule.val;\n  if(rule.op==='lt')return n<rule.val;\n  return false;\n}\nvar active=test();\nvar fname=(msg.ent&&msg.ent.attributes&&msg.ent.attributes.friendly_name)||ent.replace('sensor.truenas_disks_','');\nfunction emit(nm){node.send({cat:rule.cat,sub:rule.sub,message:rule.m(state,nm),tag:rule.sub+'_'+ent});}\nif(rule.for){\n  if(active){\n    if(fired[ent])return null;\n    if(timers[ent])return null;\n    var capName=fname;\n    timers[ent]=setTimeout(function(){\n      var tm=context.get('timers')||{};delete tm[ent];context.set('timers',tm);\n      var fr=context.get('fired')||{};fr[ent]=true;context.set('fired',fr);\n      emit(capName);\n    },rule.for);\n    context.set('timers',timers);\n  }else{\n    if(timers[ent]){clearTimeout(timers[ent]);delete timers[ent];context.set('timers',timers);}\n    if(fired[ent]){fired[ent]=false;context.set('fired',fired);}\n  }\n}else{\n  if(active){\n    if(fired[ent])return null;\n    fired[ent]=true;context.set('fired',fired);\n    emit(fname);\n  }else{\n    if(fired[ent]){fired[ent]=false;context.set('fired',fired);}\n  }\n}\nreturn null;\n",
+        "func": "\nconst H='Health';\nconst NAMES={'camera.doorbell':'Doorbell','camera.front_van':'Front Van','camera.front_car':'Front Car','camera.rear_door':'Rear Door','camera.rear_shed':'Rear Shed'};\nfunction r1(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n*10)/10;}\nfunction r0(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n);}\nfunction r2(s){var n=parseFloat(s);return isNaN(n)?s:Math.round(n*100)/100;}\n// Thresholds from the Household page (Infra Health section) -> global.health_config (21-10-2026).\n// Missing/invalid -> today's defaults.\nconst SC = global.get('health_config') || {};\nconst cfgNum = (k, d, lo, hi, st) => { const v = Number(SC[k]); return (SC[k] !== undefined && SC[k] !== '' && SC[k] !== null && isFinite(v) && v >= lo && v <= hi && Math.abs(v / st - Math.round(v / st)) < 1e-9) ? v : d; };\nconst SUS_M = cfgNum('sustain_mins', 5, 1, 60, 1), OFF_M = cfgNum('offline_mins', 2, 1, 30, 1);\nconst FIVE=SUS_M*60*1000, TWO=OFF_M*60*1000;   // defaults 5 min / 2 min\nconst OFF_TXT=OFF_M+(OFF_M===1?' minute':' minutes');\nconst RULES={\n 'binary_sensor.node_proxmox_status':{cat:H,sub:'Proxmox',op:'eq',val:'off',m:function(s){return 'Node 1 (proxmox) is offline';}},\n 'binary_sensor.node_proxmox2_status':{cat:H,sub:'Proxmox',op:'eq',val:'off',m:function(s){return 'Node 2 (proxmox2) is offline';}},\n 'sensor.node_proxmox_cpu_used':{cat:H,sub:'Proxmox',op:'gt',val:85,for:FIVE,m:function(s){return 'Node 1 CPU high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_cpu_used':{cat:H,sub:'Proxmox',op:'gt',val:85,for:FIVE,m:function(s){return 'Node 2 CPU high: '+r1(s)+'%';}},\n 'sensor.node_proxmox_memory_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 1 memory high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_memory_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 2 memory high: '+r1(s)+'%';}},\n 'sensor.node_proxmox_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 1 disk high: '+r1(s)+'%';}},\n 'sensor.node_proxmox2_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:85,m:function(s){return 'Node 2 disk high: '+r1(s)+'%';}},\n 'sensor.storage_proxmox_pbs_remote_vpn_disk_used_percentage':{cat:H,sub:'Proxmox',op:'gt',val:80,m:function(s){return 'PBS remote VPN storage at '+r1(s)+'% — consider pruning backups';}},\n 'binary_sensor.truenas_system_mainpool_healthy':{cat:H,sub:'TrueNAS',op:'eq',val:'off',m:function(s){return 'MainPool is unhealthy — check pool status immediately';}},\n 'binary_sensor.truenas_system_boot_pool_healthy':{cat:H,sub:'TrueNAS',op:'eq',val:'off',m:function(s){return 'Boot pool is unhealthy — check boot pool status';}},\n 'sensor.truenas_snapshot_tasks_mainpool':{cat:H,sub:'TrueNAS',op:'in',val:['ERROR','FAILED','ABORTED'],m:function(s){return 'Snapshot task failed — status: '+s;}},\n 'sensor.truenas_disks_sda':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'sensor.truenas_disks_sdb':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'sensor.truenas_disks_sdc':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'sensor.truenas_disks_sdd':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'sensor.truenas_disks_sde':{cat:H,sub:'TrueNAS',op:'gt',val:45,for:FIVE,m:function(s,n){return 'Disk temperature warning: '+(n||'disk')+' is '+r0(s)+'°C';}},\n 'binary_sensor.truenas_rsync_failures':{cat:H,sub:'TrueNAS',op:'eq',val:'on',m:function(s){return 'Rsync task failure — '+(flow.get('rsync_paths')||'check failed paths');}},\n 'binary_sensor.qemu_ubuntu_nextcloud_117_status':{cat:H,sub:'Nextcloud',op:'eq',val:'off',m:function(s){return 'Nextcloud VM is offline';}},\n 'sensor.qemu_ubuntu_nextcloud_117_cpu_used':{cat:H,sub:'Nextcloud',op:'gt',val:85,for:FIVE,m:function(s){return 'Nextcloud VM CPU high: '+r1(s)+'%';}},\n 'sensor.qemu_ubuntu_nextcloud_117_memory_free':{cat:H,sub:'Nextcloud',op:'lt',val:0.25,m:function(s){return 'Nextcloud VM memory low: '+r2(s)+' GB free';}},\n 'sensor.nextcloud_free_space':{cat:H,sub:'Nextcloud',op:'lt',val:500,m:function(s){return 'Nextcloud storage low: '+(Math.round(parseFloat(s)/1024*10)/10)+' TB free';}},\n 'sensor.nextcloud_updates_available':{cat:H,sub:'Nextcloud',op:'gt',val:0,m:function(s){return s+' Nextcloud app update(s) available';}},\n 'binary_sensor.nextcloud_online':{cat:H,sub:'Ubuntu-VM',op:'eq',val:'off',m:function(s){return 'Nextcloud VM is offline';}},\n 'binary_sensor.docker_online':{cat:H,sub:'Ubuntu-VM',op:'eq',val:'off',m:function(s){return 'Docker VM is offline';}},\n 'sensor.nextcloud_cpu':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,for:FIVE,m:function(s){return 'Nextcloud VM CPU high: '+r1(s)+'%';}},\n 'sensor.docker_cpu':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,for:FIVE,m:function(s){return 'Docker VM CPU high: '+r1(s)+'%';}},\n 'sensor.nextcloud_memory':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Nextcloud VM memory high: '+r1(s)+'%';}},\n 'sensor.docker_memory':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Docker VM memory high: '+r1(s)+'%';}},\n 'sensor.nextcloud_disk':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Nextcloud VM disk high: '+r1(s)+'%';}},\n 'sensor.docker_disk':{cat:H,sub:'Ubuntu-VM',op:'gt',val:85,m:function(s){return 'Docker VM disk high: '+r1(s)+'%';}},\n 'sensor.nextcloud_package_count':{cat:H,sub:'Ubuntu-VM',op:'gt',val:0,m:function(s){return 'Nextcloud VM has '+s+' pending package update(s)';}},\n 'sensor.docker_package_count':{cat:H,sub:'Ubuntu-VM',op:'gt',val:0,m:function(s){return 'Docker VM has '+s+' pending package update(s)';}},\n 'sensor.frigate_cctv_disk_usage':{cat:H,sub:'Frigate',op:'gt',val:85,for:FIVE,m:function(s){return 'Frigate CCTV disk is at '+s+'%. Check recording retention before storage fills up.';}},\n 'binary_sensor.lxc_docker_frigate_107_status':{cat:H,sub:'Frigate',op:'eq',val:'off',for:TWO,m:function(s){return 'Frigate has been offline for '+OFF_TXT+'. Check the LXC container on Proxmox.';}},\n 'camera.doorbell':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.doorbell']+' has been unavailable for '+OFF_TXT+'.';}},\n 'camera.front_van':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.front_van']+' has been unavailable for '+OFF_TXT+'.';}},\n 'camera.front_car':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.front_car']+' has been unavailable for '+OFF_TXT+'.';}},\n 'camera.rear_door':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.rear_door']+' has been unavailable for '+OFF_TXT+'.';}},\n 'camera.rear_shed':{cat:H,sub:'Frigate',op:'eq',val:'unavailable',for:TWO,m:function(s){return NAMES['camera.rear_shed']+' has been unavailable for '+OFF_TXT+'.';}},\n};\n\n// Thresholds from the Household page (Infra Health); the table above keeps the defaults.\n(function(){\n  var set=function(ids,v){ids.forEach(function(e){if(RULES[e])RULES[e].val=v;});};\n  set(['sensor.node_proxmox_cpu_used','sensor.node_proxmox2_cpu_used','sensor.qemu_ubuntu_nextcloud_117_cpu_used','sensor.nextcloud_cpu','sensor.docker_cpu'], cfgNum('cpu_pct',85,50,100,1));\n  set(['sensor.node_proxmox_memory_used_percentage','sensor.node_proxmox2_memory_used_percentage','sensor.nextcloud_memory','sensor.docker_memory'], cfgNum('mem_pct',85,50,100,1));\n  set(['sensor.node_proxmox_disk_used_percentage','sensor.node_proxmox2_disk_used_percentage','sensor.nextcloud_disk','sensor.docker_disk'], cfgNum('disk_pct',85,50,100,1));\n  set(['sensor.storage_proxmox_pbs_remote_vpn_disk_used_percentage'], cfgNum('pbs_pct',80,50,100,1));\n  set(['sensor.truenas_disks_sda','sensor.truenas_disks_sdb','sensor.truenas_disks_sdc','sensor.truenas_disks_sdd','sensor.truenas_disks_sde'], cfgNum('disk_temp_c',45,30,70,1));\n  set(['sensor.frigate_cctv_disk_usage'], cfgNum('frigate_disk_pct',85,50,100,1));\n  set(['sensor.nextcloud_free_space'], cfgNum('nc_free_gb',500,10,5000,1));\n})();\n\nvar ent=msg.topic, state=msg.payload;\nif(ent==='sensor.truenas_rsync_failed_paths'){flow.set('rsync_paths',state);return null;}\nvar rule=RULES[ent];\nif(!rule)return null;\nvar fired=context.get('fired')||{};\nvar timers=context.get('timers')||{};\nfunction test(){\n  if(rule.op==='eq')return state===rule.val;\n  if(rule.op==='in')return rule.val.indexOf(state)>=0;\n  var n=parseFloat(state); if(isNaN(n))return false;\n  if(rule.op==='gt')return n>rule.val;\n  if(rule.op==='lt')return n<rule.val;\n  return false;\n}\nvar active=test();\nvar fname=(msg.ent&&msg.ent.attributes&&msg.ent.attributes.friendly_name)||ent.replace('sensor.truenas_disks_','');\nfunction emit(nm){node.send({cat:rule.cat,sub:rule.sub,message:rule.m(state,nm),tag:rule.sub+'_'+ent});}\nif(rule.for){\n  if(active){\n    if(fired[ent])return null;\n    if(timers[ent])return null;\n    var capName=fname;\n    timers[ent]=setTimeout(function(){\n      var tm=context.get('timers')||{};delete tm[ent];context.set('timers',tm);\n      var fr=context.get('fired')||{};fr[ent]=true;context.set('fired',fr);\n      emit(capName);\n    },rule.for);\n    context.set('timers',timers);\n  }else{\n    if(timers[ent]){clearTimeout(timers[ent]);delete timers[ent];context.set('timers',timers);}\n    if(fired[ent]){fired[ent]=false;context.set('fired',fired);}\n  }\n}else{\n  if(active){\n    if(fired[ent])return null;\n    fired[ent]=true;context.set('fired',fired);\n    emit(fname);\n  }else{\n    if(fired[ent]){fired[ent]=false;context.set('fired',fired);}\n  }\n}\nreturn null;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
@@ -4429,7 +4641,7 @@
         "type": "function",
         "z": "tab-ih",
         "name": "Quiet-hours send",
-        "func": "\nfunction dub(){return new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});}\nfunction dhour(){return parseInt(new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10);}\n// Quiet hours shared by both infra flows: Household page -> Infra (global.infra_config). Default 22:00-07:00.\nfunction quiet(){var IC=global.get('infra_config')||{};var okT=function(s){return typeof s==='string'&&/^([01]\\d|2[0-3]):[0-5]\\d$/.test(s);};var qs=okT(IC.quiet_start)?IC.quiet_start:'22:00', qe=okT(IC.quiet_end)?IC.quiet_end:'07:00';if(qs===qe){qs='22:00';qe='07:00';}var m=function(s){return Number(s.slice(0,2))*60+Number(s.slice(3,5));};var d=new Date();var n=parseInt(d.toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10)*60+parseInt(d.toLocaleString('en-IE',{timeZone:'Europe/Dublin',minute:'2-digit'}),10);var a=m(qs),b=m(qe);return a<b?(n>=a&&n<b):(n>=a||n<b);}\nfunction hhmm(ts){return new Date(ts).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});}\n\nif(msg.topic==='flush'){\n  var held=context.get('held')||[];\n  context.set('held',[]);\n  if(!held.length)return null;\n  var nots=[],logs=[];\n  held.forEach(function(e){\n    nots.push({title:e.title+' (triggered '+hhmm(e.firedAt)+')',message:e.message,ndata:e.ndata});\n    logs.push({payload:dub()+'  [flush] '+e.title+' — '+e.message+'\\n'});\n  });\n  node.send([nots,logs]);\n  return null;\n}\n\nvar cat=msg.cat, sub=msg.sub, message=msg.message;\nif(!cat||!message)return null;\nvar title='['+cat+'] '+sub;\nvar tagsrc='ih_'+(msg.tag||sub);\nvar ndata={tag:tagsrc.toString().replace(/[^A-Za-z0-9_]/g,'_'),channel:cat,group:cat};\nif(global.get('maintenance_mode')){\n  node.send([null,{payload:dub()+'  [maint-dropped] '+title+' — '+message+'\\n'}]);\n  return null;\n}\nif(quiet()){\n  var held=context.get('held')||[];\n  held.push({title:title,message:message,ndata:ndata,firedAt:Date.now()});\n  context.set('held',held);\n  node.send([null,{payload:dub()+'  [quiet-held] '+title+' — '+message+'\\n'}]);\n  return null;\n}\nnode.send([{title:title,message:message,ndata:ndata},{payload:dub()+'  '+title+' — '+message+'\\n'}]);\nreturn null;\n",
+        "func": "\nfunction dub(){return new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});}\nfunction dhour(){return parseInt(new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10);}\n// Quiet hours shared by both infra flows: Household page -> Infra (global.infra_config). Default 22:00-07:00.\nfunction quiet(){var IC=global.get('infra_config')||{};var okT=function(s){return typeof s==='string'&&/^([01]\\d|2[0-3]):[0-5]\\d$/.test(s);};var qs=okT(IC.quiet_start)?IC.quiet_start:'22:00', qe=okT(IC.quiet_end)?IC.quiet_end:'07:00';if(qs===qe){qs='22:00';qe='07:00';}var m=function(s){return Number(s.slice(0,2))*60+Number(s.slice(3,5));};var d=new Date();var n=parseInt(d.toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10)*60+parseInt(d.toLocaleString('en-IE',{timeZone:'Europe/Dublin',minute:'2-digit'}),10);var a=m(qs),b=m(qe);return a<b?(n>=a&&n<b):(n>=a||n<b);}\nfunction hhmm(ts){return new Date(ts).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});}\n\nif(msg.topic==='flush'){\n  var held=context.get('held')||[];\n  context.set('held',[]);\n  if(!held.length)return null;\n  var nots=[],logs=[];\n  held.forEach(function(e){\n    nots.push({title:e.title+' (triggered '+hhmm(e.firedAt)+')',message:e.message,ndata:e.ndata});\n    logs.push({payload:dub()+'  [flush] '+e.title+' — '+e.message+'\\n'});\n  });\n  node.send([nots,logs]);\n  return null;\n}\n\nvar cat=msg.cat, sub=msg.sub, message=msg.message;\nif(!cat||!message)return null;\nvar title='['+cat+'] '+sub;\nvar tagsrc='ih_'+(msg.tag||sub);\nvar ndata={tag:tagsrc.toString().replace(/[^A-Za-z0-9_]/g,'_'),channel:cat,group:cat};\nif(msg.url)ndata.clickAction=String(msg.url);\nif(global.get('maintenance_mode')){\n  node.send([null,{payload:dub()+'  [maint-dropped] '+title+' — '+message+'\\n'}]);\n  return null;\n}\nif(quiet()){\n  var held=context.get('held')||[];\n  held.push({title:title,message:message,ndata:ndata,firedAt:Date.now()});\n  context.set('held',held);\n  node.send([null,{payload:dub()+'  [quiet-held] '+title+' — '+message+'\\n'}]);\n  return null;\n}\nnode.send([{title:title,message:message,ndata:ndata},{payload:dub()+'  '+title+' — '+message+'\\n'}]);\nreturn null;\n",
         "outputs": 2,
         "noerr": 0,
         "initialize": "",
@@ -5180,6 +5392,229 @@
         "wires": []
     },
     {
+        "id": "ih-src-fn",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "webhook source IP",
+        "func": "// Temporary (01-11-2026, audit H2 step 1): record which host calls each webhook,\n// so a source-IP allow-list can be built from measured callers, not guesses.\nconst r = msg.req || {};\nconst ts = new Date().toLocaleString('en-IE', {timeZone: 'Europe/Dublin', hour12: false});\nconst ip = String(r.ip || '?').replace(/^::ffff:/, '');\nconst ua = String((r.headers && r.headers['user-agent']) || '').slice(0, 60);\nreturn {payload: ts + '  ' + (r.originalUrl || r.url || '?') + '  ' + ip + '  ' + ua + '\\n'};",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1350,
+        "y": 960,
+        "wires": [
+            [
+                "ih-src-logfile"
+            ]
+        ]
+    },
+    {
+        "id": "ih-src-logfile",
+        "type": "file",
+        "z": "tab-ih",
+        "name": "webhook sources log",
+        "filename": "/data/webhook_sources.log",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 1720,
+        "y": 1000,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "nr-err-fn",
+        "type": "function",
+        "z": "tab-ih",
+        "name": "Node-RED error funnel (30 min/node)",
+        "func": "// 01-11-2026 (audit H4): every tab's catch node lands here. One push per failing\n// node per 30 min, routed through ih-send (quiet hours, maintenance, infra_alerts dispatch).\nconst e = msg.error || {}; const s = e.source || {};\nconst id = s.id || '?'; const nm = s.name || s.type || id;\nconst last = context.get('last') || {}; const now = Date.now();\nfor (const k in last) if (now - last[k] > 86400000) delete last[k];   // keep the map small\nif (now - (last[id] || 0) < 30 * 60000) { context.set('last', last); return null; }\nlast[id] = now; context.set('last', last);\nreturn { cat: 'Node-RED', sub: nm, message: String(e.message || 'error').slice(0, 300) + ' [' + id + ']', tag: 'nr_err_' + id };",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1500,
+        "y": 1080,
+        "wires": [
+            [
+                "ih-send"
+            ]
+        ]
+    },
+    {
+        "id": "nr-catch-tab-ih",
+        "type": "catch",
+        "z": "tab-ih",
+        "name": "catch all errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 1300,
+        "y": 1080,
+        "wires": [
+            [
+                "nr-err-fn"
+            ]
+        ]
+    },
+    {
+        "id": "nr-err-in",
+        "type": "link in",
+        "z": "tab-ih",
+        "name": "errors from other tabs",
+        "links": [
+            "nr-err-out-tab-hm",
+            "nr-err-out-tab-cam",
+            "nr-err-out-5a86c1a3371ffe9e",
+            "nr-err-out-096ff268dc7bd2f0",
+            "nr-err-out-657e6b8b07b4cdf7",
+            "nr-err-out-tab-iw",
+            "nr-err-out-tab-pc",
+            "nr-err-out-tab-dbw"
+        ],
+        "x": 1335,
+        "y": 1120,
+        "wires": [
+            [
+                "nr-err-fn"
+            ]
+        ]
+    },
+    {
+        "id": "ih-li-pl-send",
+        "type": "link in",
+        "z": "tab-ih",
+        "name": "← Paperless tab",
+        "links": [
+            "pl-lo-send"
+        ],
+        "x": 1450,
+        "y": 860,
+        "wires": [
+            [
+                "ih-send"
+            ]
+        ]
+    },
+    {
+        "id": "ih-li-pl-src",
+        "type": "link in",
+        "z": "tab-ih",
+        "name": "← Paperless tab (src log)",
+        "links": [
+            "pl-lo-src"
+        ],
+        "x": 1300,
+        "y": 1040,
+        "wires": [
+            [
+                "ih-src-fn"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-pl-in",
+        "type": "http in",
+        "z": "tab-pl",
+        "name": "POST /ih-paperless-doc",
+        "url": "/ih-paperless-doc",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 150,
+        "y": 100,
+        "wires": [
+            [
+                "ih-b-pl-fn",
+                "ih-b-pl-resp",
+                "pl-src-prep"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-pl-fn",
+        "type": "function",
+        "z": "tab-pl",
+        "name": "Paperless doc → msg",
+        "func": "// Paperless-ngx: an emailed document has been filed. Posted by a Paperless workflow\n// (Document Added + \"email\" tag) with webhook params {title, correspondent, id, url}.\n// The link comes from Paperless itself, so no hostname lives in this flow.\nvar p=msg.payload||{};\nif(typeof p==='string'){try{p=JSON.parse(p);}catch(e){p={};}}\nvar id=String(p.id||'').replace(/[^0-9]/g,'');\nvar title=String(p.title||'').trim().slice(0,150)||'(untitled)';\nvar corr=String(p.correspondent||'').trim();\nif(!corr||corr==='none'||corr==='-none-')corr='No correspondent';\nvar out={cat:'Paperless',sub:corr,message:title,tag:'paperless_'+(id||Date.now())};\nvar url=String(p.url||'').trim();\nif(/^https?:\\/\\/[^\\s]+$/.test(url)&&url.indexOf('None/')===-1)out.url=url;\nreturn out;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 100,
+        "wires": [
+            [
+                "pl-lo-send"
+            ]
+        ]
+    },
+    {
+        "id": "ih-b-pl-resp",
+        "type": "http response",
+        "z": "tab-pl",
+        "name": "200",
+        "statusCode": "200",
+        "headers": {},
+        "x": 400,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "pl-lo-send",
+        "type": "link out",
+        "z": "tab-pl",
+        "name": "→ Infra Health: ih-send",
+        "mode": "link",
+        "links": [
+            "ih-li-pl-send"
+        ],
+        "x": 650,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "pl-lo-src",
+        "type": "link out",
+        "z": "tab-pl",
+        "name": "→ Infra Health: source-IP log (temp)",
+        "mode": "link",
+        "links": [
+            "ih-li-pl-src"
+        ],
+        "x": 700,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "pl-src-prep",
+        "type": "function",
+        "z": "tab-pl",
+        "name": "keep caller IP for src log (temp)",
+        "func": "// Copy caller info into a plain object: the express req's ip getter does not survive\n// the link to tab-ih, so the temp source logger there (ih-src-fn) would log '?'.\nvar r=msg.req||{};\nmsg.req={ip:r.ip,originalUrl:r.originalUrl||r.url,headers:{'user-agent':(r.headers&&r.headers['user-agent'])||''}};\ndelete msg.res;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 220,
+        "wires": [
+            [
+                "pl-lo-src"
+            ]
+        ]
+    },
+    {
         "id": "iw-reconcile-timers-inj",
         "type": "inject",
         "z": "tab-iw",
@@ -5634,6 +6069,71 @@
                 "iw-engine"
             ]
         ]
+    },
+    {
+        "id": "iw-src-fn",
+        "type": "function",
+        "z": "tab-iw",
+        "name": "webhook source IP",
+        "func": "// Temporary (01-11-2026, audit H2 step 1): record which host calls each webhook,\n// so a source-IP allow-list can be built from measured callers, not guesses.\nconst r = msg.req || {};\nconst ts = new Date().toLocaleString('en-IE', {timeZone: 'Europe/Dublin', hour12: false});\nconst ip = String(r.ip || '?').replace(/^::ffff:/, '');\nconst ua = String((r.headers && r.headers['user-agent']) || '').slice(0, 60);\nreturn {payload: ts + '  ' + (r.originalUrl || r.url || '?') + '  ' + ip + '  ' + ua + '\\n'};",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 120,
+        "wires": [
+            [
+                "iw-src-logfile"
+            ]
+        ]
+    },
+    {
+        "id": "iw-src-logfile",
+        "type": "file",
+        "z": "tab-iw",
+        "name": "webhook sources log",
+        "filename": "/data/webhook_sources.log",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 620,
+        "y": 120,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "nr-catch-tab-iw",
+        "type": "catch",
+        "z": "tab-iw",
+        "name": "catch all errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 40,
+        "wires": [
+            [
+                "nr-err-out-tab-iw"
+            ]
+        ]
+    },
+    {
+        "id": "nr-err-out-tab-iw",
+        "type": "link out",
+        "z": "tab-iw",
+        "name": "to error funnel",
+        "mode": "link",
+        "links": [
+            "nr-err-in"
+        ],
+        "x": 255,
+        "y": 40,
+        "wires": []
     },
     {
         "id": "pc-boot",
@@ -6729,6 +7229,34 @@
         ]
     },
     {
+        "id": "nr-catch-tab-pc",
+        "type": "catch",
+        "z": "tab-pc",
+        "name": "catch all errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 120,
+        "y": 40,
+        "wires": [
+            [
+                "nr-err-out-tab-pc"
+            ]
+        ]
+    },
+    {
+        "id": "nr-err-out-tab-pc",
+        "type": "link out",
+        "z": "tab-pc",
+        "name": "to error funnel",
+        "mode": "link",
+        "links": [
+            "nr-err-in"
+        ],
+        "x": 255,
+        "y": 40,
+        "wires": []
+    },
+    {
         "id": "dbw-in",
         "type": "http in",
         "z": "tab-dbw",
@@ -6822,335 +7350,6 @@
         ]
     },
     {
-        "id": "cam-cast-wipe",
-        "type": "api-call-service",
-        "z": "tab-cam",
-        "name": "Wipe public snapshot (placeholder)",
-        "server": "ha-server",
-        "version": 5,
-        "debugenabled": false,
-        "action": "downloader.download_file",
-        "areaId": [],
-        "deviceId": [],
-        "entityId": [],
-        "data": "{\"url\": \"http://10.0.0.252:8123/local/doorbell_blank.jpg\", \"filename\": \"doorbell_snapshot.jpg\", \"overwrite\": true}",
-        "dataType": "jsonata",
-        "mergeContext": "",
-        "mustacheAltTags": false,
-        "outputProperties": [],
-        "queue": "none",
-        "x": 1650,
-        "y": 1000,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "ih-src-fn",
-        "type": "function",
-        "z": "tab-ih",
-        "name": "webhook source IP",
-        "func": "// Temporary (01-11-2026, audit H2 step 1): record which host calls each webhook,\n// so a source-IP allow-list can be built from measured callers, not guesses.\nconst r = msg.req || {};\nconst ts = new Date().toLocaleString('en-IE', {timeZone: 'Europe/Dublin', hour12: false});\nconst ip = String(r.ip || '?').replace(/^::ffff:/, '');\nconst ua = String((r.headers && r.headers['user-agent']) || '').slice(0, 60);\nreturn {payload: ts + '  ' + (r.originalUrl || r.url || '?') + '  ' + ip + '  ' + ua + '\\n'};",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1500,
-        "y": 1000,
-        "wires": [
-            [
-                "ih-src-logfile"
-            ]
-        ]
-    },
-    {
-        "id": "ih-src-logfile",
-        "type": "file",
-        "z": "tab-ih",
-        "name": "webhook sources log",
-        "filename": "/data/webhook_sources.log",
-        "filenameType": "str",
-        "appendNewline": false,
-        "createDir": true,
-        "overwriteFile": "false",
-        "encoding": "none",
-        "x": 1720,
-        "y": 1000,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "iw-src-fn",
-        "type": "function",
-        "z": "tab-iw",
-        "name": "webhook source IP",
-        "func": "// Temporary (01-11-2026, audit H2 step 1): record which host calls each webhook,\n// so a source-IP allow-list can be built from measured callers, not guesses.\nconst r = msg.req || {};\nconst ts = new Date().toLocaleString('en-IE', {timeZone: 'Europe/Dublin', hour12: false});\nconst ip = String(r.ip || '?').replace(/^::ffff:/, '');\nconst ua = String((r.headers && r.headers['user-agent']) || '').slice(0, 60);\nreturn {payload: ts + '  ' + (r.originalUrl || r.url || '?') + '  ' + ip + '  ' + ua + '\\n'};",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 400,
-        "y": 120,
-        "wires": [
-            [
-                "iw-src-logfile"
-            ]
-        ]
-    },
-    {
-        "id": "iw-src-logfile",
-        "type": "file",
-        "z": "tab-iw",
-        "name": "webhook sources log",
-        "filename": "/data/webhook_sources.log",
-        "filenameType": "str",
-        "appendNewline": false,
-        "createDir": true,
-        "overwriteFile": "false",
-        "encoding": "none",
-        "x": 620,
-        "y": 120,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "nr-err-fn",
-        "type": "function",
-        "z": "tab-ih",
-        "name": "Node-RED error funnel (30 min/node)",
-        "func": "// 01-11-2026 (audit H4): every tab's catch node lands here. One push per failing\n// node per 30 min, routed through ih-send (quiet hours, maintenance, infra_alerts dispatch).\nconst e = msg.error || {}; const s = e.source || {};\nconst id = s.id || '?'; const nm = s.name || s.type || id;\nconst last = context.get('last') || {}; const now = Date.now();\nfor (const k in last) if (now - last[k] > 86400000) delete last[k];   // keep the map small\nif (now - (last[id] || 0) < 30 * 60000) { context.set('last', last); return null; }\nlast[id] = now; context.set('last', last);\nreturn { cat: 'Node-RED', sub: nm, message: String(e.message || 'error').slice(0, 300) + ' [' + id + ']', tag: 'nr_err_' + id };",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 1500,
-        "y": 1080,
-        "wires": [
-            [
-                "ih-send"
-            ]
-        ]
-    },
-    {
-        "id": "nr-catch-tab-hm",
-        "type": "catch",
-        "z": "tab-hm",
-        "name": "catch all errors",
-        "scope": null,
-        "uncaught": false,
-        "x": 120,
-        "y": 40,
-        "wires": [
-            [
-                "nr-err-out-tab-hm"
-            ]
-        ]
-    },
-    {
-        "id": "nr-err-out-tab-hm",
-        "type": "link out",
-        "z": "tab-hm",
-        "name": "to error funnel",
-        "mode": "link",
-        "links": [
-            "nr-err-in"
-        ],
-        "x": 255,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "nr-catch-tab-cam",
-        "type": "catch",
-        "z": "tab-cam",
-        "name": "catch all errors",
-        "scope": null,
-        "uncaught": false,
-        "x": 120,
-        "y": 40,
-        "wires": [
-            [
-                "nr-err-out-tab-cam"
-            ]
-        ]
-    },
-    {
-        "id": "nr-err-out-tab-cam",
-        "type": "link out",
-        "z": "tab-cam",
-        "name": "to error funnel",
-        "mode": "link",
-        "links": [
-            "nr-err-in"
-        ],
-        "x": 255,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "nr-catch-5a86c1a3371ffe9e",
-        "type": "catch",
-        "z": "5a86c1a3371ffe9e",
-        "name": "catch all errors",
-        "scope": null,
-        "uncaught": false,
-        "x": 120,
-        "y": 40,
-        "wires": [
-            [
-                "nr-err-out-5a86c1a3371ffe9e"
-            ]
-        ]
-    },
-    {
-        "id": "nr-err-out-5a86c1a3371ffe9e",
-        "type": "link out",
-        "z": "5a86c1a3371ffe9e",
-        "name": "to error funnel",
-        "mode": "link",
-        "links": [
-            "nr-err-in"
-        ],
-        "x": 255,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "nr-catch-096ff268dc7bd2f0",
-        "type": "catch",
-        "z": "096ff268dc7bd2f0",
-        "name": "catch all errors",
-        "scope": null,
-        "uncaught": false,
-        "x": 120,
-        "y": 40,
-        "wires": [
-            [
-                "nr-err-out-096ff268dc7bd2f0"
-            ]
-        ]
-    },
-    {
-        "id": "nr-err-out-096ff268dc7bd2f0",
-        "type": "link out",
-        "z": "096ff268dc7bd2f0",
-        "name": "to error funnel",
-        "mode": "link",
-        "links": [
-            "nr-err-in"
-        ],
-        "x": 255,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "nr-catch-657e6b8b07b4cdf7",
-        "type": "catch",
-        "z": "657e6b8b07b4cdf7",
-        "name": "catch all errors",
-        "scope": null,
-        "uncaught": false,
-        "x": 120,
-        "y": 40,
-        "wires": [
-            [
-                "nr-err-out-657e6b8b07b4cdf7"
-            ]
-        ]
-    },
-    {
-        "id": "nr-err-out-657e6b8b07b4cdf7",
-        "type": "link out",
-        "z": "657e6b8b07b4cdf7",
-        "name": "to error funnel",
-        "mode": "link",
-        "links": [
-            "nr-err-in"
-        ],
-        "x": 255,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "nr-catch-tab-ih",
-        "type": "catch",
-        "z": "tab-ih",
-        "name": "catch all errors",
-        "scope": null,
-        "uncaught": false,
-        "x": 1300,
-        "y": 1080,
-        "wires": [
-            [
-                "nr-err-fn"
-            ]
-        ]
-    },
-    {
-        "id": "nr-catch-tab-iw",
-        "type": "catch",
-        "z": "tab-iw",
-        "name": "catch all errors",
-        "scope": null,
-        "uncaught": false,
-        "x": 120,
-        "y": 40,
-        "wires": [
-            [
-                "nr-err-out-tab-iw"
-            ]
-        ]
-    },
-    {
-        "id": "nr-err-out-tab-iw",
-        "type": "link out",
-        "z": "tab-iw",
-        "name": "to error funnel",
-        "mode": "link",
-        "links": [
-            "nr-err-in"
-        ],
-        "x": 255,
-        "y": 40,
-        "wires": []
-    },
-    {
-        "id": "nr-catch-tab-pc",
-        "type": "catch",
-        "z": "tab-pc",
-        "name": "catch all errors",
-        "scope": null,
-        "uncaught": false,
-        "x": 120,
-        "y": 40,
-        "wires": [
-            [
-                "nr-err-out-tab-pc"
-            ]
-        ]
-    },
-    {
-        "id": "nr-err-out-tab-pc",
-        "type": "link out",
-        "z": "tab-pc",
-        "name": "to error funnel",
-        "mode": "link",
-        "links": [
-            "nr-err-in"
-        ],
-        "x": 255,
-        "y": 40,
-        "wires": []
-    },
-    {
         "id": "nr-catch-tab-dbw",
         "type": "catch",
         "z": "tab-dbw",
@@ -7179,65 +7378,32 @@
         "wires": []
     },
     {
-        "id": "nr-err-in",
-        "type": "link in",
-        "z": "tab-ih",
-        "name": "errors from other tabs",
-        "links": [
-            "nr-err-out-tab-hm",
-            "nr-err-out-tab-cam",
-            "nr-err-out-5a86c1a3371ffe9e",
-            "nr-err-out-096ff268dc7bd2f0",
-            "nr-err-out-657e6b8b07b4cdf7",
-            "nr-err-out-tab-iw",
-            "nr-err-out-tab-pc",
-            "nr-err-out-tab-dbw"
-        ],
-        "x": 1335,
-        "y": 1120,
-        "wires": [
-            [
-                "nr-err-fn"
-            ]
-        ]
-    },
-    {
-        "id": "na-dispatch",
-        "type": "subflow:sf-dispatch-notify",
-        "z": "096ff268dc7bd2f0",
-        "name": "dispatch: security notify list",
-        "env": [
+        "id": "cam-cast-haurl",
+        "type": "ha-api",
+        "z": "tab-cam",
+        "name": "HA external URL (for the cast)",
+        "server": "ha-server",
+        "version": 1,
+        "debugenabled": false,
+        "protocol": "websocket",
+        "method": "get",
+        "path": "",
+        "data": "{\"type\":\"get_config\"}",
+        "dataType": "json",
+        "responseType": "json",
+        "outputProperties": [
             {
-                "name": "flagName",
-                "type": "str",
-                "value": "security"
+                "property": "ha_config",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "results"
             }
         ],
-        "x": 950,
-        "y": 580,
+        "x": 1530,
+        "y": 820,
         "wires": [
             [
-                "na-notify"
-            ]
-        ]
-    },
-    {
-        "id": "nfc-dispatch",
-        "type": "subflow:sf-dispatch-notify",
-        "z": "657e6b8b07b4cdf7",
-        "name": "dispatch: security notify list",
-        "env": [
-            {
-                "name": "flagName",
-                "type": "str",
-                "value": "security"
-            }
-        ],
-        "x": 820,
-        "y": 380,
-        "wires": [
-            [
-                "nfc-notify"
+                "cam-cast"
             ]
         ]
     }

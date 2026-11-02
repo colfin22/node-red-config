@@ -1,0 +1,106 @@
+[
+ {
+  "id": "tab-pl",
+  "type": "tab",
+  "label": "Paperless",
+  "disabled": false,
+  "info": "Paperless-ngx emailed-document notifications.\nA Paperless workflow (Document Added, filtered on an 'email' tag that a consumption-started workflow adds to mail-fetched documents) POSTs {title, correspondent, id, url} to /ih-paperless-doc.\nThe alert goes over a link to the Infra Health tab's ih-send: quiet-hours hold + flush, maintenance-mode drop, infra-alert phone only.",
+  "env": []
+ },
+ {
+  "id": "ih-b-pl-in",
+  "type": "http in",
+  "z": "tab-pl",
+  "name": "POST /ih-paperless-doc",
+  "url": "/ih-paperless-doc",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 150,
+  "y": 100,
+  "wires": [
+   [
+    "ih-b-pl-fn",
+    "ih-b-pl-resp",
+    "pl-src-prep"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-pl-fn",
+  "type": "function",
+  "z": "tab-pl",
+  "name": "Paperless doc \u2192 msg",
+  "func": "// Paperless-ngx: an emailed document has been filed. Posted by a Paperless workflow\n// (Document Added + \"email\" tag) with webhook params {title, correspondent, id, url}.\n// The link comes from Paperless itself, so no hostname lives in this flow.\nvar p=msg.payload||{};\nif(typeof p==='string'){try{p=JSON.parse(p);}catch(e){p={};}}\nvar id=String(p.id||'').replace(/[^0-9]/g,'');\nvar title=String(p.title||'').trim().slice(0,150)||'(untitled)';\nvar corr=String(p.correspondent||'').trim();\nif(!corr||corr==='none'||corr==='-none-')corr='No correspondent';\nvar out={cat:'Paperless',sub:corr,message:title,tag:'paperless_'+(id||Date.now())};\nvar url=String(p.url||'').trim();\nif(/^https?:\\/\\/[^\\s]+$/.test(url)&&url.indexOf('None/')===-1)out.url=url;\nreturn out;",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 400,
+  "y": 100,
+  "wires": [
+   [
+    "pl-lo-send"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-pl-resp",
+  "type": "http response",
+  "z": "tab-pl",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 400,
+  "y": 160,
+  "wires": []
+ },
+ {
+  "id": "pl-lo-send",
+  "type": "link out",
+  "z": "tab-pl",
+  "name": "\u2192 Infra Health: ih-send",
+  "mode": "link",
+  "links": [
+   "ih-li-pl-send"
+  ],
+  "x": 650,
+  "y": 100,
+  "wires": []
+ },
+ {
+  "id": "pl-lo-src",
+  "type": "link out",
+  "z": "tab-pl",
+  "name": "\u2192 Infra Health: source-IP log (temp)",
+  "mode": "link",
+  "links": [
+   "ih-li-pl-src"
+  ],
+  "x": 700,
+  "y": 220,
+  "wires": []
+ },
+ {
+  "id": "pl-src-prep",
+  "type": "function",
+  "z": "tab-pl",
+  "name": "keep caller IP for src log (temp)",
+  "func": "// Copy caller info into a plain object: the express req's ip getter does not survive\n// the link to tab-ih, so the temp source logger there (ih-src-fn) would log '?'.\nvar r=msg.req||{};\nmsg.req={ip:r.ip,originalUrl:r.originalUrl||r.url,headers:{'user-agent':(r.headers&&r.headers['user-agent'])||''}};\ndelete msg.res;\nreturn msg;",
+  "outputs": 1,
+  "timeout": 0,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 420,
+  "y": 220,
+  "wires": [
+   [
+    "pl-lo-src"
+   ]
+  ]
+ }
+]

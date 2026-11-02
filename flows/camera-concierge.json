@@ -135,7 +135,7 @@
   "entityId": [
    "media_player.kitchen_display_cast"
   ],
-  "data": "{\"media_content_id\": \"https://ha.colfin22.net/local/doorbell_snapshot.jpg?_t=\" & $string($floor($millis()/1000)), \"media_content_type\": \"image/jpeg\"}",
+  "data": "{\"media_content_id\": $replace($string(ha_config.external_url), /\\/+$/, \"\") & \"/local/doorbell_snapshot.jpg?_t=\" & $string($floor($millis()/1000)), \"media_content_type\": \"image/jpeg\"}",
   "dataType": "jsonata",
   "mergeContext": "",
   "mustacheAltTags": false,
@@ -1120,7 +1120,7 @@
   "y": 760,
   "wires": [
    [
-    "cam-cast"
+    "cam-cast-haurl"
    ]
   ]
  },
@@ -1264,6 +1264,36 @@
   "x": 255,
   "y": 40,
   "wires": []
+ },
+ {
+  "id": "cam-cast-haurl",
+  "type": "ha-api",
+  "z": "tab-cam",
+  "name": "HA external URL (for the cast)",
+  "server": "ha-server",
+  "version": 1,
+  "debugenabled": false,
+  "protocol": "websocket",
+  "method": "get",
+  "path": "",
+  "data": "{\"type\":\"get_config\"}",
+  "dataType": "json",
+  "responseType": "json",
+  "outputProperties": [
+   {
+    "property": "ha_config",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "results"
+   }
+  ],
+  "x": 1530,
+  "y": 820,
+  "wires": [
+   [
+    "cam-cast"
+   ]
+  ]
  },
  {
   "id": "ha-server",
