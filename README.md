@@ -202,6 +202,17 @@ at the forecast check, so both anchor to the same wake times. A boost already ru
 
 An edit that breaks a rule is refused; a stored group that breaks one falls back to that group's defaults.
 
+A ninth section, **Weather alerts**, holds one time shared by the HA fog and frost warnings
+(`automation.fog_warning_commute`, `automation.frost_warning_car_windscreen`, weekdays only). Unlike the
+other sections it is not a JSON file: the value lives in the HA helper `input_datetime.weather_alert_time`,
+which both automations use as their time trigger. The page reads the helper on load and every 120 s and
+writes it with `input_datetime.set_datetime`, so a change made in HA directly shows up within 2 minutes.
+The helper has no `initial`, so its value survives an HA restart.
+
+| Setting | Default | Rule |
+|---|---|---|
+| Fog and frost alerts, weekdays at | 07:30 | 05:00–09:00; anything else is refused and the box snaps back |
+
 ### What to search and replace
 
 Every id below is mine and will not exist on your system. Nothing errors when a name does not
@@ -535,6 +546,8 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
   | `/ih-restic-failed` | restic backup failure, per dataset |
   | `/ih-nextcloud-db-dump-failed` | Nextcloud database dump failure |
   | `/ih-esbn-download` | ESB Networks smart-meter download, failure or warning |
+  | `/ih-utility-bills` | utility-bills script: bills that could not be read, or a crashed run |
+  | `/ih-panda-invoices` | panda-invoice-download: Panda waste invoice download failure |
   | `/ih-zabbix` | Zabbix problem and recovery events |
   | `/nr-backup-alert` | this repo's own nightly backup, when its secret scan blocks a push |
 

@@ -1007,6 +1007,104 @@
   ]
  },
  {
+  "id": "ih-b-ubill-in",
+  "type": "http in",
+  "z": "tab-ih",
+  "name": "Utility bills problem",
+  "url": "/ih-utility-bills",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 150,
+  "y": 1160,
+  "wires": [
+   [
+    "ih-b-ubill-fn",
+    "ih-b-ubill-resp",
+    "ih-src-fn"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-ubill-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Utility bills problem build",
+  "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar n=Number(b.problems)||0;\nvar lines=(Array.isArray(b.items)?b.items:[]).slice(0,5).join('\\n');\nvar more=(Array.isArray(b.items)&&b.items.length>5)?'\\n+'+(b.items.length-5)+' more':'';\nreturn {cat:'Service',sub:'Utility bills',\n  message:n+' bill'+(n===1?'':'s')+' could not be read and '+(n===1?'was':'were')+' not written to InfluxDB:\\n'+lines+more+'\\nSee the utility-bills log.',\n  tag:'utility_bills'};\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 410,
+  "y": 1160,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-ubill-resp",
+  "type": "http response",
+  "z": "tab-ih",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 410,
+  "y": 1200,
+  "wires": []
+ },
+ {
+  "id": "ih-b-panda-in",
+  "type": "http in",
+  "z": "tab-ih",
+  "name": "Panda invoices failed",
+  "url": "/ih-panda-invoices",
+  "method": "post",
+  "upload": false,
+  "swaggerDoc": "",
+  "x": 150,
+  "y": 1240,
+  "wires": [
+   [
+    "ih-b-panda-fn",
+    "ih-b-panda-resp",
+    "ih-src-fn"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-panda-fn",
+  "type": "function",
+  "z": "tab-ih",
+  "name": "Panda invoices failed build",
+  "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar m=(b.message||'unknown error').toString().slice(0,400);\nreturn {cat:'Service',sub:'Panda invoices',\n  message:m+'\\nSee the panda-invoice-download log.',\n  tag:'panda_invoices'};\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 410,
+  "y": 1240,
+  "wires": [
+   [
+    "ih-send"
+   ]
+  ]
+ },
+ {
+  "id": "ih-b-panda-resp",
+  "type": "http response",
+  "z": "tab-ih",
+  "name": "200",
+  "statusCode": "200",
+  "headers": {},
+  "x": 410,
+  "y": 1280,
+  "wires": []
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",

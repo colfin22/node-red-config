@@ -1129,6 +1129,155 @@
   "wires": []
  },
  {
+  "id": "pc-wa-boot",
+  "type": "inject",
+  "z": "tab-pc",
+  "name": "load weather alert time + 120s refresh",
+  "props": [
+   {
+    "p": "payload"
+   }
+  ],
+  "repeat": "120",
+  "crontab": "",
+  "once": true,
+  "onceDelay": "2",
+  "topic": "",
+  "payload": "",
+  "payloadType": "date",
+  "x": 200,
+  "y": 1240,
+  "wires": [
+   [
+    "pc-wa-get"
+   ]
+  ]
+ },
+ {
+  "id": "pc-wa-get",
+  "type": "ha-get-entities",
+  "z": "tab-pc",
+  "name": "weather_alert_time state",
+  "server": "ha-server",
+  "version": 3,
+  "rules": [
+   {
+    "property": "entity_id",
+    "logic": "is",
+    "value": "input_datetime.weather_alert_time",
+    "valueType": "str"
+   }
+  ],
+  "outputType": "array",
+  "outputEmptyResults": true,
+  "outputLocationType": "msg",
+  "outputLocation": "payload",
+  "outputResultsCount": 1,
+  "output_type": "array",
+  "output_empty_results": true,
+  "output_location_type": "msg",
+  "output_location": "payload",
+  "output_results_count": 1,
+  "x": 480,
+  "y": 1240,
+  "wires": [
+   [
+    "pc-wa-load"
+   ]
+  ]
+ },
+ {
+  "id": "pc-wa-load",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "HA state -> page",
+  "func": "// HA input_datetime.weather_alert_time -> the page. Input is either the state string\n// (\"07:30:00\", from the watcher) or a get-entities array (120 s refresh).\nlet st = msg.payload;\nif (Array.isArray(st)) st = st.length ? st[0].state : undefined;\nif (typeof st !== 'string' || !/^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$/.test(st)) {\n  node.status({ fill: 'red', shape: 'ring', text: 'HA state unusable: ' + st });\n  return null;\n}\nconst t = st.slice(0, 5);\nflow.set('weather_alert_time', t);\nnode.status({ fill: 'green', shape: 'dot', text: t });\nreturn { payload: { time: t } };\n",
+  "outputs": 1,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 760,
+  "y": 1260,
+  "wires": [
+   [
+    "pc-wa-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-wa-ui",
+  "type": "ui-template",
+  "z": "tab-pc",
+  "group": "pc-ui-group-weather",
+  "page": "",
+  "ui": "",
+  "name": "Weather alert time",
+  "order": 1,
+  "width": "6",
+  "height": "0",
+  "head": "",
+  "format": "<template>\n  <div>\n    <table style=\"width:100%; border-collapse:collapse;\">\n      <tbody>\n        <tr style=\"border-top:1px solid #ddd;\">\n          <td style=\"padding-right:12px;\">Fog and frost alerts, weekdays at</td>\n          <td style=\"width:150px;\">\n            <v-text-field :key=\"'wa-' + (msg._t || 0)\" type=\"time\" min=\"05:00\" max=\"09:00\" density=\"compact\" hide-details\n              :model-value=\"(msg.payload || {}).time\"\n              @blur=\"e => send({ payload: { time: e.target.value } })\"\n              @keyup.enter=\"e => send({ payload: { time: e.target.value } })\"></v-text-field>\n          </td>\n        </tr>\n      </tbody>\n    </table>\n    <div style=\"margin-top:8px; opacity:.75; font-size:.9em;\">\n      05:00\u201309:00. One time for both alerts. Frost is sent if it is 0 \u00b0C or below at that time; fog if either weather source says fog.\n    </div>\n  </div>\n</template>\n",
+  "storeOutMessages": true,
+  "passthru": false,
+  "resendOnRefresh": true,
+  "templateScope": "local",
+  "className": "",
+  "x": 1040,
+  "y": 1260,
+  "wires": [
+   [
+    "pc-wa-save"
+   ]
+  ]
+ },
+ {
+  "id": "pc-wa-save",
+  "type": "function",
+  "z": "tab-pc",
+  "name": "validate 05:00-09:00",
+  "func": "// Page edit -> validate (05:00-09:00) -> out1 sets the HA helper, out2 back to the page\n// so it always shows what is stored (_t re-keys the input so a rejected entry snaps back).\nconst cur = flow.get('weather_alert_time');\nif (!cur) { node.warn('weather alert time not loaded from HA yet, refusing to save - try again in a few seconds'); return [null, null]; }\nconst v = String((msg.payload || {}).time || '').trim();\nconst ok = /^([01]\\d|2[0-3]):[0-5]\\d$/.test(v);\nconst mins = ok ? Number(v.slice(0, 2)) * 60 + Number(v.slice(3, 5)) : -1;\nif (!ok || mins < 300 || mins > 540) {\n  node.warn('weather alert time rejected: ' + v + ' (must be 05:00-09:00)');\n  return [null, { payload: { time: cur }, _t: Date.now() }];\n}\nif (v === cur) return [null, { payload: { time: cur }, _t: Date.now() }];\nflow.set('weather_alert_time', v);\nnode.status({ fill: 'blue', shape: 'dot', text: 'saved ' + v });\nreturn [{ time: v + ':00' }, { payload: { time: v }, _t: Date.now() }];\n",
+  "outputs": 2,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 1300,
+  "y": 1260,
+  "wires": [
+   [
+    "pc-wa-set"
+   ],
+   [
+    "pc-wa-ui"
+   ]
+  ]
+ },
+ {
+  "id": "pc-wa-set",
+  "type": "api-call-service",
+  "z": "tab-pc",
+  "name": "set weather_alert_time",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "input_datetime.set_datetime",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"entity_id\": \"input_datetime.weather_alert_time\", \"time\": msg.time}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 1580,
+  "y": 1260,
+  "wires": [
+   []
+  ]
+ },
+ {
   "id": "ha-server",
   "type": "server",
   "name": "Home Assistant",
@@ -1250,6 +1399,19 @@
   "width": "6",
   "height": "1",
   "order": 8,
+  "showTitle": true,
+  "className": "",
+  "visible": "true",
+  "disabled": "false"
+ },
+ {
+  "id": "pc-ui-group-weather",
+  "type": "ui-group",
+  "name": "Weather alerts",
+  "page": "pc-ui-page",
+  "width": "6",
+  "height": "1",
+  "order": 9,
   "showTitle": true,
   "className": "",
   "visible": "true",
