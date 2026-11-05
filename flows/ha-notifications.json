@@ -1,0 +1,241 @@
+[
+ {
+  "id": "tab-hn",
+  "type": "tab",
+  "label": "HA notifications",
+  "disabled": false,
+  "info": "Home Assistant automations send phone pushes here with the home_notify event, so the Household page decides who gets them and each person's quiet hours apply.\ngroup home: whoever has Home reminders on, held in their quiet hours.\ngroup home_urgent: whoever has Home reminders on, any hour.\ngroup people: the person ids in the event, held in their quiet hours."
+ },
+ {
+  "id": "hn-ev",
+  "type": "server-events",
+  "z": "tab-hn",
+  "name": "home_notify",
+  "server": "ha-server",
+  "version": 3,
+  "exposeAsEntityConfig": "",
+  "eventType": "home_notify",
+  "waitForRunning": true,
+  "outputProperties": [
+   {
+    "property": "payload",
+    "propertyType": "msg",
+    "value": "",
+    "valueType": "eventData"
+   }
+  ],
+  "event_type": "home_notify",
+  "x": 150,
+  "y": 100,
+  "wires": [
+   [
+    "hn-fn"
+   ]
+  ]
+ },
+ {
+  "id": "hn-fn",
+  "type": "function",
+  "z": "tab-hn",
+  "name": "route by group",
+  "func": "// HA automations fire the home_notify event: { group, title, message, data, people, house_time, home_only, once_per_day }\nconst D = (msg.payload && msg.payload.event) || msg.payload || {};\nif (!D.message) { node.warn('[home_notify] no message: ' + JSON.stringify(D).slice(0, 200)); return null; }\nconst m = { title: D.title, message: D.message, ndata: D.data || {}, house_time: !!D.house_time, home_only: !!D.home_only, once_per_day: D.once_per_day || '' };\nif (D.group === 'home') return [m, null, null];\nif (D.group === 'home_urgent') return [null, m, null];\nif (D.group === 'people' && Array.isArray(D.people) && D.people.length) { m.people = D.people; return [null, null, m]; }\nnode.warn('[home_notify] bad group or people: ' + JSON.stringify(D).slice(0, 200));\nreturn null;\n",
+  "outputs": 3,
+  "noerr": 0,
+  "initialize": "",
+  "finalize": "",
+  "libs": [],
+  "x": 340,
+  "y": 100,
+  "wires": [
+   [
+    "hn-home"
+   ],
+   [
+    "hn-urgent"
+   ],
+   [
+    "hn-people"
+   ]
+  ]
+ },
+ {
+  "id": "hn-home",
+  "type": "subflow:sf-dispatch-notify",
+  "z": "tab-hn",
+  "name": "dispatch: home_reminders, held",
+  "env": [
+   {
+    "name": "flagName",
+    "type": "str",
+    "value": "home_reminders"
+   },
+   {
+    "name": "quietMode",
+    "type": "str",
+    "value": "hold"
+   },
+   {
+    "name": "quietSource",
+    "type": "str",
+    "value": ""
+   },
+   {
+    "name": "ignoreOnlyWhenHome",
+    "type": "str",
+    "value": "yes"
+   }
+  ],
+  "x": 580,
+  "y": 60,
+  "wires": [
+   [
+    "hn-notify"
+   ]
+  ]
+ },
+ {
+  "id": "hn-urgent",
+  "type": "subflow:sf-dispatch-notify",
+  "z": "tab-hn",
+  "name": "dispatch: home_reminders, any hour",
+  "env": [
+   {
+    "name": "flagName",
+    "type": "str",
+    "value": "home_reminders"
+   },
+   {
+    "name": "quietMode",
+    "type": "str",
+    "value": ""
+   },
+   {
+    "name": "quietSource",
+    "type": "str",
+    "value": ""
+   },
+   {
+    "name": "ignoreOnlyWhenHome",
+    "type": "str",
+    "value": "yes"
+   }
+  ],
+  "x": 580,
+  "y": 100,
+  "wires": [
+   [
+    "hn-notify"
+   ]
+  ]
+ },
+ {
+  "id": "hn-people",
+  "type": "subflow:sf-dispatch-notify",
+  "z": "tab-hn",
+  "name": "dispatch: named people, held",
+  "env": [
+   {
+    "name": "flagName",
+    "type": "str",
+    "value": ""
+   },
+   {
+    "name": "quietMode",
+    "type": "str",
+    "value": "hold"
+   },
+   {
+    "name": "quietSource",
+    "type": "str",
+    "value": ""
+   },
+   {
+    "name": "ignoreOnlyWhenHome",
+    "type": "str",
+    "value": "yes"
+   }
+  ],
+  "x": 580,
+  "y": 140,
+  "wires": [
+   [
+    "hn-notify"
+   ]
+  ]
+ },
+ {
+  "id": "hn-notify",
+  "type": "api-call-service",
+  "z": "tab-hn",
+  "name": "notify: HA automation",
+  "server": "ha-server",
+  "version": 5,
+  "debugenabled": false,
+  "action": "{{action}}",
+  "areaId": [],
+  "deviceId": [],
+  "entityId": [],
+  "data": "{\"title\": msg.title, \"message\": msg.message, \"data\": msg.ndata ? msg.ndata : {}}",
+  "dataType": "jsonata",
+  "mergeContext": "",
+  "mustacheAltTags": false,
+  "outputProperties": [],
+  "queue": "none",
+  "x": 850,
+  "y": 100,
+  "wires": [
+   []
+  ]
+ },
+ {
+  "id": "nr-catch-tab-hn",
+  "type": "catch",
+  "z": "tab-hn",
+  "name": "catch all errors",
+  "scope": null,
+  "uncaught": false,
+  "x": 150,
+  "y": 220,
+  "wires": [
+   [
+    "nr-err-out-tab-hn"
+   ]
+  ]
+ },
+ {
+  "id": "nr-err-out-tab-hn",
+  "type": "link out",
+  "z": "tab-hn",
+  "name": "to error funnel",
+  "mode": "link",
+  "links": [
+   "nr-err-in"
+  ],
+  "x": 340,
+  "y": 220,
+  "wires": []
+ },
+ {
+  "id": "ha-server",
+  "type": "server",
+  "name": "Home Assistant",
+  "version": 5,
+  "addon": false,
+  "rejectUnauthorizedCerts": false,
+  "ha_boolean": "y|yes|true|on|home|open",
+  "connectionDelay": true,
+  "cacheJson": true,
+  "heartbeat": true,
+  "heartbeatInterval": 30,
+  "areaSelector": "friendly",
+  "deviceSelector": "friendly",
+  "entitySelector": "friendly",
+  "statusSeparator": "at: ",
+  "statusYear": "hidden",
+  "statusMonth": "short",
+  "statusDay": "numeric",
+  "statusHourCycle": "h23",
+  "statusTimeFormat": "h:m",
+  "enableGlobalContextStore": false
+ }
+]

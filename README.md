@@ -86,13 +86,24 @@ defaults (House Mode role `none`, every toggle off) rather than needing a flow e
 - **Heating changes** / **Freeze warning** — the two heating notification types.
 - **Infra alerts** — Infra Watchdog + Infra Health & Alerts phone pushes, and (dynamically, for
   whoever currently has it on and is home) the Infra Watchdog TTS announcement.
+- **Time zone**: read only, from the companion app's "Current time zone" sensor on the person's
+  linked phone (switch that sensor on in the app). Keeps the last known zone if the phone goes
+  offline, and shows "not reporting" if it has never sent one.
+- **Quiet hours per person**: infra alerts, low battery alerts and the freezing morning push wait
+  until that person's quiet hours end, at their own local time, then arrive with "(triggered HH:MM)"
+  in that local time. Heating change pushes are skipped for anyone in their quiet hours, as before.
+  Held messages use the `file` context store, so a restart keeps them. Each send, hold and release is
+  logged to `data/quiet_send.log`. House Mode, heating schedules, rates and speaker announcements
+  stay on the house clock. Security and camera pushes still arrive at any hour.
+- **Home reminders**: off by default. Home Assistant automations for household reminders go to whoever has this on, even when out, held in their quiet hours. See the HA notifications tab.
+- **Forecast**: stored per person, off by default. No flow reads it yet.
 - **Battery sensor** — free-text entity id (e.g. `sensor.xxx_battery_level`); low-battery
   monitoring only runs for **Resident**s with this set (the old `PERSON_n_BATTERY`, now per-person
   and dashboard-editable). Notified to whoever currently has Security on.
 
 A toggle with no resolvable notify target (no linked `device_tracker`/`notify` entity) renders
 disabled with a reason, rather than silently doing nothing. Backing store is
-`data/person_config.json` (entity ids + booleans only, no secrets; not in this repo — `data/*` is
+`data/person_config.json` (entity ids, booleans and each last known time zone, no secrets; not in this repo — `data/*` is
 gitignored, so it is not in the git backup), loaded
 into `global` context on deploy/tick so every consumer flow reads it live — no redeploy needed
 after a toggle change. Every consumer that reads it (House Mode, House Alarm, Camera Concierge,
@@ -118,7 +129,7 @@ by the alarm flows, each falling back to its built-in default:
 | Nightly shed re-arm | 22:00 | Alarm NFC Tags (a 60 s tick fires once a day in the 5 min after this time) |
 | Night-arm retry, after the door/window that blocked `arm_night` is closed | 20 min | House Alarm (one retry) |
 | Phone low-battery alert level | 15 % | House Alarm battery monitoring |
-| Battery alerts quiet from / until | 22:00 / 07:00 | House Alarm: low-battery pushes inside this window are held and sent as one summary at the end time |
+| Battery alerts quiet from / until | 22:00 / 07:00 | House Alarm: low-battery pushes are recorded for one summary while everyone on the Security list is inside this window at their own local time. It is sent when the first person's window ends, and anyone still asleep gets it when theirs ends |
 
 A fourth section, **House Mode**, holds the House Mode engine's timings (`data/house_mode_config.json`
 → `global.house_mode_config`, not in the git backup). `hm-engine` reads them on every message, so a
@@ -163,7 +174,7 @@ running keeps the timers it started with; after a Node-RED restart the resume lo
 | Repeat reminder: core monitors, or a big outage | 15 min |
 | Repeat reminder: other monitors | 60 min |
 | This many down at once counts as a big outage | 3 |
-| Infra alerts quiet from / until — **both** infra flows (`iw-engine` and `ih-send` hold alerts inside it; a 60 s tick in each flow sends the overnight summary once in the 5 min after the end time) | 22:00 / 07:00 |
+| Infra alerts quiet from / until — **both** infra flows (applied at each person's local time. `iw-engine` stays silent only while everyone on the infra list is inside it, then sends the overnight summary. `sf-dispatch-notify` holds messages for anyone still inside it) | 22:00 / 07:00 |
 
 The grace must be shorter than the escalation and the core repeat no longer than the other; an edit
 that breaks either is refused (as is a quiet start equal to the end), and a stored set that breaks one falls back to the defaults.
@@ -272,6 +283,20 @@ Requires: mode is `Home`, a resident is home, `maintenance_mode` off, both TVs o
 
 ## Changing the mode by hand
 Picking a mode yourself holds it for 4 hours; the engine leaves it alone until then. The change is published as `changed by hand` (see below).
+
+## HA notifications tab
+
+Home Assistant automations can send a phone push through Node-RED by firing the `home_notify` event, so the Household page decides who gets it and each person's quiet hours apply. Event fields:
+
+| Field | Meaning |
+|---|---|
+| `group` | `home` = whoever has Home reminders on, held in quiet hours. `home_urgent` = the same people, any hour. `people` = the person ids in `people`, held in quiet hours |
+| `title`, `message`, `data` | As for a `notify` call |
+| `house_time` | The time was chosen for the house, so anyone on the house clock gets it on time even inside quiet hours |
+| `home_only` | Only people at home at send time and at release time |
+| `once_per_day` | A key. Each person gets that key once per house calendar day |
+
+Alerts that must arrive at any hour with Node-RED down stay as direct `notify` calls in Home Assistant.
 
 ## People config (`hm-cfg` node)
 Roles come from the Household Config dashboard (`global.person_config`), re-read on every tick. **Residents** enable Sleeping and trigger Away. **Guests** only count towards "anyone home" — they prevent Away when physically present but don't enable Sleeping. Presence is the person entity, OR'd with an optional second "phone on Wi-Fi" sensor set per person on the dashboard. Anyone in the house with no tracked phone is excluded from both, and the indoor sensors are their safety net.
@@ -547,7 +572,7 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
   | `/ih-nextcloud-db-dump-failed` | Nextcloud database dump failure |
   | `/ih-esbn-download` | ESB Networks smart-meter download, failure or warning |
   | `/ih-utility-bills` | utility-bills script: bills that could not be read, or a crashed run |
-  | `/ih-panda-invoices` | panda-invoice-download: Panda waste invoice download failure |
+  | `/ih-panda-invoices` | panda-waste-data-scraper: Panda invoice or bin weight run failure |
   | `/ih-zabbix` | Zabbix problem and recovery events |
   | `/nr-backup-alert` | this repo's own nightly backup, when its secret scan blocks a push |
 
@@ -555,7 +580,7 @@ One tab consolidates what used to be eleven separate HA infrastructure-alert aut
 - **Backup watchdog** — at 07:30 it queries the Proxmox API on every node in `PVE_NODES` for the vzdump task list and alerts **only on failures**, when a node has no backup finished in the last 26 hours, or when the Proxmox API can't be read for a node (the read-only API token comes from the gitignored `.env`).
 - **Node-RED's own errors** — every tab has a catch node linked to one function here, which pushes `[Node-RED] <node name>` with the error text, at most once per failing node every 30 minutes. A failed Home Assistant call (an unknown notify service during an HA restart, say) no longer shows up only in the container log.
 
-**Delivery:** shared quiet-hours gate — alerts inside the quiet hours (default 22:00–07:00, Household page → Infra) are held and flushed at the end of the window with their original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way. An alert that carries a `url` gets it as the notification's tap action (the Paperless tab uses this; held alerts keep it through the flush). The Paperless tab hands its alerts to this same delivery over a link node.
+**Delivery:** shared quiet-hours gate — alerts inside a person's quiet hours (default 22:00–07:00 at their local time, Household page → Infra) are held by `sf-dispatch-notify` and sent at the end of that person's window with the original trigger time in the title; `maintenance_mode` drops alerts entirely (logged, not pushed) while planned work is under way. An alert that carries a `url` gets it as the notification's tap action (the Paperless tab uses this; held alerts keep it through the flush). The Paperless tab hands its alerts to this same delivery over a link node.
 
 # Paperless — how it works
 

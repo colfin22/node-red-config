@@ -4,7 +4,7 @@
   "type": "tab",
   "label": "Infra Health & Alerts",
   "disabled": false,
-  "info": "Consolidated infra health + backup/Zabbix alerts (migrated from HA 28-06-2026). Group A: ih-watch->ih-engine. Group B: 4 http-in. All -> ih-send (type-prefix + quiet-hours 22-07 + 07:00 flush)."
+  "info": "Consolidated infra health + backup/Zabbix alerts (migrated from HA 28-06-2026). Group A: ih-watch->ih-engine. Group B: 4 http-in. All -> ih-send (type-prefix) -> per person quiet hours in sf-dispatch-notify."
  },
  {
   "id": "ih-watch",
@@ -128,8 +128,8 @@
   "id": "ih-send",
   "type": "function",
   "z": "tab-ih",
-  "name": "Quiet-hours send",
-  "func": "\nfunction dub(){return new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});}\nfunction dhour(){return parseInt(new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10);}\n// Quiet hours shared by both infra flows: Household page -> Infra (global.infra_config). Default 22:00-07:00.\nfunction quiet(){var IC=global.get('infra_config')||{};var okT=function(s){return typeof s==='string'&&/^([01]\\d|2[0-3]):[0-5]\\d$/.test(s);};var qs=okT(IC.quiet_start)?IC.quiet_start:'22:00', qe=okT(IC.quiet_end)?IC.quiet_end:'07:00';if(qs===qe){qs='22:00';qe='07:00';}var m=function(s){return Number(s.slice(0,2))*60+Number(s.slice(3,5));};var d=new Date();var n=parseInt(d.toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',hour12:false}),10)*60+parseInt(d.toLocaleString('en-IE',{timeZone:'Europe/Dublin',minute:'2-digit'}),10);var a=m(qs),b=m(qe);return a<b?(n>=a&&n<b):(n>=a||n<b);}\nfunction hhmm(ts){return new Date(ts).toLocaleTimeString('en-IE',{timeZone:'Europe/Dublin',hour:'2-digit',minute:'2-digit'});}\n\nif(msg.topic==='flush'){\n  var held=context.get('held')||[];\n  context.set('held',[]);\n  if(!held.length)return null;\n  var nots=[],logs=[];\n  held.forEach(function(e){\n    nots.push({title:e.title+' (triggered '+hhmm(e.firedAt)+')',message:e.message,ndata:e.ndata});\n    logs.push({payload:dub()+'  [flush] '+e.title+' \u2014 '+e.message+'\\n'});\n  });\n  node.send([nots,logs]);\n  return null;\n}\n\nvar cat=msg.cat, sub=msg.sub, message=msg.message;\nif(!cat||!message)return null;\nvar title='['+cat+'] '+sub;\nvar tagsrc='ih_'+(msg.tag||sub);\nvar ndata={tag:tagsrc.toString().replace(/[^A-Za-z0-9_]/g,'_'),channel:cat,group:cat};\nif(msg.url)ndata.clickAction=String(msg.url);\nif(global.get('maintenance_mode')){\n  node.send([null,{payload:dub()+'  [maint-dropped] '+title+' \u2014 '+message+'\\n'}]);\n  return null;\n}\nif(quiet()){\n  var held=context.get('held')||[];\n  held.push({title:title,message:message,ndata:ndata,firedAt:Date.now()});\n  context.set('held',held);\n  node.send([null,{payload:dub()+'  [quiet-held] '+title+' \u2014 '+message+'\\n'}]);\n  return null;\n}\nnode.send([{title:title,message:message,ndata:ndata},{payload:dub()+'  '+title+' \u2014 '+message+'\\n'}]);\nreturn null;\n",
+  "name": "Infra send",
+  "func": "\nfunction dub(){return new Date().toLocaleString('en-IE',{timeZone:'Europe/Dublin',hour12:false});}\n// Quiet hours are per person now: ih-notify-dispatch holds for whoever is in theirs (Household page -> Infra).\nvar cat=msg.cat, sub=msg.sub, message=msg.message;\nif(!cat||!message)return null;\nvar title='['+cat+'] '+sub;\nvar tagsrc='ih_'+(msg.tag||sub);\nvar ndata={tag:tagsrc.toString().replace(/[^A-Za-z0-9_]/g,'_'),channel:cat,group:cat};\nif(msg.url)ndata.clickAction=String(msg.url);\nif(global.get('maintenance_mode')){\n  node.send([null,{payload:dub()+'  [maint-dropped] '+title+' \u2014 '+message+'\\n'}]);\n  return null;\n}\nnode.send([{title:title,message:message,ndata:ndata},{payload:dub()+'  '+title+' \u2014 '+message+'\\n'}]);\nreturn null;\n",
   "outputs": 2,
   "noerr": 0,
   "initialize": "",
@@ -161,31 +161,6 @@
   "y": 860,
   "wires": [
    []
-  ]
- },
- {
-  "id": "ih-cron",
-  "type": "inject",
-  "z": "tab-ih",
-  "name": "tick 60s -> flush gate",
-  "props": [
-   {
-    "p": "topic",
-    "v": "flush",
-    "vt": "str"
-   }
-  ],
-  "repeat": "60",
-  "crontab": "",
-  "once": false,
-  "onceDelay": 0.1,
-  "topic": "flush",
-  "x": 150,
-  "y": 640,
-  "wires": [
-   [
-    "ih-flush-gate"
-   ]
   ]
  },
  {
@@ -728,6 +703,16 @@
     "name": "flagName",
     "type": "str",
     "value": "infra_alerts"
+   },
+   {
+    "name": "quietMode",
+    "type": "str",
+    "value": "hold"
+   },
+   {
+    "name": "quietSource",
+    "type": "str",
+    "value": "infra"
    }
   ],
   "x": 1940,
@@ -760,25 +745,6 @@
   "y": 620,
   "wires": [
    []
-  ]
- },
- {
-  "id": "ih-flush-gate",
-  "type": "function",
-  "z": "tab-ih",
-  "name": "flush time gate (Infra quiet end)",
-  "func": "// 60 s tick -> passes ONCE per day, in the 5 minutes after the end of the shared infra quiet\n// hours (Household page -> Infra, default 07:00), carrying the inject's topic 'flush' (infra health).\nconst IC = global.get('infra_config') || {};\nconst okT = s => typeof s === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(s);\nlet QS = okT(IC.quiet_start) ? IC.quiet_start : '22:00', QE = okT(IC.quiet_end) ? IC.quiet_end : '07:00';\nif (QS === QE) { QS = '22:00'; QE = '07:00'; }\nconst T = Number(QE.slice(0, 2)) * 60 + Number(QE.slice(3, 5));\nconst d = new Date();\nconst since = ((d.getHours() * 60 + d.getMinutes()) - T + 1440) % 1440;\nif (since >= 5) return null;\nconst day = new Date(d.getTime() - since * 60000).toDateString();\nif (context.get('lastDay') === day) return null;\ncontext.set('lastDay', day);\nnode.warn('[gate] infra health flush (' + QE + ')');\nreturn msg;\n",
-  "outputs": 1,
-  "noerr": 0,
-  "initialize": "",
-  "finalize": "",
-  "libs": [],
-  "x": 350,
-  "y": 690,
-  "wires": [
-   [
-    "ih-send"
-   ]
   ]
  },
  {
@@ -964,7 +930,8 @@
    "nr-err-out-657e6b8b07b4cdf7",
    "nr-err-out-tab-iw",
    "nr-err-out-tab-pc",
-   "nr-err-out-tab-dbw"
+   "nr-err-out-tab-dbw",
+   "nr-err-out-tab-hn"
   ],
   "x": 1335,
   "y": 1120,
@@ -1030,7 +997,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "Utility bills problem build",
-  "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar n=Number(b.problems)||0;\nvar lines=(Array.isArray(b.items)?b.items:[]).slice(0,5).join('\\n');\nvar more=(Array.isArray(b.items)&&b.items.length>5)?'\\n+'+(b.items.length-5)+' more':'';\nreturn {cat:'Service',sub:'Utility bills',\n  message:n+' bill'+(n===1?'':'s')+' could not be read and '+(n===1?'was':'were')+' not written to InfluxDB:\\n'+lines+more+'\\nSee the utility-bills log.',\n  tag:'utility_bills'};\n",
+  "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar items=Array.isArray(b.items)?b.items:[];\nif(b.crashed===true||b.crashed==='true'){\n  return {cat:'Service',sub:'Utility bills',\n    message:'The utility-bills run crashed before finishing: '+(items[0]||'unknown error').toString().slice(0,300)+'\\nSee the utility-bills log.',\n    tag:'utility_bills'};\n}\nvar n=Number(b.problems)||0;\nvar lines=items.slice(0,5).join('\\n');\nvar more=items.length>5?'\\n+'+(items.length-5)+' more':'';\nreturn {cat:'Service',sub:'Utility bills',\n  message:n+' bill'+(n===1?'':'s')+' could not be read and '+(n===1?'was':'were')+' not written to InfluxDB:\\n'+lines+more+'\\nSee the utility-bills log.',\n  tag:'utility_bills'};\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
@@ -1079,7 +1046,7 @@
   "type": "function",
   "z": "tab-ih",
   "name": "Panda invoices failed build",
-  "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar m=(b.message||'unknown error').toString().slice(0,400);\nreturn {cat:'Service',sub:'Panda invoices',\n  message:m+'\\nSee the panda-invoice-download log.',\n  tag:'panda_invoices'};\n",
+  "func": "var b=global.get('parseWebhookBody')(msg.payload);\nvar m=(b.message||'unknown error').toString().slice(0,400);\nreturn {cat:'Service',sub:'Panda invoices',\n  message:m+'\\nSee the panda-waste-data-scraper log.',\n  tag:'panda_invoices'};\n",
   "outputs": 1,
   "noerr": 0,
   "initialize": "",
