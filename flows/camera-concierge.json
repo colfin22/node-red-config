@@ -210,11 +210,13 @@
   "server": "ha-server",
   "version": 5,
   "debugenabled": false,
-  "action": "notify.nvidia_shield",
+  "action": "nfandroidtv.send_message",
   "areaId": [],
   "deviceId": [],
-  "entityId": [],
-  "data": "{\"message\": who & \" at the front door\", \"data\": {\"duration\": \"20\", \"position\": \"top-right\", \"image\": image}}",
+  "entityId": [
+   "notify.nvidia_shield"
+  ],
+  "data": "$merge([{\"message\": who & \" at the front door\", \"position\": \"top-right\", \"duration\": {\"seconds\": 20}}, image ? {\"image\": {\"media_content_id\": \"media-source://image/image.doorbell_person\", \"media_content_type\": \"image/jpeg\"}} : {}])",
   "dataType": "jsonata",
   "mergeContext": "",
   "mustacheAltTags": false,
